@@ -1,0 +1,22 @@
+appName: cartera-proveedores-api-prod
+
+image:
+  name: containerregistryhs2023.azurecr.io/flujoshs-api
+  tag: prod-d8bf61b
+
+httpRoute:
+  path: /flujoshs-api/
+
+volumes:
+  uploads:
+    name: flujoshs-api-uploads-nas-prod
+    mountPath: /home/node/app/uploads
+    storage: 10Gi
+
+envFrom:
+  secret: hs-common-env-prod
+
+apiPort: 3000
+
+envVars:
+  API_PREFIX: ""  # Dejamos vacío para que no afecte las rutas ya que el URL Rewrite lo maneja

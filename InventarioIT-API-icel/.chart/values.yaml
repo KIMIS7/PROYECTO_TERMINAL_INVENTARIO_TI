@@ -1,0 +1,21 @@
+appName: cartera-proveedores-api-staging
+
+image:
+  name: containerregistryhs2023.azurecr.io/flujoshs-api
+  tag: sha-78978d3
+
+httpRoute:
+  path: /staging-flujoshs-api/
+
+volumes:
+  uploads:
+    name: flujoshs-api-uploads-nas
+    mountPath: /home/node/app/uploads
+    storage: 10Gi
+
+
+apiPort: 3000
+
+envVars:
+  DATABASE_URL: ""
+  API_PREFIX: ""  # Dejamos vacío para que no afecte las rutas ya que el URL Rewrite lo maneja

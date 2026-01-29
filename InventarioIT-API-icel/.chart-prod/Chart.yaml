@@ -1,0 +1,6 @@
+apiVersion: v2
+name: flujoshs-api-nest
+description: Proyecto de Nestjs para el backend de la aplicación flujoshs-api
+type: application
+version: 0.1.0
+appVersion: 1.0.0

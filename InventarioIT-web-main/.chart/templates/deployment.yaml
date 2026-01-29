@@ -1,0 +1,26 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+    spec:
+      imagePullSecrets:
+      - name: acr-hs
+      containers:
+      - name: web-container
+        image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: 3000
+        envFrom:
+        - secretRef:
+            name: {{ .Values.variablesEntorno }}
+        - configMapRef:
+            name: {{ .Values.appName }}-config

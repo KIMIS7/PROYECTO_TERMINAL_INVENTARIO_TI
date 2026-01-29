@@ -1,0 +1,25 @@
+appName: staging-flujoshs-web
+
+image:
+  name: containerregistryhs2023.azurecr.io/flujos-hs-web
+  tag: staging-f180010
+
+variablesEntorno: hs-common-env
+
+envVars:
+  
+  NEXTAUTH_SECRET: 
+  AZURE_AD_CLIENT_ID:
+  AZURE_AD_CLIENT_SECRET: 
+  AZURE_AD_TENANT_ID: 
+  NEXT_PUBLIC_API: https://corporativohs.com/staging-flujoshs-api/
+  NODE_ENV: staging
+  NEXT_PUBLIC_REDIRECT_URL: /flujoshs-staging
+  AUTH_BASEPATH: /flujoshs-staging/api/auth
+  NEXT_PUBLIC_AUTH_BASEPATH: /flujoshs-staging/api/auth
+  NEXT_PUBLIC_BASE_PATH: /flujoshs-staging
+  NEXTAUTH_URL: https://corporativohs.com/flujoshs-staging/api/auth/
+  NEXT_PUBLIC_APP_VERSION: v1.0.0  # vMAJOR.MINOR.PATCH
+  TIPODEPUBLICACION: PATCH  # Valores posibles: MAJOR, MINOR, PATCH
+  NEXT_BASE_PATH: /flujoshs-staging
+

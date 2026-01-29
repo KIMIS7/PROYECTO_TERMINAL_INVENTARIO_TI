@@ -1,0 +1,33 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Values.appName }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: {{ .Values.appName }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Values.appName }}
+    spec:
+      imagePullSecrets:
+      - name: acr-hs
+      containers:
+      - name: api-container
+        image: "{{ .Values.image.name }}:{{ .Values.image.tag }}"
+        ports:
+        - containerPort: {{ .Values.apiPort }}
+        volumeMounts:
+        - name: {{ .Values.volumes.uploads.name }}
+          mountPath: {{ .Values.volumes.uploads.mountPath }}
+        - configMapRef:
+            name: {{ .Values.appName }}-config
+        env:
+        - name: API_PORT
+          value: "{{ .Values.apiPort }}"
+      volumes:
+      - name: {{ .Values.volumes.uploads.name }}
+        persistentVolumeClaim:
+          claimName: {{ .Values.volumes.uploads.name }}

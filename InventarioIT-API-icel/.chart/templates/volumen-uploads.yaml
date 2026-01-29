@@ -1,0 +1,36 @@
+  # Volumen
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: {{ .Values.volumes.uploads.name }}
+  labels:
+    storage.k8s.io/created-by: devopshs
+    app: {{ .Values.appName }}
+spec:
+  accessModes:
+    - ReadWriteMany
+  capacity:
+    storage: {{ .Values.volumes.uploads.storage}}
+  storageClassName: nfs-synology-csi
+  persistentVolumeReclaimPolicy: Retain
+  volumeMode: Filesystem
+  nfs:
+    server: 10.10.159.140
+    path: /volume1/KUBER/{{ .Values.volumes.uploads.name }}
+    readOnly: no
+---
+# Claim
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ .Values.volumes.uploads.name }}
+  labels:
+    app: {{ .Values.appName }}
+spec:
+  storageClassName: nfs-synology-csi
+  volumeName: {{ .Values.volumes.uploads.name }}
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: {{ .Values.volumes.uploads.storage }}

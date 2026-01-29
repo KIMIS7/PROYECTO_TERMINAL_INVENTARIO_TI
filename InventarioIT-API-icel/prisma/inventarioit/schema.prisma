@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlserver"
+  url      = env("DATABASE_URL")
+}
+
+model Asset {
+  AssetID                                 Int                     @id(map: "PK_Asset") @default(autoincrement())
+  Name                                    String                  @db.NVarChar(255)
+  VendorID                                Int
+  ProductTypeID                           Int
+  AssetState                              Int
+  CompanyID                               Int
+  SiteID                                  Int
+  UserID                                  Int
+  AssetState_Asset_AssetStateToAssetState AssetState              @relation("Asset_AssetStateToAssetState", fields: [AssetState], references: [AssetStateID], onUpdate: NoAction, map: "FK_Asset_AssetState")
+  Company                                 Company                 @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Asset_Company")
+  ProductType                             ProductType             @relation(fields: [ProductTypeID], references: [ProductTypeID], onUpdate: NoAction, map: "FK_Asset_ProductType")
+  Site                                    Site                    @relation(fields: [SiteID], references: [SiteID], onUpdate: NoAction, map: "FK_Asset_Site")
+  User                                    User                    @relation(fields: [UserID], references: [UserID], onUpdate: NoAction, map: "FK_Asset_User")
+  Vendor                                  Vendor                  @relation(fields: [VendorID], references: [VendorID], onUpdate: NoAction, map: "FK_Asset_Vendor")
+  AssetDetail                             AssetDetail[]
+  AssetHistory                            AssetHistory[]
+  AssetOwnershipHistory                   AssetOwnershipHistory[]
+}
+
+model AssetDetail {
+  AssetDetailID        Int       @id(map: "PK_AssetDetail") @default(autoincrement())
+  AssetID              Int
+  ProductManuf         String?   @db.NVarChar(50)
+  IPAddress            String?   @db.NVarChar(50)
+  MACAddress           String?   @db.NVarChar(50)
+  Loanable             String?   @db.NVarChar(50)
+  VMPlatform           String?   @db.NVarChar(50)
+  VirtualHost          String?   @db.NVarChar(50)
+  OperatingSystem      String?   @db.NVarChar(50)
+  Domain               String?   @db.NVarChar(50)
+  ProcessorInfo        String?   @db.NVarChar(50)
+  Processor            String?   @db.NVarChar(50)
+  PhysicalMemory       String?   @db.NVarChar(50)
+  HDDModel             String?   @db.NVarChar(50)
+  HDDSerial            String?   @db.NVarChar(50)
+  HDDCapacity          String?   @db.NVarChar(50)
+  KeyboardType         String?   @db.NVarChar(50)
+  MouseType            String?   @db.NVarChar(50)
+  NumModel             String?   @db.NVarChar(50)
+  Model                String?   @db.NVarChar(50)
+  IMEI                 String?   @db.NVarChar(50)
+  ModemFirmwareVersion String?   @db.NVarChar(50)
+  Platform             String?   @db.NVarChar(50)
+  OSName               String?   @db.NVarChar(50)
+  OSVersion            String?   @db.NVarChar(50)
+  RAM                  String?   @db.NVarChar(50)
+  SerialNum            String?   @db.NVarChar(150)
+  PurchaseDate         DateTime? @db.Date
+  WarrantyExpiryDate   DateTime? @db.Date
+  CreatedTime          DateTime? @db.DateTime
+  LastUpdateTime       DateTime? @db.DateTime
+  AssetACQDate         DateTime? @db.Date
+  AssetExpiryDate      DateTime? @db.Date
+  AssetTAG             String?   @db.NVarChar(150)
+  WarrantyExpiry       DateTime? @db.Date
+  AssignedTime         DateTime? @db.DateTime
+  Barcode              String?   @db.VarChar(50)
+  LastUpdateBy         Int
+  Asset                Asset     @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_AssetDetail_Asset")
+  User                 User      @relation(fields: [LastUpdateBy], references: [UserID], onUpdate: NoAction, map: "FK_AssetDetail_User")
+}
+
+model AssetHistory {
+  AssetHistoryID Int      @id(map: "PK_AssetHistory") @default(autoincrement())
+  AssetID        Int
+  Operation      String   @db.NVarChar(255)
+  Description    String   @db.NVarChar(500)
+  CreatedTime    DateTime @db.DateTime
+  Asset          Asset    @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_AssetHistory_Asset")
+}
+
+model AssetOwnershipHistory {
+  AssetOwnershipHistoryID Int      @id(map: "PK_AssetOwnershipHistory") @default(autoincrement())
+  UserID                  Int
+  AssetID                 Int
+  FromDate                DateTime @db.Date
+  ToDate                  DateTime @db.Date
+  Asset                   Asset    @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_AssetOwnershipHistory_Asset")
+  User                    User     @relation(fields: [UserID], references: [UserID], onUpdate: NoAction, map: "FK_AssetOwnershipHistory_User")
+}
+
+model AssetState {
+  AssetStateID                       Int     @id(map: "PK_AssetState") @default(autoincrement())
+  Name                               String  @db.NVarChar(100)
+  Asset_Asset_AssetStateToAssetState Asset[] @relation("Asset_AssetStateToAssetState")
+}
+
+model Company {
+  CompanyID   Int     @id(map: "PK_Company") @default(autoincrement())
+  Description String  @db.NVarChar(100)
+  Asset       Asset[]
+  Site        Site[]
+}
+
+model ProductType {
+  ProductTypeID Int     @id(map: "PK_ProductType") @default(autoincrement())
+  Name          String  @db.NVarChar(150)
+  Category      String  @db.NVarChar(150)
+  Group         String  @db.NVarChar(150)
+  SubCategory   String  @db.NVarChar(150)
+  Asset         Asset[]
+}
+
+model Site {
+  SiteID    Int     @id(map: "PK_Site") @default(autoincrement())
+  Name      String  @db.NVarChar(150)
+  CompanyID Int
+  Asset     Asset[]
+  Company   Company @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Site_Company")
+}
+
+model sysdiagrams {
+  name         String @db.NVarChar(128)
+  principal_id Int
+  diagram_id   Int    @id(map: "PK__sysdiagr__C2B05B617B950609") @default(autoincrement())
+  version      Int?
+  definition   Bytes?
+
+  @@unique([principal_id, name], map: "UK_principal_name")
+}
+
+model User {
+  UserID                Int                     @id(map: "PK_User") @default(autoincrement())
+  Email                 String                  @db.NVarChar(100)
+  FirstName             String                  @db.NVarChar(100)
+  LastName              String                  @db.NVarChar(100)
+  Name                  String                  @db.NVarChar(200)
+  Department            String                  @db.NVarChar(100)
+  SiteID                Int
+  rolD                  Int
+  isActive              Boolean
+  token                 String?                 @db.NVarChar(Max)
+  createdAt             DateTime                @db.DateTime
+  Asset                 Asset[]
+  AssetDetail           AssetDetail[]
+  AssetOwnershipHistory AssetOwnershipHistory[]
+  rol                   rol                     @relation(fields: [rolD], references: [rolID], onUpdate: NoAction, map: "FK_User_rol")
+}
+
+model Vendor {
+  VendorID Int     @id(map: "PK_Vendor") @default(autoincrement())
+  Name     String  @db.NVarChar(150)
+  Asset    Asset[]
+}
+
+model dashboard_paths {
+  dashboarpathID     Int                  @id(map: "PK__dashboar__1B99B889FA0DFA91") @default(autoincrement())
+  path               String               @unique(map: "UQ__dashboar__8320EE2ABFF93821") @db.NVarChar(100)
+  name               String               @db.NVarChar(100)
+  icon               String?              @db.NVarChar(Max)
+  rol_dashboard_path rol_dashboard_path[]
+}
+
+model rol {
+  rolID              Int                  @id(map: "PK__rol__540236547729CB5E") @default(autoincrement())
+  name               String               @db.NVarChar(100)
+  isActive           Boolean?             @default(true, map: "DF__rol__isActive__7D439ABD")
+  rol_dashboard_path rol_dashboard_path[]
+  User               User[]
+}
+
+model rol_dashboard_path {
+  roldashboardpathID Int             @id(map: "PK__rol_dash__CF2416D3EBA3D73B") @default(autoincrement())
+  rolID              Int
+  dashboarpathID     Int
+  dashboard_paths    dashboard_paths @relation(fields: [dashboarpathID], references: [dashboarpathID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_path")
+  rol                rol             @relation(fields: [rolID], references: [rolID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_rol")
+}

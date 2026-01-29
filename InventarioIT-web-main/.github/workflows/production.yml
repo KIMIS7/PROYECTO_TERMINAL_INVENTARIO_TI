@@ -1,0 +1,153 @@
+name: CI/CD - Production
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+    - main
+    paths-ignore:
+    - 'README.md'
+env:
+  REGISTRY: containerregistryhs2023.azurecr.io
+  IMAGE_NAME: flujos-hs-web
+
+jobs:
+  version:
+    name: Update Version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    outputs:
+      new_version: ${{ steps.version_update.outputs.new_version }}
+      short_sha: ${{ steps.set_image_tag.outputs.short_sha }}
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Update Version Based on TIPODEPUBLICACION
+      id: version_update
+      run: |
+        chart_dir=".chart-prod"
+        
+        # Extract current version and TIPODEPUBLICACION from values.yaml
+        current_version=$(grep "NEXT_PUBLIC_APP_VERSION:" "$chart_dir/values.yaml" | awk '{print $2}' | tr -d ' ')
+        tipo_publicacion=$(grep "TIPODEPUBLICACION:" "$chart_dir/values.yaml" | awk '{print $2}' | tr -d ' ')
+        
+        # Remove 'v' prefix for calculations
+        version_number=${current_version#v}
+        
+        # Split version into components
+        IFS='.' read -ra VERSION_PARTS <<< "$version_number"
+        MAJOR=${VERSION_PARTS[0]}
+        MINOR=${VERSION_PARTS[1]}
+        PATCH=${VERSION_PARTS[2]}
+        
+        # Update version based on TIPODEPUBLICACION
+        if [ "$tipo_publicacion" == "MAJOR" ]; then
+          MAJOR=$((MAJOR + 1))
+          MINOR=0
+          PATCH=0
+        elif [ "$tipo_publicacion" == "MINOR" ]; then
+          MINOR=$((MINOR + 1))
+          PATCH=0
+        elif [ "$tipo_publicacion" == "PATCH" ]; then
+          PATCH=$((PATCH + 1))
+        fi
+        
+        # Create new version string without 'v' prefix (just numbers)
+        new_version="$MAJOR.$MINOR.$PATCH"
+        new_version_with_v="v$new_version"
+        
+        echo "Current version: $current_version"
+        echo "Tipo de publicación: $tipo_publicacion"
+        echo "New version: $new_version"
+        
+        # Update the version in values.yaml - still using v-prefix in the file
+        sed -i "s/NEXT_PUBLIC_APP_VERSION: $current_version/NEXT_PUBLIC_APP_VERSION: $new_version_with_v/" "$chart_dir/values.yaml"
+        
+        # Set output for use in later steps
+        echo "new_version=$new_version" >> $GITHUB_OUTPUT
+        
+    - name: Set Image Tag
+      id: set_image_tag
+      run: |
+        new_image_tag=${{ github.sha }}
+        short_sha=prod-${new_image_tag:0:7}
+        
+        # Update the image tag in values.yaml
+        chart_dir=".chart-prod"
+        sed -i "s/^  tag: .*/  tag: $short_sha/" "$chart_dir/values.yaml"
+        
+        echo "short_sha=$short_sha" >> $GITHUB_OUTPUT
+        
+    - name: Commit and push changes
+      run: |
+        git config --global user.name "${{ github.actor }}"
+        git config --global user.email "${{ github.actor }}@users.noreply.github.com"
+        git add .chart-prod/values.yaml
+        git commit -m "cd: update version to ${{ steps.version_update.outputs.new_version }} and image tag to ${{ steps.set_image_tag.outputs.short_sha }}"
+        git push
+
+  build:
+    name: Build container image
+    runs-on: ubuntu-latest
+    needs: version
+    environment:
+      name: production
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.ref }}
+        
+    - name: Fetch latest changes
+      run: git pull origin ${{ github.ref_name }}
+    
+    - name: Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+      
+    - name: Docker meta
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=raw,value=${{ needs.version.outputs.short_sha }}
+          
+    - name: Log into registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ secrets.ACR_USERNAME }}
+        password: ${{ secrets.ACR_PASSWORD }}
+        
+    - name: Display build information
+      run: |
+        echo "Building with version: ${{ needs.version.outputs.new_version }}"
+        echo "Image tag: ${{ needs.version.outputs.short_sha }}"
+
+    - name: Extract config from values.yaml
+      id: config
+      run: |
+        chart_dir=".chart-prod"
+        echo "NEXT_PUBLIC_API=$(grep "^ *NEXT_PUBLIC_API:" "$chart_dir/values.yaml" | awk '{print $2}' | tr -d ' ')" >> $GITHUB_OUTPUT
+        echo "AUTH_BASEPATH=$(grep "^ *AUTH_BASEPATH:" "$chart_dir/values.yaml" | awk '{print $2}' | tr -d ' ')" >> $GITHUB_OUTPUT
+        echo "NEXT_BASE_PATH=$(grep "^ *NEXT_BASE_PATH:" "$chart_dir/values.yaml" | awk '{print $2}' | tr -d ' ')" >> $GITHUB_OUTPUT
+        
+    - name: Build & Push
+      uses: docker/build-push-action@v5
+      with:
+        context: .
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        build-args: |
+          AUTH_SECRET=${{ secrets.AUTH_SECRET }}
+          AUTH_BASEPATH=${{ steps.config.outputs.AUTH_BASEPATH }}
+          NEXT_PUBLIC_API=${{ steps.config.outputs.NEXT_PUBLIC_API }}
+          NEXT_BASE_PATH=${{ steps.config.outputs.NEXT_BASE_PATH }}
+          APP_VERSION=${{ needs.version.outputs.new_version }}
+          NODE_ENV=production
+        cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+        cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
