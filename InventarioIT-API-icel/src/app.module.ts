@@ -8,6 +8,13 @@ import { DashboardPathModule } from './dashboard-path/dashboard-path.module';
 import { UserModule } from './user/user.module';
 import { SimpleAuthMiddleware } from './auth/simple-auth.middleware';
 import { AuthModule } from './auth/auth.module';
+// Módulos de activos
+import { AssetModule } from './asset/asset.module';
+import { ProductTypeModule } from './product-type/product-type.module';
+import { VendorModule } from './vendor/vendor.module';
+import { AssetStateModule } from './asset-state/asset-state.module';
+import { CompanyModule } from './company/company.module';
+import { SiteModule } from './site/site.module';
 //import { APP_GUARD } from '@nestjs/core';
 //import { AzureAuthGuard } from './azure-auth/azure-auth.guard';
 
@@ -23,6 +30,13 @@ import { AuthModule } from './auth/auth.module';
     DashboardPathModule,
     UserModule,
     AuthModule,
+    // Módulos de activos
+    AssetModule,
+    ProductTypeModule,
+    VendorModule,
+    AssetStateModule,
+    CompanyModule,
+    SiteModule,
   ],
   controllers: [AppController],
   providers: [],
@@ -42,6 +56,13 @@ export class AppModule implements NestModule {
         '/comments',
         '/origin-port',
         '/approval-hierarchy',
+        // Rutas de activos
+        '/asset',
+        '/product-type',
+        '/vendor',
+        '/asset-state',
+        '/company',
+        '/site',
       );
   }
 }

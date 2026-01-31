@@ -1,0 +1,50 @@
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  Headers,
+} from '@nestjs/common';
+import { AssetService } from './asset.service';
+import { CreateAssetDto } from './dto/create-asset.dto';
+import { UpdateAssetDto } from './dto/update-asset.dto';
+
+@Controller('asset')
+export class AssetController {
+  constructor(private readonly assetService: AssetService) {}
+
+  @Post()
+  create(
+    @Body() createAssetDto: CreateAssetDto,
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.assetService.create(createAssetDto, userEmail);
+  }
+
+  @Get()
+  findAll() {
+    return this.assetService.findAll();
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string) {
+    return this.assetService.findOne(+id);
+  }
+
+  @Patch(':id')
+  update(
+    @Param('id') id: string,
+    @Body() updateAssetDto: UpdateAssetDto,
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.assetService.update(+id, updateAssetDto, userEmail);
+  }
+
+  @Delete(':id')
+  remove(@Param('id') id: string) {
+    return this.assetService.remove(+id);
+  }
+}

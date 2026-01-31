@@ -240,6 +240,107 @@ const api = {
       return response.data;
     }
   },
+  // Asset Management
+  asset: {
+    create: async (data: {
+      name: string;
+      vendorID: number;
+      productTypeID: number;
+      assetState: number;
+      companyID: number;
+      siteID: number;
+      userID?: number;
+      detail?: Record<string, unknown>;
+    }) => {
+      const response = await apiClient.post<{ success: boolean; message: string; data: { assetID: number } }>("/asset", data);
+      return response.data;
+    },
+    getAll: async () => {
+      const response = await apiClient.get<{
+        assetID: number;
+        name: string;
+        vendorID: number;
+        productTypeID: number;
+        assetState: number;
+        companyID: number;
+        siteID: number;
+        userID: number;
+        vendor?: { vendorID: number; name: string };
+        productType?: { productTypeID: number; name: string; category: string; group: string; subCategory: string };
+        assetStateInfo?: { assetStateID: number; name: string };
+        company?: { companyID: number; description: string };
+        site?: { siteID: number; name: string };
+      }[]>("/asset");
+      return response.data;
+    },
+    getById: async (assetID: number) => {
+      const response = await apiClient.get(`/asset/${assetID}`);
+      return response.data;
+    },
+    update: async (assetID: number, data: Record<string, unknown>) => {
+      const response = await apiClient.patch<{ success: boolean; message: string; data: unknown }>(`/asset/${assetID}`, data);
+      return response.data;
+    },
+    delete: async (assetID: number) => {
+      const response = await apiClient.delete<{ success: boolean; message: string }>(`/asset/${assetID}`);
+      return response.data;
+    },
+  },
+  // Catálogos para activos
+  productType: {
+    getAll: async () => {
+      const response = await apiClient.get<{
+        productTypeID: number;
+        name: string;
+        category: string;
+        group: string;
+        subCategory: string;
+      }[]>("/product-type");
+      return response.data;
+    },
+    getByCategory: async (category: string) => {
+      const response = await apiClient.get<{
+        productTypeID: number;
+        name: string;
+        category: string;
+        group: string;
+        subCategory: string;
+      }[]>(`/product-type/category/${category}`);
+      return response.data;
+    },
+  },
+  vendor: {
+    getAll: async () => {
+      const response = await apiClient.get<{ vendorID: number; name: string }[]>("/vendor");
+      return response.data;
+    },
+    create: async (data: { name: string }) => {
+      const response = await apiClient.post<{ success: boolean; message: string; data: { vendorID: number; name: string } }>("/vendor", data);
+      return response.data;
+    },
+  },
+  assetState: {
+    getAll: async () => {
+      const response = await apiClient.get<{ assetStateID: number; name: string }[]>("/asset-state");
+      return response.data;
+    },
+  },
+  company: {
+    getAll: async () => {
+      const response = await apiClient.get<{ companyID: number; description: string }[]>("/company");
+      return response.data;
+    },
+  },
+  site: {
+    getAll: async () => {
+      const response = await apiClient.get<{ siteID: number; name: string; companyID: number }[]>("/site");
+      return response.data;
+    },
+    getByCompany: async (companyID: number) => {
+      const response = await apiClient.get<{ siteID: number; name: string; companyID: number }[]>(`/site/company/${companyID}`);
+      return response.data;
+    },
+  },
 };
 
 export default api;
