@@ -1,23 +1,35 @@
 import { MainLayout } from "@/components/MainLayout";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { ProductType, Vendor, AssetState, Company, Site, Asset } from "@/types";
 import api from "@/lib/api";
-import { AssetCategorySidebar } from "@/components/AssetCategorySidebar";
-import { AssetToolbar } from "@/components/AssetToolbar";
-import { AssetDataTable } from "@/components/AssetDataTable";
+import { ColumnDef } from "@tanstack/react-table";
+import { Badge } from "@/components/ui/badge";
+import { DataTable } from "@/components/data-table";
+import { AssetManagementPanel } from "@/components/AssetManagementPanel";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
-import { ChevronDown } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Settings, Paperclip } from "lucide-react";
+import { cn } from "@/lib/utils";
 
-type FilterType = {
-  type: "all" | "category" | "group" | "subCategory" | "productType";
-  value: string | null;
+// Función para obtener el color del estado
+const getStateColor = (state: string) => {
+  const lowerState = state.toLowerCase();
+  if (lowerState.includes("assigned") || lowerState.includes("asignado")) {
+    return "text-blue-600 bg-blue-50";
+  }
+  if (lowerState.includes("in use") || lowerState.includes("en uso") || lowerState.includes("uso")) {
+    return "text-green-600 bg-green-50";
+  }
+  if (lowerState.includes("in shop") || lowerState.includes("disponible") || lowerState.includes("almacen")) {
+    return "text-orange-600 bg-orange-50";
+  }
+  if (lowerState.includes("repair") || lowerState.includes("reparacion")) {
+    return "text-yellow-600 bg-yellow-50";
+  }
+  if (lowerState.includes("retired") || lowerState.includes("retirado") || lowerState.includes("baja")) {
+    return "text-gray-600 bg-gray-50";
+  }
+  return "text-gray-600 bg-gray-50";
 };
 
 export default function Altas() {
@@ -30,21 +42,10 @@ export default function Altas() {
 
   // Estados para los activos
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-
-  // Estados para filtros y selección
-  const [selectedFilter, setSelectedFilter] = useState<FilterType>({
-    type: "all",
-    value: null,
-  });
-  const [selectedAssetIds, setSelectedAssetIds] = useState<number[]>([]);
-  const [searchQuery, setSearchQuery] = useState("");
-
-  // Estados para paginación y vista
-  const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
-  const [currentView, setCurrentView] = useState<"list" | "grid">("list");
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   // Cargar catálogos al montar el componente
   useEffect(() => {
@@ -87,80 +88,17 @@ export default function Altas() {
       setIsLoading(true);
       const response = await api.asset.getAll().catch(() => []);
       setAssets(response as Asset[]);
+      setFilteredAssets(response as Asset[]);
     } catch (error) {
       console.error("Error fetching assets:", error);
-      toast.error("Error al cargar los activos");
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Filtrar activos
-  const filteredAssets = useMemo(() => {
-    let result = [...assets];
-
-    // Aplicar filtro de categoría
-    if (selectedFilter.type !== "all" && selectedFilter.value) {
-      switch (selectedFilter.type) {
-        case "category":
-          result = result.filter(
-            (asset) => asset.productType?.category === selectedFilter.value
-          );
-          break;
-        case "group":
-          result = result.filter(
-            (asset) => asset.productType?.group === selectedFilter.value
-          );
-          break;
-        case "subCategory":
-          result = result.filter(
-            (asset) => asset.productType?.subCategory === selectedFilter.value
-          );
-          break;
-        case "productType":
-          result = result.filter(
-            (asset) =>
-              asset.productTypeID.toString() === selectedFilter.value
-          );
-          break;
-      }
-    }
-
-    // Aplicar búsqueda
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (asset) =>
-          asset.name.toLowerCase().includes(query) ||
-          asset.assetDetail?.serialNum?.toLowerCase().includes(query) ||
-          asset.assetDetail?.assetTAG?.toLowerCase().includes(query) ||
-          asset.user?.name?.toLowerCase().includes(query) ||
-          asset.vendor?.name?.toLowerCase().includes(query)
-      );
-    }
-
-    return result;
-  }, [assets, selectedFilter, searchQuery]);
-
-  // Obtener el título basado en el filtro
-  const getFilterTitle = useCallback(() => {
-    if (selectedFilter.type === "all") return "All Assets";
-    if (selectedFilter.value) {
-      if (selectedFilter.type === "productType") {
-        const pt = productTypes.find(
-          (p) => p.productTypeID.toString() === selectedFilter.value
-        );
-        return pt?.name || "Assets";
-      }
-      return selectedFilter.value;
-    }
-    return "All Assets";
-  }, [selectedFilter, productTypes]);
-
   // Handlers
   const handleRefresh = () => {
     loadAssets();
-    toast.success("Lista actualizada");
   };
 
   const handleCreateAsset = () => {
@@ -169,136 +107,187 @@ export default function Altas() {
 
   const handleCreateSuccess = () => {
     loadAssets();
-    toast.success("Activo creado exitosamente");
   };
 
-  const handleEdit = () => {
-    if (selectedAssetIds.length === 1) {
-      const asset = assets.find((a) => a.assetID === selectedAssetIds[0]);
-      if (asset) {
-        // TODO: Abrir modal de edición
-        console.log("Editar activo:", asset);
-        toast.info("Funcionalidad de edición en desarrollo");
-      }
+  const handleSearch = (query: string) => {
+    if (!query.trim()) {
+      applyFilters(selectedCategory, assets);
+      return;
     }
-  };
 
-  const handleDelete = async () => {
-    if (selectedAssetIds.length === 0) return;
-
-    const confirmed = window.confirm(
-      `¿Está seguro de eliminar ${selectedAssetIds.length} activo(s)?`
+    const filtered = assets.filter(
+      (asset) =>
+        asset.name.toLowerCase().includes(query.toLowerCase()) ||
+        asset.assetDetail?.serialNum?.toLowerCase().includes(query.toLowerCase()) ||
+        asset.assetDetail?.assetTAG?.toLowerCase().includes(query.toLowerCase()) ||
+        asset.user?.name?.toLowerCase().includes(query.toLowerCase())
     );
-    if (!confirmed) return;
+    setFilteredAssets(filtered);
+  };
 
-    try {
-      await Promise.all(selectedAssetIds.map((id) => api.asset.delete(id)));
-      toast.success(`${selectedAssetIds.length} activo(s) eliminado(s)`);
-      setSelectedAssetIds([]);
-      loadAssets();
-    } catch (error) {
-      console.error("Error deleting assets:", error);
-      toast.error("Error al eliminar activos");
+  const handleFilterByCategory = (category: string | null) => {
+    setSelectedCategory(category);
+    applyFilters(category, assets);
+  };
+
+  const applyFilters = (category: string | null, assetList: Asset[]) => {
+    if (!category) {
+      setFilteredAssets(assetList);
+      return;
     }
+
+    const filtered = assetList.filter(
+      (asset) => asset.productType?.category === category
+    );
+    setFilteredAssets(filtered);
   };
 
-  const handleImportCSV = () => {
-    toast.info("Funcionalidad de importación en desarrollo");
-  };
-
-  const handleAssignUsers = () => {
-    if (selectedAssetIds.length === 0) return;
-    toast.info("Funcionalidad de asignación en desarrollo");
-  };
-
-  const handleExport = () => {
-    toast.info("Funcionalidad de exportación en desarrollo");
-  };
-
-  const handleRowDoubleClick = (asset: Asset) => {
-    console.log("Ver detalles del activo:", asset);
-    // TODO: Abrir modal de detalles o navegar a página de detalles
-  };
+  // Columnas de la tabla estilo imagen
+  const columns: ColumnDef<Asset>[] = useMemo(
+    () => [
+      {
+        id: "actions",
+        header: "",
+        cell: () => (
+          <div className="flex items-center gap-1">
+            <button className="p-1 hover:bg-gray-100 rounded">
+              <Settings className="h-4 w-4 text-gray-400" />
+            </button>
+            <button className="p-1 hover:bg-gray-100 rounded">
+              <Paperclip className="h-4 w-4 text-gray-400" />
+            </button>
+          </div>
+        ),
+        enableSorting: false,
+        size: 70,
+      },
+      {
+        accessorKey: "name",
+        header: "Name",
+        cell: ({ row }) => {
+          const asset = row.original;
+          return (
+            <span className="font-medium text-gray-900 truncate max-w-[250px]" title={asset.name}>
+              {asset.name}
+            </span>
+          );
+        },
+      },
+      {
+        id: "user",
+        header: "User",
+        cell: ({ row }) => {
+          const user = row.original.user;
+          return (
+            <span className="text-gray-600">
+              {user?.name || "-"}
+            </span>
+          );
+        },
+      },
+      {
+        id: "department",
+        header: "Department",
+        cell: ({ row }) => {
+          const user = row.original.user;
+          return (
+            <span className="text-gray-600">
+              {user?.department || "-"}
+            </span>
+          );
+        },
+      },
+      {
+        id: "associatedTo",
+        header: "Associated To",
+        cell: ({ row }) => {
+          const site = row.original.site;
+          return (
+            <span className="text-gray-600">
+              {site?.name || "-"}
+            </span>
+          );
+        },
+      },
+      {
+        id: "product",
+        header: "Product",
+        cell: ({ row }) => {
+          const detail = row.original.assetDetail;
+          const vendor = row.original.vendor;
+          const productName = detail?.model || row.original.name;
+          const fullName = vendor ? `${vendor.name} ${productName}` : productName;
+          return (
+            <span className="text-gray-600 truncate max-w-[180px]" title={fullName}>
+              {fullName}
+            </span>
+          );
+        },
+      },
+      {
+        id: "productType",
+        header: "Product Type",
+        cell: ({ row }) => {
+          const productType = row.original.productType;
+          return (
+            <span className="text-gray-600">
+              {productType?.subCategory || productType?.name || "-"}
+            </span>
+          );
+        },
+      },
+      {
+        id: "state",
+        header: "State",
+        cell: ({ row }) => {
+          const stateInfo = row.original.assetStateInfo;
+          const stateName = stateInfo?.name || "Unknown";
+          return (
+            <Badge
+              variant="outline"
+              className={cn("font-normal", getStateColor(stateName))}
+            >
+              {stateName}
+            </Badge>
+          );
+        },
+      },
+      {
+        id: "assetTag",
+        header: "AssetTag",
+        cell: ({ row }) => {
+          const detail = row.original.assetDetail;
+          return (
+            <span className="text-gray-600 font-mono text-xs">
+              {detail?.assetTAG || "-"}
+            </span>
+          );
+        },
+      },
+    ],
+    []
+  );
 
   return (
     <MainLayout
       breadcrumb={{ title: "Altas", subtitle: "Registro de activos TI" }}
     >
       {() => (
-        <div className="flex h-[calc(100vh-120px)]">
-          {/* Sidebar de Categorías */}
-          <div className="w-64 flex-shrink-0 border-r overflow-hidden">
-            <AssetCategorySidebar
-              productTypes={productTypes}
-              selectedFilter={selectedFilter}
-              onFilterChange={setSelectedFilter}
-            />
-          </div>
+        <div className="flex flex-1 flex-col gap-4 p-4 pt-4">
+          {/* Panel de Gestión con Mini Menú de Categorías */}
+          <AssetManagementPanel
+            totalAssets={assets.length}
+            productTypes={productTypes}
+            selectedCategory={selectedCategory}
+            onRefresh={handleRefresh}
+            onCreateAsset={handleCreateAsset}
+            onSearch={handleSearch}
+            onFilterByCategory={handleFilterByCategory}
+          />
 
-          {/* Panel Principal */}
-          <div className="flex-1 flex flex-col overflow-hidden">
-            {/* Encabezado con breadcrumb y título */}
-            <div className="px-4 py-3 border-b bg-white">
-              {/* Breadcrumb */}
-              <div className="text-xs text-gray-500 mb-1">
-                All Assets
-              </div>
-
-              {/* Título con dropdown */}
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-2 text-lg font-semibold text-gray-900 hover:text-gray-700">
-                    {getFilterTitle()}
-                    <ChevronDown className="h-5 w-5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => setSelectedFilter({ type: "all", value: null })}>
-                    All Assets
-                  </DropdownMenuItem>
-                  {Array.from(new Set(productTypes.map((pt) => pt.category))).map(
-                    (category) => (
-                      <DropdownMenuItem
-                        key={category}
-                        onClick={() =>
-                          setSelectedFilter({ type: "category", value: category })
-                        }
-                      >
-                        {category}
-                      </DropdownMenuItem>
-                    )
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-
-            {/* Barra de herramientas */}
-            <AssetToolbar
-              selectedCount={selectedAssetIds.length}
-              totalCount={filteredAssets.length}
-              currentPage={currentPage}
-              pageSize={pageSize}
-              onNew={handleCreateAsset}
-              onEdit={handleEdit}
-              onDelete={handleDelete}
-              onImportCSV={handleImportCSV}
-              onAssignUsers={handleAssignUsers}
-              onExport={handleExport}
-              onRefresh={handleRefresh}
-              onPageChange={setCurrentPage}
-              onViewChange={setCurrentView}
-              currentView={currentView}
-            />
-
-            {/* Tabla de activos */}
-            <div className="flex-1 overflow-auto p-4">
-              <AssetDataTable
-                data={filteredAssets}
-                loading={isLoading}
-                onSelectionChange={setSelectedAssetIds}
-                onRowDoubleClick={handleRowDoubleClick}
-              />
-            </div>
+          {/* Tabla de Activos */}
+          <div className="-mx-4 flex-1 overflow-auto px-4 py-1 lg:flex-row lg:space-x-12 lg:space-y-0">
+            <DataTable columns={columns} data={filteredAssets} loading={isLoading} />
           </div>
 
           {/* Modal de Crear Activo */}
