@@ -270,6 +270,8 @@ const api = {
         assetStateInfo?: { assetStateID: number; name: string };
         company?: { companyID: number; description: string };
         site?: { siteID: number; name: string };
+        user?: { userID: number; name: string; email: string; department: string; firstName?: string; lastName?: string };
+        assetDetail?: { assetDetailID: number; serialNum?: string; assetTAG?: string; model?: string };
       }[]>("/asset");
       return response.data;
     },
