@@ -116,6 +116,7 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
+          User: true,
         },
       });
 
@@ -151,6 +152,16 @@ export class AssetService {
           : null,
         site: asset.Site
           ? { siteID: asset.Site.SiteID, name: asset.Site.Name, companyID: asset.Site.CompanyID }
+          : null,
+        user: asset.User
+          ? {
+              userID: asset.User.UserID,
+              name: asset.User.Name,
+              email: asset.User.Email,
+              department: asset.User.Department,
+              firstName: asset.User.FirstName,
+              lastName: asset.User.LastName,
+            }
           : null,
         assetDetail: asset.AssetDetail[0]
           ? {
@@ -188,6 +199,7 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
+          User: true,
           AssetHistory: {
             orderBy: { CreatedTime: 'desc' },
             take: 10,
@@ -208,11 +220,40 @@ export class AssetService {
         companyID: asset.CompanyID,
         siteID: asset.SiteID,
         userID: asset.UserID,
-        vendor: asset.Vendor,
-        productType: asset.ProductType,
-        assetStateInfo: asset.AssetState_Asset_AssetStateToAssetState,
-        company: asset.Company,
-        site: asset.Site,
+        vendor: asset.Vendor
+          ? { vendorID: asset.Vendor.VendorID, name: asset.Vendor.Name }
+          : null,
+        productType: asset.ProductType
+          ? {
+              productTypeID: asset.ProductType.ProductTypeID,
+              name: asset.ProductType.Name,
+              category: asset.ProductType.Category,
+              group: asset.ProductType.Group,
+              subCategory: asset.ProductType.SubCategory,
+            }
+          : null,
+        assetStateInfo: asset.AssetState_Asset_AssetStateToAssetState
+          ? {
+              assetStateID: asset.AssetState_Asset_AssetStateToAssetState.AssetStateID,
+              name: asset.AssetState_Asset_AssetStateToAssetState.Name,
+            }
+          : null,
+        company: asset.Company
+          ? { companyID: asset.Company.CompanyID, description: asset.Company.Description }
+          : null,
+        site: asset.Site
+          ? { siteID: asset.Site.SiteID, name: asset.Site.Name, companyID: asset.Site.CompanyID }
+          : null,
+        user: asset.User
+          ? {
+              userID: asset.User.UserID,
+              name: asset.User.Name,
+              email: asset.User.Email,
+              department: asset.User.Department,
+              firstName: asset.User.FirstName,
+              lastName: asset.User.LastName,
+            }
+          : null,
         assetDetail: asset.AssetDetail[0] || null,
         history: asset.AssetHistory,
       };

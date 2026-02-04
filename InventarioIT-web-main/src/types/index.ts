@@ -62,6 +62,16 @@ export interface Site {
   companyID: number;
 }
 
+// Información del usuario asignado al activo
+export interface AssetUser {
+  userID: number;
+  name: string;
+  email: string;
+  department: string;
+  firstName?: string;
+  lastName?: string;
+}
+
 export interface Asset {
   assetID: number;
   name: string;
@@ -78,6 +88,8 @@ export interface Asset {
   company?: Company;
   site?: Site;
   assetDetail?: AssetDetail;
+  // Usuario asignado
+  user?: AssetUser;
 }
 
 export interface AssetDetail {
