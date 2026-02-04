@@ -2,40 +2,30 @@
 import { Expose, Transform } from 'class-transformer';
 
 export class UserDto {
-  @Expose()
-  UserID: number;
+  @Expose({ name: 'userID' })
+  @Transform(({ obj }) => obj?.UserID)
+  userID: number;
 
-  @Expose()
-  Email: string;
+  @Expose({ name: 'email' })
+  @Transform(({ obj }) => obj?.Email)
+  email: string;
 
-  @Expose()
-  FirstName: string;
-
-  @Expose()
-  LastName: string;
-
-  @Expose()
-  Name: string;
-
-  @Expose()
-  Department: string;
-
-  @Expose()
-  SiteID: number;
-
-  @Expose()
-  rolD: number;
+  @Expose({ name: 'name' })
+  @Transform(({ obj }) => obj?.Name)
+  name: string;
 
   @Expose()
   isActive: boolean;
 
-  @Expose()
-  token: string;
+  @Expose({ name: 'pin' })
+  @Transform(({ obj }) => obj?.token || '')
+  pin: string;
 
-  @Expose()
-  createdAt: Date;
+  @Expose({ name: 'rolID' })
+  @Transform(({ obj }) => obj?.rolD)
+  rolID: number;
 
-  @Expose()
+  @Expose({ name: 'rolName' })
   @Transform(({ obj }) => obj?.rol?.name)
   rolName: string;
 }
