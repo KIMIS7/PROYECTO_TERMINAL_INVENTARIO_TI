@@ -2,7 +2,6 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
@@ -197,63 +196,37 @@ export const CreateProductTypeModal = ({
 
           {/* Categoria */}
           <div>
-            <Label htmlFor="category" className="text-sm font-medium">
+            <Label className="text-sm font-medium">
               Categoria *
             </Label>
-            <Select
-              value={formData.category}
-              onValueChange={(value) => handleInputChange("category", value)}
-              disabled={isLoading}
-            >
-              <SelectTrigger className={errors.category ? "border-red-500" : ""}>
-                <SelectValue placeholder="Seleccionar categoria" />
-              </SelectTrigger>
-              <SelectContent>
-                {PRODUCT_CATEGORIES.map((category) => (
-                  <SelectItem key={category} value={category}>
-                    <div className="flex items-center gap-2">
+            {errors.category && <p className="text-red-500 text-xs mt-1 mb-2">{errors.category}</p>}
+            <div className="grid grid-cols-2 gap-2">
+              {PRODUCT_CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => handleInputChange("category", category)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    formData.category === category
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300"
+                  }`}
+                  disabled={isLoading}
+                >
+                  <div className="flex items-center gap-2">
+                    <div className={`${formData.category === category ? "text-blue-600" : "text-gray-500"}`}>
                       {categoryIcons[category]}
-                      <div>
-                        <span className="font-medium">{category}</span>
-                        <span className="text-xs text-gray-500 ml-2">
-                          - {categoryDescriptions[category]}
-                        </span>
-                      </div>
                     </div>
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-            {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
-          </div>
-
-          {/* Seleccion visual de categoria */}
-          <div className="grid grid-cols-2 gap-2">
-            {PRODUCT_CATEGORIES.map((category) => (
-              <button
-                key={category}
-                type="button"
-                onClick={() => handleInputChange("category", category)}
-                className={`p-3 rounded-lg border-2 text-left transition-all ${
-                  formData.category === category
-                    ? "border-blue-500 bg-blue-50"
-                    : "border-gray-200 hover:border-gray-300"
-                }`}
-                disabled={isLoading}
-              >
-                <div className="flex items-center gap-2">
-                  <div className={`${formData.category === category ? "text-blue-600" : "text-gray-500"}`}>
-                    {categoryIcons[category]}
+                    <div>
+                      <p className={`text-sm font-medium ${formData.category === category ? "text-blue-700" : "text-gray-700"}`}>
+                        {category}
+                      </p>
+                      <p className="text-xs text-gray-500">{categoryDescriptions[category]}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className={`text-sm font-medium ${formData.category === category ? "text-blue-700" : "text-gray-700"}`}>
-                      {category}
-                    </p>
-                    <p className="text-xs text-gray-500">{categoryDescriptions[category]}</p>
-                  </div>
-                </div>
-              </button>
-            ))}
+                </button>
+              ))}
+            </div>
           </div>
 
           {/* Grupo */}
