@@ -6,11 +6,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProductType, Vendor, AssetState, Company, Site } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
-import { CreateProductTypeModal, PRODUCT_CATEGORIES, ProductCategory } from "./CreateProductTypeModal";
+import { CreateProductTypeModal, ProductCategory } from "./CreateProductTypeModal";
 import {
-  Monitor,
-  Headphones,
-  Cpu,
   Package,
   ChevronDown,
   ChevronUp,
@@ -28,22 +25,6 @@ interface CreateAssetModalProps {
   onSuccess: () => void;
   onProductTypeCreated?: (newProductType: ProductType) => void;
 }
-
-// Iconos por categoria
-const categoryIcons: Record<string, React.ReactNode> = {
-  "Equipo": <Monitor className="h-5 w-5" />,
-  "Accesorio": <Headphones className="h-5 w-5" />,
-  "Componente": <Cpu className="h-5 w-5" />,
-  "Otros": <Package className="h-5 w-5" />,
-};
-
-// Descripciones de categorias
-const categoryDescriptions: Record<string, string> = {
-  "Equipo": "Computadoras, laptops, servidores",
-  "Accesorio": "Teclados, mouse, monitores",
-  "Componente": "RAM, discos duros, tarjetas",
-  "Otros": "Otros tipos de activo",
-};
 
 export const CreateAssetModal = ({
   productTypes,
@@ -95,7 +76,6 @@ export const CreateAssetModal = ({
     warrantyExpiryDate: "",
   });
 
-  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
   const [filteredSites, setFilteredSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -108,11 +88,6 @@ export const CreateAssetModal = ({
   useEffect(() => {
     setLocalProductTypes(productTypes);
   }, [productTypes]);
-
-  // Filtrar tipos de productos por categoria seleccionada
-  const filteredProductTypes = selectedCategory
-    ? localProductTypes.filter(pt => pt.category === selectedCategory)
-    : localProductTypes;
 
   // Obtener la categoria del tipo de producto seleccionado
   const selectedProductType = localProductTypes.find(pt => pt.productTypeID === formData.productTypeID);
@@ -136,11 +111,6 @@ export const CreateAssetModal = ({
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
-  };
-
-  const handleCategorySelect = (category: ProductCategory) => {
-    setSelectedCategory(category);
-    setFormData(prev => ({ ...prev, productTypeID: 0 }));
   };
 
   const validateForm = () => {
@@ -287,7 +257,6 @@ export const CreateAssetModal = ({
       purchaseDate: "",
       warrantyExpiryDate: "",
     });
-    setSelectedCategory(null);
     setErrors({});
     setShowTechnical(true);
     setShowDates(false);
@@ -302,7 +271,6 @@ export const CreateAssetModal = ({
 
   const handleProductTypeCreated = (newProductType: ProductType) => {
     setLocalProductTypes(prev => [...prev, newProductType]);
-    setSelectedCategory(newProductType.category as ProductCategory);
     setFormData(prev => ({ ...prev, productTypeID: newProductType.productTypeID }));
     if (onProductTypeCreated) {
       onProductTypeCreated(newProductType);
@@ -597,38 +565,6 @@ export const CreateAssetModal = ({
             </Button>
           </div>
 
-          {/* Mini Menu de Categorias */}
-          <div className="p-4 bg-gray-50 border-b">
-            <p className="text-sm text-gray-600 mb-3 font-medium">Selecciona la categoria del activo:</p>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {PRODUCT_CATEGORIES.map((category) => (
-                <button
-                  key={category}
-                  type="button"
-                  onClick={() => handleCategorySelect(category)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
-                    selectedCategory === category
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300 bg-white"
-                  }`}
-                  disabled={isLoading}
-                >
-                  <div className="flex items-center gap-2">
-                    <div className={`${selectedCategory === category ? "text-blue-600" : "text-gray-500"}`}>
-                      {categoryIcons[category]}
-                    </div>
-                    <div>
-                      <p className={`text-sm font-medium ${selectedCategory === category ? "text-blue-700" : "text-gray-700"}`}>
-                        {category}
-                      </p>
-                      <p className="text-xs text-gray-500 hidden md:block">{categoryDescriptions[category]}</p>
-                    </div>
-                  </div>
-                </button>
-              ))}
-            </div>
-          </div>
-
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4">
             {/* Informacion Basica */}
@@ -676,21 +612,21 @@ export const CreateAssetModal = ({
                     disabled={isLoading}
                   >
                     <SelectTrigger className={errors.productTypeID ? "border-red-500" : ""}>
-                      <SelectValue placeholder={selectedCategory ? "Seleccionar tipo" : "Primero selecciona categoria"} />
+                      <SelectValue placeholder="Seleccionar tipo" />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value="none">Seleccionar tipo</SelectItem>
-                      {filteredProductTypes.map((pt) => (
+                      {localProductTypes.map((pt) => (
                         <SelectItem key={pt.productTypeID} value={pt.productTypeID.toString()}>
-                          {pt.name} ({pt.group} - {pt.subCategory})
+                          {pt.name} ({pt.category} - {pt.subCategory})
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                   {errors.productTypeID && <p className="text-red-500 text-xs mt-1">{errors.productTypeID}</p>}
-                  {filteredProductTypes.length === 0 && selectedCategory && (
+                  {localProductTypes.length === 0 && (
                     <p className="text-amber-600 text-xs mt-1">
-                      No hay tipos de activo en esta categoria. Crea uno nuevo.
+                      No hay tipos de activo disponibles. Crea uno nuevo.
                     </p>
                   )}
                 </div>
