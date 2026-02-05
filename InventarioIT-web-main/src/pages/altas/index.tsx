@@ -177,6 +177,15 @@ export default function Altas() {
     toast.success("Activo creado exitosamente");
   };
 
+  const handleProductTypeCreated = async () => {
+    try {
+      const productTypesRes = await api.productType.getAll().catch(() => []);
+      setProductTypes(productTypesRes);
+    } catch (error) {
+      console.error("Error reloading product types:", error);
+    }
+  };
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
       setSelectedAssets(new Set(paginatedAssets.map((a) => a.assetID)));
@@ -557,6 +566,7 @@ export default function Altas() {
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
             onSuccess={handleCreateSuccess}
+            onProductTypeCreated={handleProductTypeCreated}
           />
         </div>
       )}

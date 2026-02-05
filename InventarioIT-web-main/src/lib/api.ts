@@ -310,6 +310,35 @@ const api = {
       }[]>(`/product-type/category/${category}`);
       return response.data;
     },
+    getAvailableCategories: async () => {
+      const response = await apiClient.get<{
+        success: boolean;
+        data: string[];
+      }>("/product-type/available-categories");
+      return response.data;
+    },
+    create: async (data: { name: string; category: string; group: string; subCategory: string }) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+        data: {
+          productTypeID: number;
+          name: string;
+          category: string;
+          group: string;
+          subCategory: string;
+        };
+      }>("/product-type", data);
+      return response.data;
+    },
+    delete: async (productTypeID: number) => {
+      const response = await apiClient.delete<{
+        success: boolean;
+        message: string;
+        data: { productTypeID: number };
+      }>(`/product-type/${productTypeID}`);
+      return response.data;
+    },
   },
   vendor: {
     getAll: async () => {

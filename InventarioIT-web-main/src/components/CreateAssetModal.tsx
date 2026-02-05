@@ -6,17 +6,15 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProductType, Vendor, AssetState, Company, Site } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
+import { CreateProductTypeModal, PRODUCT_CATEGORIES, ProductCategory } from "./CreateProductTypeModal";
 import {
   Monitor,
-  Laptop,
-  Server,
-  Smartphone,
-  Printer,
-  HardDrive,
-  Wifi,
+  Headphones,
+  Cpu,
   Package,
   ChevronDown,
-  ChevronUp
+  ChevronUp,
+  Plus,
 } from "lucide-react";
 
 interface CreateAssetModalProps {
@@ -28,17 +26,23 @@ interface CreateAssetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onProductTypeCreated?: (newProductType: ProductType) => void;
 }
 
-// Iconos por categoría
+// Iconos por categoria
 const categoryIcons: Record<string, React.ReactNode> = {
-  "Computadoras": <Monitor className="h-5 w-5" />,
-  "Laptops": <Laptop className="h-5 w-5" />,
-  "Servidores": <Server className="h-5 w-5" />,
-  "Dispositivos Móviles": <Smartphone className="h-5 w-5" />,
-  "Impresoras": <Printer className="h-5 w-5" />,
-  "Almacenamiento": <HardDrive className="h-5 w-5" />,
-  "Red": <Wifi className="h-5 w-5" />,
+  "Equipo": <Monitor className="h-5 w-5" />,
+  "Accesorio": <Headphones className="h-5 w-5" />,
+  "Componente": <Cpu className="h-5 w-5" />,
+  "Otros": <Package className="h-5 w-5" />,
+};
+
+// Descripciones de categorias
+const categoryDescriptions: Record<string, string> = {
+  "Equipo": "Computadoras, laptops, servidores",
+  "Accesorio": "Teclados, mouse, monitores",
+  "Componente": "RAM, discos duros, tarjetas",
+  "Otros": "Otros tipos de activo",
 };
 
 export const CreateAssetModal = ({
@@ -50,58 +54,75 @@ export const CreateAssetModal = ({
   isOpen,
   onClose,
   onSuccess,
+  onProductTypeCreated,
 }: CreateAssetModalProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
 
   // Estado del formulario
   const [formData, setFormData] = useState({
-    // Datos básicos
+    // Datos basicos
     name: "",
     vendorID: 0,
     productTypeID: 0,
     assetState: 0,
     companyID: 0,
     siteID: 0,
-    // Detalles técnicos
+    // Detalles tecnicos basicos
     serialNum: "",
     assetTAG: "",
     model: "",
     productManuf: "",
-    // Detalles de red
+    // Detalles de red (Equipo)
     ipAddress: "",
     macAddress: "",
     domain: "",
-    // Detalles de hardware
+    // Detalles de hardware (Equipo)
     processor: "",
     ram: "",
     hddCapacity: "",
     operatingSystem: "",
+    // Detalles adicionales (Componente)
+    physicalMemory: "",
+    hddModel: "",
+    hddSerial: "",
+    // Detalles moviles (Otros)
+    imei: "",
+    platform: "",
+    osName: "",
+    osVersion: "",
     // Fechas
     purchaseDate: "",
     warrantyExpiryDate: "",
   });
 
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<ProductCategory | null>(null);
   const [filteredSites, setFilteredSites] = useState<Site[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const [showTechnical, setShowTechnical] = useState(false);
+  const [showTechnical, setShowTechnical] = useState(true);
   const [showDates, setShowDates] = useState(false);
+  const [isProductTypeModalOpen, setIsProductTypeModalOpen] = useState(false);
+  const [localProductTypes, setLocalProductTypes] = useState<ProductType[]>(productTypes);
 
-  // Obtener categorías únicas
-  const uniqueCategories = Array.from(new Set(productTypes.map(pt => pt.category))).filter(Boolean);
+  // Actualizar tipos de producto locales cuando cambien los props
+  useEffect(() => {
+    setLocalProductTypes(productTypes);
+  }, [productTypes]);
 
-  // Filtrar tipos de productos por categoría seleccionada
+  // Filtrar tipos de productos por categoria seleccionada
   const filteredProductTypes = selectedCategory
-    ? productTypes.filter(pt => pt.category === selectedCategory)
-    : productTypes;
+    ? localProductTypes.filter(pt => pt.category === selectedCategory)
+    : localProductTypes;
 
-  // Filtrar sitios cuando cambia la compañía
+  // Obtener la categoria del tipo de producto seleccionado
+  const selectedProductType = localProductTypes.find(pt => pt.productTypeID === formData.productTypeID);
+  const productTypeCategory = selectedProductType?.category as ProductCategory | undefined;
+
+  // Filtrar sitios cuando cambia la compania
   useEffect(() => {
     if (formData.companyID) {
       const filtered = sites.filter(site => site.companyID === formData.companyID);
       setFilteredSites(filtered);
-      // Reset siteID si no está en los sitios filtrados
       if (!filtered.find(s => s.siteID === formData.siteID)) {
         setFormData(prev => ({ ...prev, siteID: 0 }));
       }
@@ -117,9 +138,8 @@ export const CreateAssetModal = ({
     }
   };
 
-  const handleCategorySelect = (category: string) => {
+  const handleCategorySelect = (category: ProductCategory) => {
     setSelectedCategory(category);
-    // Reset productTypeID cuando cambia la categoría
     setFormData(prev => ({ ...prev, productTypeID: 0 }));
   };
 
@@ -165,6 +185,40 @@ export const CreateAssetModal = ({
     try {
       setIsLoading(true);
 
+      // Construir objeto de detalles segun la categoria
+      const detail: Record<string, string | undefined> = {
+        serialNum: formData.serialNum || undefined,
+        assetTAG: formData.assetTAG || undefined,
+        model: formData.model || undefined,
+        productManuf: formData.productManuf || undefined,
+        purchaseDate: formData.purchaseDate || undefined,
+        warrantyExpiryDate: formData.warrantyExpiryDate || undefined,
+      };
+
+      // Agregar campos segun la categoria
+      if (productTypeCategory === "Equipo" || productTypeCategory === "Otros") {
+        detail.ipAddress = formData.ipAddress || undefined;
+        detail.macAddress = formData.macAddress || undefined;
+        detail.domain = formData.domain || undefined;
+        detail.processor = formData.processor || undefined;
+        detail.ram = formData.ram || undefined;
+        detail.hddCapacity = formData.hddCapacity || undefined;
+        detail.operatingSystem = formData.operatingSystem || undefined;
+      }
+
+      if (productTypeCategory === "Componente" || productTypeCategory === "Otros") {
+        detail.physicalMemory = formData.physicalMemory || undefined;
+        detail.hddModel = formData.hddModel || undefined;
+        detail.hddSerial = formData.hddSerial || undefined;
+      }
+
+      if (productTypeCategory === "Otros") {
+        detail.imei = formData.imei || undefined;
+        detail.platform = formData.platform || undefined;
+        detail.osName = formData.osName || undefined;
+        detail.osVersion = formData.osVersion || undefined;
+      }
+
       const assetData = {
         name: formData.name,
         vendorID: formData.vendorID,
@@ -172,28 +226,12 @@ export const CreateAssetModal = ({
         assetState: formData.assetState,
         companyID: formData.companyID,
         siteID: formData.siteID,
-        detail: {
-          serialNum: formData.serialNum || undefined,
-          assetTAG: formData.assetTAG || undefined,
-          model: formData.model || undefined,
-          productManuf: formData.productManuf || undefined,
-          ipAddress: formData.ipAddress || undefined,
-          macAddress: formData.macAddress || undefined,
-          domain: formData.domain || undefined,
-          processor: formData.processor || undefined,
-          ram: formData.ram || undefined,
-          hddCapacity: formData.hddCapacity || undefined,
-          operatingSystem: formData.operatingSystem || undefined,
-          purchaseDate: formData.purchaseDate || undefined,
-          warrantyExpiryDate: formData.warrantyExpiryDate || undefined,
-        },
+        detail,
       };
 
       await api.asset.create(assetData);
 
-      // Reset form
       resetForm();
-
       showSuccess("Activo registrado exitosamente");
       onSuccess();
       onClose();
@@ -208,12 +246,12 @@ export const CreateAssetModal = ({
         if (status === 409) {
           showWarning("Ya existe un activo con estos datos");
         } else if (status === 400) {
-          showError(`Error de validación: ${message}`);
+          showError(`Error de validacion: ${message}`);
         } else {
           showError(`Error: ${message}`);
         }
       } else {
-        showError("Error inesperado. Por favor, intenta más tarde.");
+        showError("Error inesperado. Por favor, intenta mas tarde.");
       }
     } finally {
       setIsLoading(false);
@@ -239,12 +277,19 @@ export const CreateAssetModal = ({
       ram: "",
       hddCapacity: "",
       operatingSystem: "",
+      physicalMemory: "",
+      hddModel: "",
+      hddSerial: "",
+      imei: "",
+      platform: "",
+      osName: "",
+      osVersion: "",
       purchaseDate: "",
       warrantyExpiryDate: "",
     });
     setSelectedCategory(null);
     setErrors({});
-    setShowTechnical(false);
+    setShowTechnical(true);
     setShowDates(false);
   };
 
@@ -255,436 +300,596 @@ export const CreateAssetModal = ({
     }
   };
 
+  const handleProductTypeCreated = (newProductType: ProductType) => {
+    setLocalProductTypes(prev => [...prev, newProductType]);
+    setSelectedCategory(newProductType.category as ProductCategory);
+    setFormData(prev => ({ ...prev, productTypeID: newProductType.productTypeID }));
+    if (onProductTypeCreated) {
+      onProductTypeCreated(newProductType);
+    }
+  };
+
+  // Renderizar campos de detalles tecnicos segun la categoria
+  const renderTechnicalFields = () => {
+    if (!productTypeCategory) {
+      return (
+        <p className="text-sm text-gray-500 italic">
+          Selecciona un tipo de activo para ver los campos disponibles
+        </p>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Campos basicos - siempre visibles */}
+        <div>
+          <Label htmlFor="serialNum" className="text-sm font-medium">
+            Numero de Serie
+          </Label>
+          <Input
+            id="serialNum"
+            value={formData.serialNum}
+            onChange={(e) => handleInputChange("serialNum", e.target.value)}
+            placeholder="Ej: SN123456789"
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="assetTAG" className="text-sm font-medium">
+            Asset TAG
+          </Label>
+          <Input
+            id="assetTAG"
+            value={formData.assetTAG}
+            onChange={(e) => handleInputChange("assetTAG", e.target.value)}
+            placeholder="Ej: TAG-001"
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="model" className="text-sm font-medium">
+            Modelo
+          </Label>
+          <Input
+            id="model"
+            value={formData.model}
+            onChange={(e) => handleInputChange("model", e.target.value)}
+            placeholder="Ej: Dell Latitude 5520"
+            disabled={isLoading}
+          />
+        </div>
+
+        <div>
+          <Label htmlFor="productManuf" className="text-sm font-medium">
+            Fabricante
+          </Label>
+          <Input
+            id="productManuf"
+            value={formData.productManuf}
+            onChange={(e) => handleInputChange("productManuf", e.target.value)}
+            placeholder="Ej: Dell, HP, Lenovo"
+            disabled={isLoading}
+          />
+        </div>
+
+        {/* Campos de Equipo y Otros */}
+        {(productTypeCategory === "Equipo" || productTypeCategory === "Otros") && (
+          <>
+            <div>
+              <Label htmlFor="ipAddress" className="text-sm font-medium">
+                Direccion IP
+              </Label>
+              <Input
+                id="ipAddress"
+                value={formData.ipAddress}
+                onChange={(e) => handleInputChange("ipAddress", e.target.value)}
+                placeholder="Ej: 192.168.1.100"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="macAddress" className="text-sm font-medium">
+                Direccion MAC
+              </Label>
+              <Input
+                id="macAddress"
+                value={formData.macAddress}
+                onChange={(e) => handleInputChange("macAddress", e.target.value)}
+                placeholder="Ej: AA:BB:CC:DD:EE:FF"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="domain" className="text-sm font-medium">
+                Dominio
+              </Label>
+              <Input
+                id="domain"
+                value={formData.domain}
+                onChange={(e) => handleInputChange("domain", e.target.value)}
+                placeholder="Ej: empresa.local"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="processor" className="text-sm font-medium">
+                Procesador
+              </Label>
+              <Input
+                id="processor"
+                value={formData.processor}
+                onChange={(e) => handleInputChange("processor", e.target.value)}
+                placeholder="Ej: Intel Core i7-1185G7"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="ram" className="text-sm font-medium">
+                Memoria RAM
+              </Label>
+              <Input
+                id="ram"
+                value={formData.ram}
+                onChange={(e) => handleInputChange("ram", e.target.value)}
+                placeholder="Ej: 16 GB"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="hddCapacity" className="text-sm font-medium">
+                Capacidad Almacenamiento
+              </Label>
+              <Input
+                id="hddCapacity"
+                value={formData.hddCapacity}
+                onChange={(e) => handleInputChange("hddCapacity", e.target.value)}
+                placeholder="Ej: 512 GB SSD"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="operatingSystem" className="text-sm font-medium">
+                Sistema Operativo
+              </Label>
+              <Input
+                id="operatingSystem"
+                value={formData.operatingSystem}
+                onChange={(e) => handleInputChange("operatingSystem", e.target.value)}
+                placeholder="Ej: Windows 11 Pro"
+                disabled={isLoading}
+              />
+            </div>
+          </>
+        )}
+
+        {/* Campos de Componente y Otros */}
+        {(productTypeCategory === "Componente" || productTypeCategory === "Otros") && (
+          <>
+            <div>
+              <Label htmlFor="physicalMemory" className="text-sm font-medium">
+                Memoria Fisica
+              </Label>
+              <Input
+                id="physicalMemory"
+                value={formData.physicalMemory}
+                onChange={(e) => handleInputChange("physicalMemory", e.target.value)}
+                placeholder="Ej: 8 GB DDR4"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="hddModel" className="text-sm font-medium">
+                Modelo HDD/SSD
+              </Label>
+              <Input
+                id="hddModel"
+                value={formData.hddModel}
+                onChange={(e) => handleInputChange("hddModel", e.target.value)}
+                placeholder="Ej: Samsung 970 EVO"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="hddSerial" className="text-sm font-medium">
+                Serial HDD/SSD
+              </Label>
+              <Input
+                id="hddSerial"
+                value={formData.hddSerial}
+                onChange={(e) => handleInputChange("hddSerial", e.target.value)}
+                placeholder="Ej: S4EVNX0N123456"
+                disabled={isLoading}
+              />
+            </div>
+          </>
+        )}
+
+        {/* Campos adicionales solo para Otros */}
+        {productTypeCategory === "Otros" && (
+          <>
+            <div>
+              <Label htmlFor="imei" className="text-sm font-medium">
+                IMEI
+              </Label>
+              <Input
+                id="imei"
+                value={formData.imei}
+                onChange={(e) => handleInputChange("imei", e.target.value)}
+                placeholder="Ej: 353456789012345"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="platform" className="text-sm font-medium">
+                Plataforma
+              </Label>
+              <Input
+                id="platform"
+                value={formData.platform}
+                onChange={(e) => handleInputChange("platform", e.target.value)}
+                placeholder="Ej: Android, iOS"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="osName" className="text-sm font-medium">
+                Nombre SO
+              </Label>
+              <Input
+                id="osName"
+                value={formData.osName}
+                onChange={(e) => handleInputChange("osName", e.target.value)}
+                placeholder="Ej: Android"
+                disabled={isLoading}
+              />
+            </div>
+
+            <div>
+              <Label htmlFor="osVersion" className="text-sm font-medium">
+                Version SO
+              </Label>
+              <Input
+                id="osVersion"
+                value={formData.osVersion}
+                onChange={(e) => handleInputChange("osVersion", e.target.value)}
+                placeholder="Ej: 13.0"
+                disabled={isLoading}
+              />
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b">
-          <div className="flex items-center gap-2">
-            <Package className="h-5 w-5 text-blue-600" />
-            <h2 className="text-lg font-semibold">Registrar Nuevo Activo</h2>
+    <>
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-lg w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="flex items-center justify-between p-4 border-b">
+            <div className="flex items-center gap-2">
+              <Package className="h-5 w-5 text-blue-600" />
+              <h2 className="text-lg font-semibold">Registrar Nuevo Activo</h2>
+            </div>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleClose}
+              disabled={isLoading}
+              className="h-8 w-8"
+            >
+              X
+            </Button>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="h-8 w-8"
-          >
-            ×
-          </Button>
-        </div>
 
-        {/* Mini Menú de Categorías */}
-        <div className="p-4 bg-gray-50 border-b">
-          <p className="text-sm text-gray-600 mb-3 font-medium">Selecciona el tipo de activo:</p>
-          <div className="flex flex-wrap gap-2">
-            {uniqueCategories.map((category) => (
-              <Button
-                key={category}
-                type="button"
-                variant={selectedCategory === category ? "default" : "outline"}
-                size="sm"
-                onClick={() => handleCategorySelect(category)}
-                className="flex items-center gap-2"
-                disabled={isLoading}
-              >
-                {categoryIcons[category] || <Package className="h-4 w-4" />}
-                {category}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        {/* Formulario */}
-        <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4">
-          {/* Información Básica */}
-          <div className="mb-6">
-            <h3 className="text-sm font-semibold text-gray-700 mb-4 pb-2 border-b">
-              Información Básica
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {/* Nombre del Activo */}
-              <div>
-                <Label htmlFor="name" className="text-sm font-medium">
-                  Nombre del Activo *
-                </Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => handleInputChange("name", e.target.value)}
-                  className={errors.name ? "border-red-500" : ""}
-                  placeholder="Ej: PC-001, Laptop-HR-01"
-                  disabled={isLoading}
-                />
-                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-              </div>
-
-              {/* Tipo de Producto */}
-              <div>
-                <Label htmlFor="productTypeID" className="text-sm font-medium">
-                  Tipo de Activo *
-                </Label>
-                <Select
-                  value={formData.productTypeID ? formData.productTypeID.toString() : "none"}
-                  onValueChange={(value) => handleInputChange("productTypeID", value === "none" ? 0 : Number(value))}
+          {/* Mini Menu de Categorias */}
+          <div className="p-4 bg-gray-50 border-b">
+            <p className="text-sm text-gray-600 mb-3 font-medium">Selecciona la categoria del activo:</p>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+              {PRODUCT_CATEGORIES.map((category) => (
+                <button
+                  key={category}
+                  type="button"
+                  onClick={() => handleCategorySelect(category)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${
+                    selectedCategory === category
+                      ? "border-blue-500 bg-blue-50"
+                      : "border-gray-200 hover:border-gray-300 bg-white"
+                  }`}
                   disabled={isLoading}
                 >
-                  <SelectTrigger className={errors.productTypeID ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccionar tipo" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seleccionar tipo</SelectItem>
-                    {filteredProductTypes.map((pt) => (
-                      <SelectItem key={pt.productTypeID} value={pt.productTypeID.toString()}>
-                        {pt.name} ({pt.group})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.productTypeID && <p className="text-red-500 text-xs mt-1">{errors.productTypeID}</p>}
-              </div>
-
-              {/* Proveedor */}
-              <div>
-                <Label htmlFor="vendorID" className="text-sm font-medium">
-                  Proveedor *
-                </Label>
-                <Select
-                  value={formData.vendorID ? formData.vendorID.toString() : "none"}
-                  onValueChange={(value) => handleInputChange("vendorID", value === "none" ? 0 : Number(value))}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className={errors.vendorID ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccionar proveedor" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seleccionar proveedor</SelectItem>
-                    {vendors.map((vendor) => (
-                      <SelectItem key={vendor.vendorID} value={vendor.vendorID.toString()}>
-                        {vendor.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.vendorID && <p className="text-red-500 text-xs mt-1">{errors.vendorID}</p>}
-              </div>
-
-              {/* Estado */}
-              <div>
-                <Label htmlFor="assetState" className="text-sm font-medium">
-                  Estado *
-                </Label>
-                <Select
-                  value={formData.assetState ? formData.assetState.toString() : "none"}
-                  onValueChange={(value) => handleInputChange("assetState", value === "none" ? 0 : Number(value))}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className={errors.assetState ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccionar estado" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seleccionar estado</SelectItem>
-                    {assetStates.map((state) => (
-                      <SelectItem key={state.assetStateID} value={state.assetStateID.toString()}>
-                        {state.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.assetState && <p className="text-red-500 text-xs mt-1">{errors.assetState}</p>}
-              </div>
-
-              {/* Empresa */}
-              <div>
-                <Label htmlFor="companyID" className="text-sm font-medium">
-                  Empresa *
-                </Label>
-                <Select
-                  value={formData.companyID ? formData.companyID.toString() : "none"}
-                  onValueChange={(value) => handleInputChange("companyID", value === "none" ? 0 : Number(value))}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger className={errors.companyID ? "border-red-500" : ""}>
-                    <SelectValue placeholder="Seleccionar empresa" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seleccionar empresa</SelectItem>
-                    {companies.map((company) => (
-                      <SelectItem key={company.companyID} value={company.companyID.toString()}>
-                        {company.description}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.companyID && <p className="text-red-500 text-xs mt-1">{errors.companyID}</p>}
-              </div>
-
-              {/* Sitio */}
-              <div>
-                <Label htmlFor="siteID" className="text-sm font-medium">
-                  Sitio/Ubicación *
-                </Label>
-                <Select
-                  value={formData.siteID ? formData.siteID.toString() : "none"}
-                  onValueChange={(value) => handleInputChange("siteID", value === "none" ? 0 : Number(value))}
-                  disabled={isLoading || !formData.companyID}
-                >
-                  <SelectTrigger className={errors.siteID ? "border-red-500" : ""}>
-                    <SelectValue placeholder={formData.companyID ? "Seleccionar sitio" : "Primero selecciona empresa"} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="none">Seleccionar sitio</SelectItem>
-                    {filteredSites.map((site) => (
-                      <SelectItem key={site.siteID} value={site.siteID.toString()}>
-                        {site.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-                {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
-              </div>
+                  <div className="flex items-center gap-2">
+                    <div className={`${selectedCategory === category ? "text-blue-600" : "text-gray-500"}`}>
+                      {categoryIcons[category]}
+                    </div>
+                    <div>
+                      <p className={`text-sm font-medium ${selectedCategory === category ? "text-blue-700" : "text-gray-700"}`}>
+                        {category}
+                      </p>
+                      <p className="text-xs text-gray-500 hidden md:block">{categoryDescriptions[category]}</p>
+                    </div>
+                  </div>
+                </button>
+              ))}
             </div>
           </div>
 
-          {/* Detalles Técnicos (Colapsable) */}
-          <div className="mb-6">
-            <button
-              type="button"
-              onClick={() => setShowTechnical(!showTechnical)}
-              className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 mb-4 pb-2 border-b hover:text-blue-600"
-            >
-              <span>Detalles Técnicos (Opcional)</span>
-              {showTechnical ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
-
-            {showTechnical && (
+          {/* Formulario */}
+          <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4">
+            {/* Informacion Basica */}
+            <div className="mb-6">
+              <h3 className="text-sm font-semibold text-gray-700 mb-4 pb-2 border-b">
+                Informacion Basica
+              </h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Número de Serie */}
+                {/* Nombre del Activo */}
                 <div>
-                  <Label htmlFor="serialNum" className="text-sm font-medium">
-                    Número de Serie
+                  <Label htmlFor="name" className="text-sm font-medium">
+                    Nombre del Activo *
                   </Label>
                   <Input
-                    id="serialNum"
-                    value={formData.serialNum}
-                    onChange={(e) => handleInputChange("serialNum", e.target.value)}
-                    placeholder="Ej: SN123456789"
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => handleInputChange("name", e.target.value)}
+                    className={errors.name ? "border-red-500" : ""}
+                    placeholder="Ej: PC-001, Laptop-HR-01"
                     disabled={isLoading}
                   />
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                 </div>
 
-                {/* Asset TAG */}
+                {/* Tipo de Producto con boton para crear nuevo */}
                 <div>
-                  <Label htmlFor="assetTAG" className="text-sm font-medium">
-                    Asset TAG
-                  </Label>
-                  <Input
-                    id="assetTAG"
-                    value={formData.assetTAG}
-                    onChange={(e) => handleInputChange("assetTAG", e.target.value)}
-                    placeholder="Ej: TAG-001"
+                  <div className="flex items-center justify-between">
+                    <Label htmlFor="productTypeID" className="text-sm font-medium">
+                      Tipo de Activo *
+                    </Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setIsProductTypeModalOpen(true)}
+                      className="h-6 text-xs text-blue-600 hover:text-blue-700"
+                    >
+                      <Plus className="h-3 w-3 mr-1" />
+                      Crear nuevo
+                    </Button>
+                  </div>
+                  <Select
+                    value={formData.productTypeID ? formData.productTypeID.toString() : "none"}
+                    onValueChange={(value) => handleInputChange("productTypeID", value === "none" ? 0 : Number(value))}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger className={errors.productTypeID ? "border-red-500" : ""}>
+                      <SelectValue placeholder={selectedCategory ? "Seleccionar tipo" : "Primero selecciona categoria"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar tipo</SelectItem>
+                      {filteredProductTypes.map((pt) => (
+                        <SelectItem key={pt.productTypeID} value={pt.productTypeID.toString()}>
+                          {pt.name} ({pt.group} - {pt.subCategory})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.productTypeID && <p className="text-red-500 text-xs mt-1">{errors.productTypeID}</p>}
+                  {filteredProductTypes.length === 0 && selectedCategory && (
+                    <p className="text-amber-600 text-xs mt-1">
+                      No hay tipos de activo en esta categoria. Crea uno nuevo.
+                    </p>
+                  )}
                 </div>
 
-                {/* Modelo */}
+                {/* Proveedor */}
                 <div>
-                  <Label htmlFor="model" className="text-sm font-medium">
-                    Modelo
+                  <Label htmlFor="vendorID" className="text-sm font-medium">
+                    Proveedor *
                   </Label>
-                  <Input
-                    id="model"
-                    value={formData.model}
-                    onChange={(e) => handleInputChange("model", e.target.value)}
-                    placeholder="Ej: Dell Latitude 5520"
+                  <Select
+                    value={formData.vendorID ? formData.vendorID.toString() : "none"}
+                    onValueChange={(value) => handleInputChange("vendorID", value === "none" ? 0 : Number(value))}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger className={errors.vendorID ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Seleccionar proveedor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar proveedor</SelectItem>
+                      {vendors.map((vendor) => (
+                        <SelectItem key={vendor.vendorID} value={vendor.vendorID.toString()}>
+                          {vendor.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.vendorID && <p className="text-red-500 text-xs mt-1">{errors.vendorID}</p>}
                 </div>
 
-                {/* Fabricante */}
+                {/* Estado */}
                 <div>
-                  <Label htmlFor="productManuf" className="text-sm font-medium">
-                    Fabricante
+                  <Label htmlFor="assetState" className="text-sm font-medium">
+                    Estado *
                   </Label>
-                  <Input
-                    id="productManuf"
-                    value={formData.productManuf}
-                    onChange={(e) => handleInputChange("productManuf", e.target.value)}
-                    placeholder="Ej: Dell, HP, Lenovo"
+                  <Select
+                    value={formData.assetState ? formData.assetState.toString() : "none"}
+                    onValueChange={(value) => handleInputChange("assetState", value === "none" ? 0 : Number(value))}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger className={errors.assetState ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Seleccionar estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar estado</SelectItem>
+                      {assetStates.map((state) => (
+                        <SelectItem key={state.assetStateID} value={state.assetStateID.toString()}>
+                          {state.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.assetState && <p className="text-red-500 text-xs mt-1">{errors.assetState}</p>}
                 </div>
 
-                {/* IP Address */}
+                {/* Empresa */}
                 <div>
-                  <Label htmlFor="ipAddress" className="text-sm font-medium">
-                    Dirección IP
+                  <Label htmlFor="companyID" className="text-sm font-medium">
+                    Empresa *
                   </Label>
-                  <Input
-                    id="ipAddress"
-                    value={formData.ipAddress}
-                    onChange={(e) => handleInputChange("ipAddress", e.target.value)}
-                    placeholder="Ej: 192.168.1.100"
+                  <Select
+                    value={formData.companyID ? formData.companyID.toString() : "none"}
+                    onValueChange={(value) => handleInputChange("companyID", value === "none" ? 0 : Number(value))}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger className={errors.companyID ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Seleccionar empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar empresa</SelectItem>
+                      {companies.map((company) => (
+                        <SelectItem key={company.companyID} value={company.companyID.toString()}>
+                          {company.description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.companyID && <p className="text-red-500 text-xs mt-1">{errors.companyID}</p>}
                 </div>
 
-                {/* MAC Address */}
+                {/* Sitio */}
                 <div>
-                  <Label htmlFor="macAddress" className="text-sm font-medium">
-                    Dirección MAC
+                  <Label htmlFor="siteID" className="text-sm font-medium">
+                    Sitio/Ubicacion *
                   </Label>
-                  <Input
-                    id="macAddress"
-                    value={formData.macAddress}
-                    onChange={(e) => handleInputChange("macAddress", e.target.value)}
-                    placeholder="Ej: AA:BB:CC:DD:EE:FF"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* Dominio */}
-                <div>
-                  <Label htmlFor="domain" className="text-sm font-medium">
-                    Dominio
-                  </Label>
-                  <Input
-                    id="domain"
-                    value={formData.domain}
-                    onChange={(e) => handleInputChange("domain", e.target.value)}
-                    placeholder="Ej: empresa.local"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* Procesador */}
-                <div>
-                  <Label htmlFor="processor" className="text-sm font-medium">
-                    Procesador
-                  </Label>
-                  <Input
-                    id="processor"
-                    value={formData.processor}
-                    onChange={(e) => handleInputChange("processor", e.target.value)}
-                    placeholder="Ej: Intel Core i7-1185G7"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* RAM */}
-                <div>
-                  <Label htmlFor="ram" className="text-sm font-medium">
-                    Memoria RAM
-                  </Label>
-                  <Input
-                    id="ram"
-                    value={formData.ram}
-                    onChange={(e) => handleInputChange("ram", e.target.value)}
-                    placeholder="Ej: 16 GB"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* Capacidad HDD */}
-                <div>
-                  <Label htmlFor="hddCapacity" className="text-sm font-medium">
-                    Capacidad Almacenamiento
-                  </Label>
-                  <Input
-                    id="hddCapacity"
-                    value={formData.hddCapacity}
-                    onChange={(e) => handleInputChange("hddCapacity", e.target.value)}
-                    placeholder="Ej: 512 GB SSD"
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* Sistema Operativo */}
-                <div>
-                  <Label htmlFor="operatingSystem" className="text-sm font-medium">
-                    Sistema Operativo
-                  </Label>
-                  <Input
-                    id="operatingSystem"
-                    value={formData.operatingSystem}
-                    onChange={(e) => handleInputChange("operatingSystem", e.target.value)}
-                    placeholder="Ej: Windows 11 Pro"
-                    disabled={isLoading}
-                  />
+                  <Select
+                    value={formData.siteID ? formData.siteID.toString() : "none"}
+                    onValueChange={(value) => handleInputChange("siteID", value === "none" ? 0 : Number(value))}
+                    disabled={isLoading || !formData.companyID}
+                  >
+                    <SelectTrigger className={errors.siteID ? "border-red-500" : ""}>
+                      <SelectValue placeholder={formData.companyID ? "Seleccionar sitio" : "Primero selecciona empresa"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar sitio</SelectItem>
+                      {filteredSites.map((site) => (
+                        <SelectItem key={site.siteID} value={site.siteID.toString()}>
+                          {site.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
                 </div>
               </div>
-            )}
-          </div>
+            </div>
 
-          {/* Fechas (Colapsable) */}
-          <div className="mb-6">
-            <button
+            {/* Detalles Tecnicos (Colapsable) */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => setShowTechnical(!showTechnical)}
+                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 mb-4 pb-2 border-b hover:text-blue-600"
+              >
+                <span>
+                  Detalles Tecnicos
+                  {productTypeCategory && (
+                    <span className="ml-2 text-xs font-normal text-blue-600">
+                      (Plantilla: {productTypeCategory})
+                    </span>
+                  )}
+                </span>
+                {showTechnical ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+
+              {showTechnical && renderTechnicalFields()}
+            </div>
+
+            {/* Fechas (Colapsable) */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => setShowDates(!showDates)}
+                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 mb-4 pb-2 border-b hover:text-blue-600"
+              >
+                <span>Fechas (Opcional)</span>
+                {showDates ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+
+              {showDates && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="purchaseDate" className="text-sm font-medium">
+                      Fecha de Compra
+                    </Label>
+                    <Input
+                      id="purchaseDate"
+                      type="date"
+                      value={formData.purchaseDate}
+                      onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+
+                  <div>
+                    <Label htmlFor="warrantyExpiryDate" className="text-sm font-medium">
+                      Vencimiento de Garantia
+                    </Label>
+                    <Input
+                      id="warrantyExpiryDate"
+                      type="date"
+                      value={formData.warrantyExpiryDate}
+                      onChange={(e) => handleInputChange("warrantyExpiryDate", e.target.value)}
+                      disabled={isLoading}
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </form>
+
+          {/* Footer */}
+          <div className="flex gap-2 p-4 border-t bg-gray-50">
+            <Button
               type="button"
-              onClick={() => setShowDates(!showDates)}
-              className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 mb-4 pb-2 border-b hover:text-blue-600"
+              variant="outline"
+              onClick={handleClose}
+              disabled={isLoading}
+              className="flex-1"
             >
-              <span>Fechas (Opcional)</span>
-              {showDates ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-            </button>
-
-            {showDates && (
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {/* Fecha de Compra */}
-                <div>
-                  <Label htmlFor="purchaseDate" className="text-sm font-medium">
-                    Fecha de Compra
-                  </Label>
-                  <Input
-                    id="purchaseDate"
-                    type="date"
-                    value={formData.purchaseDate}
-                    onChange={(e) => handleInputChange("purchaseDate", e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-
-                {/* Fecha de Vencimiento de Garantía */}
-                <div>
-                  <Label htmlFor="warrantyExpiryDate" className="text-sm font-medium">
-                    Vencimiento de Garantía
-                  </Label>
-                  <Input
-                    id="warrantyExpiryDate"
-                    type="date"
-                    value={formData.warrantyExpiryDate}
-                    onChange={(e) => handleInputChange("warrantyExpiryDate", e.target.value)}
-                    disabled={isLoading}
-                  />
-                </div>
-              </div>
-            )}
+              Cancelar
+            </Button>
+            <Button
+              type="submit"
+              onClick={handleSubmit}
+              disabled={isLoading}
+              className="flex-1 bg-blue-600 hover:bg-blue-700"
+            >
+              {isLoading ? "Registrando..." : "Registrar Activo"}
+            </Button>
           </div>
-        </form>
-
-        {/* Footer */}
-        <div className="flex gap-2 p-4 border-t bg-gray-50">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="flex-1 bg-blue-600 hover:bg-blue-700"
-          >
-            {isLoading ? "Registrando..." : "Registrar Activo"}
-          </Button>
         </div>
       </div>
-    </div>
+
+      {/* Modal para crear tipo de producto */}
+      <CreateProductTypeModal
+        isOpen={isProductTypeModalOpen}
+        onClose={() => setIsProductTypeModalOpen(false)}
+        onSuccess={handleProductTypeCreated}
+      />
+    </>
   );
 };
