@@ -1,9 +1,15 @@
-import { Controller, Get, Patch, Param, Body } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Param, Body } from '@nestjs/common';
 import { DashboardPathService } from './dashboard-path.service';
+import { CreateDashboardPathDto } from './dto/create-dashboard-path.dto';
 
 @Controller('dashboard-path')
 export class DashboardPathController {
   constructor(private readonly dashboardPathService: DashboardPathService) {}
+
+  @Post()
+  create(@Body() createDashboardPathDto: CreateDashboardPathDto) {
+    return this.dashboardPathService.create(createDashboardPathDto);
+  }
 
   @Get()
   findAll() {

@@ -128,6 +128,14 @@ const api = {
       }[]>("/dashboard-path");
       return response.data;
     },
+    create: async (data: { path: string; name: string }) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+        data: { dashboarpathID: number; path: string; name: string; icon?: string };
+      }>("/dashboard-path", data);
+      return response.data;
+    },
   },
   user: {
         verify: async (email: string) => {
