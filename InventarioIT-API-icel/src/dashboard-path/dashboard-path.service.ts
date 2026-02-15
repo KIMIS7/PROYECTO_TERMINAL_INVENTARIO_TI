@@ -2,14 +2,52 @@ import {
   ConflictException,
   Injectable,
   InternalServerErrorException,
+  Logger,
   NotFoundException,
+  OnModuleInit,
 } from '@nestjs/common';
 import { CreateDashboardPathDto } from './dto/create-dashboard-path.dto';
 import { PrismaShopic } from 'src/database/database.service';
 
 @Injectable()
-export class DashboardPathService {
+export class DashboardPathService implements OnModuleInit {
+  private readonly logger = new Logger(DashboardPathService.name);
+
   constructor(private readonly prismaShopic: PrismaShopic) {}
+
+  async onModuleInit() {
+    await this.seedRequiredPaths();
+  }
+
+  private async seedRequiredPaths() {
+    const requiredPaths = [
+      { path: '/movimientos', name: 'Movimientos' },
+    ];
+
+    for (const requiredPath of requiredPaths) {
+      try {
+        const exists = await this.prismaShopic.dashboard_paths.findUnique({
+          where: { path: requiredPath.path },
+        });
+
+        if (!exists) {
+          await this.prismaShopic.dashboard_paths.create({
+            data: {
+              path: requiredPath.path,
+              name: requiredPath.name,
+            },
+          });
+          this.logger.log(
+            `Ruta "${requiredPath.name}" (${requiredPath.path}) creada automáticamente`,
+          );
+        }
+      } catch (error) {
+        this.logger.warn(
+          `No se pudo crear la ruta "${requiredPath.path}": ${error.message}`,
+        );
+      }
+    }
+  }
 
   async create(createDashboardPathDto: CreateDashboardPathDto) {
     // Verificar si ya existe un path con la misma ruta

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { RefreshCw, Search, Plus, Shield, PackagePlus } from "lucide-react";
+import { RefreshCw, Search, Plus, Shield } from "lucide-react";
 import { Role, DashboardPath, RolePermission } from "@/types";
 
 interface PermissionManagementPanelProps {
@@ -11,7 +11,6 @@ interface PermissionManagementPanelProps {
   dashboardPaths: DashboardPath[];
   onRefresh: () => void;
   onAssignPermission: () => void;
-  onAddModule: () => void;
   onSearch: (searchTerm: string) => void;
   onFilterByRole: (roleId: number | null) => void;
   onFilterByPath: (pathId: number | null) => void;
@@ -23,7 +22,6 @@ export const PermissionManagementPanel = ({
   dashboardPaths,
   onRefresh,
   onAssignPermission,
-  onAddModule,
   onSearch,
   onFilterByRole,
   onFilterByPath,
@@ -77,10 +75,6 @@ export const PermissionManagementPanel = ({
           <Button onClick={onAssignPermission} className="flex items-center gap-2">
             <Plus className="h-4 w-4" />
             Asignar Permiso
-          </Button>
-          <Button variant="outline" onClick={onAddModule} className="flex items-center gap-2">
-            <PackagePlus className="h-4 w-4" />
-            Agregar Módulo
           </Button>
           <Button variant="outline" onClick={onRefresh} className="flex items-center gap-2">
             <RefreshCw className="h-4 w-4" />

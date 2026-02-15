@@ -6,7 +6,6 @@ import { Role, DashboardPath, RolePermission } from "@/types";
 import api from "@/lib/api";
 import { PermissionManagementPanel } from "@/components/PermissionManagementPanel";
 import { AssignPermissionModal } from "@/components/AssignPermissionModal";
-import { CreateModuleModal } from "@/components/CreateModuleModal";
 import { useNotifications } from "@/hooks/useNotifications";
 
 export default function PermisosPage() {
@@ -17,7 +16,6 @@ export default function PermisosPage() {
   const [filteredPermissions, setFilteredPermissions] = useState<RolePermission[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isAssignModalOpen, setIsAssignModalOpen] = useState(false);
-  const [isModuleModalOpen, setIsModuleModalOpen] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
@@ -59,15 +57,7 @@ export default function PermisosPage() {
     setIsAssignModalOpen(true);
   };
 
-  const handleAddModule = () => {
-    setIsModuleModalOpen(true);
-  };
-
   const handleAssignSuccess = () => {
-    fetchData();
-  };
-
-  const handleModuleSuccess = () => {
     fetchData();
   };
 
@@ -124,7 +114,6 @@ export default function PermisosPage() {
             dashboardPaths={dashboardPaths}
             onRefresh={handleRefresh}
             onAssignPermission={handleAssignPermission}
-            onAddModule={handleAddModule}
             onSearch={handleSearch}
             onFilterByRole={handleFilterByRole}
             onFilterByPath={handleFilterByPath}
@@ -144,12 +133,6 @@ export default function PermisosPage() {
             isOpen={isAssignModalOpen}
             onClose={() => setIsAssignModalOpen(false)}
             onSuccess={handleAssignSuccess}
-          />
-
-          <CreateModuleModal
-            isOpen={isModuleModalOpen}
-            onClose={() => setIsModuleModalOpen(false)}
-            onSuccess={handleModuleSuccess}
           />
         </div>
       )}
