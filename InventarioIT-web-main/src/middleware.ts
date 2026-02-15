@@ -22,5 +22,6 @@ export const config = {
         "/usuarios/:path*",
         "/permisos/:path*",
         "/puertos-origen/:path*",
+        "/movimientos/:path*",
     ],
 };

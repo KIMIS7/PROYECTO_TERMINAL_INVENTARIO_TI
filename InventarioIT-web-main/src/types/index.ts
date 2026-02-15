@@ -133,6 +133,35 @@ export interface AssetDetail {
   lastUpdateBy: number;
 }
 
+// Tipos para Movimientos
+export const MOVEMENT_TYPES = ['ALTA', 'BAJA', 'REASIGNACION', 'PRESTAMO'] as const;
+export type MovementType = (typeof MOVEMENT_TYPES)[number];
+
+export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
+  ALTA: 'Alta',
+  BAJA: 'Baja',
+  REASIGNACION: 'Reasignación',
+  PRESTAMO: 'Préstamo',
+};
+
+export interface Movement {
+  movementID: number;
+  assetID: number;
+  assetName: string;
+  movementType: MovementType;
+  description: string | null;
+  responsible: string | null;
+  createdTime: string;
+  createdBy: string | null;
+}
+
+export interface CreateMovementDto {
+  assetID: number;
+  movementType: MovementType;
+  description?: string;
+  responsible?: string;
+}
+
 export interface CreateAssetDto {
   name: string;
   vendorID: number;

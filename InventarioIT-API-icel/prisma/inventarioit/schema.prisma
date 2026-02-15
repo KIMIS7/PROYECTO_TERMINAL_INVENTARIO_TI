@@ -25,6 +25,7 @@ model Asset {
   AssetDetail                             AssetDetail[]
   AssetHistory                            AssetHistory[]
   AssetOwnershipHistory                   AssetOwnershipHistory[]
+  Movement                                Movement[]
 }
 
 model AssetDetail {
@@ -77,6 +78,17 @@ model AssetHistory {
   Description    String   @db.NVarChar(500)
   CreatedTime    DateTime @db.DateTime
   Asset          Asset    @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_AssetHistory_Asset")
+}
+
+model Movement {
+  MovementID    Int      @id(map: "PK_Movement") @default(autoincrement())
+  AssetID       Int
+  MovementType  String   @db.NVarChar(50)
+  Description   String?  @db.NVarChar(500)
+  Responsible   String?  @db.NVarChar(255)
+  CreatedTime   DateTime @db.DateTime
+  CreatedBy     String?  @db.NVarChar(100)
+  Asset         Asset    @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_Movement_Asset")
 }
 
 model AssetOwnershipHistory {

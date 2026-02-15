@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getSession } from "next-auth/react";
-import { User } from "@/types";
+import { User, Movement, CreateMovementDto } from "@/types";
 
 // Verificar que la URL de la API esté configurada correctamente
 const apiBaseUrl = process.env.NEXT_PUBLIC_API || "http://localhost:5000/";
@@ -285,6 +285,21 @@ const api = {
     },
     delete: async (assetID: number) => {
       const response = await apiClient.delete<{ success: boolean; message: string }>(`/asset/${assetID}`);
+      return response.data;
+    },
+  },
+  // Movimientos de activos
+  movement: {
+    create: async (data: CreateMovementDto) => {
+      const response = await apiClient.post<{ success: boolean; message: string; data: { movementID: number; assetID: number; movementType: string } }>("/movement", data);
+      return response.data;
+    },
+    getAll: async () => {
+      const response = await apiClient.get<Movement[]>("/movement");
+      return response.data;
+    },
+    getByAssetId: async (assetID: number) => {
+      const response = await apiClient.get<Movement[]>(`/movement/asset/${assetID}`);
       return response.data;
     },
   },
