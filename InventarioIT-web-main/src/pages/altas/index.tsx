@@ -3,6 +3,7 @@ import { useEffect, useState, useMemo } from "react";
 import { ProductType, Vendor, AssetState, Company, Site, Asset } from "@/types";
 import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
+import { EditAssetModal } from "@/components/EditAssetModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -56,6 +57,8 @@ export default function Altas() {
   const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
 
   // Estados para filtros y selección
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -206,8 +209,18 @@ export default function Altas() {
 
   const handleEdit = () => {
     if (selectedAssets.size === 1) {
-      toast.info("Funcionalidad de edición en desarrollo");
+      const assetID = Array.from(selectedAssets)[0];
+      const asset = assets.find((a) => a.assetID === assetID);
+      if (asset) {
+        setEditingAsset(asset);
+        setIsEditModalOpen(true);
+      }
     }
+  };
+
+  const handleEditSuccess = () => {
+    loadAssets();
+    setSelectedAssets(new Set());
   };
 
   const handleDelete = async () => {
@@ -568,6 +581,24 @@ export default function Altas() {
             onSuccess={handleCreateSuccess}
             onProductTypeCreated={handleProductTypeCreated}
           />
+
+          {/* Modal de Editar Activo */}
+          {editingAsset && (
+            <EditAssetModal
+              asset={editingAsset}
+              productTypes={productTypes}
+              vendors={vendors}
+              assetStates={assetStates}
+              companies={companies}
+              sites={sites}
+              isOpen={isEditModalOpen}
+              onClose={() => {
+                setIsEditModalOpen(false);
+                setEditingAsset(null);
+              }}
+              onSuccess={handleEditSuccess}
+            />
+          )}
         </div>
       )}
     </MainLayout>
