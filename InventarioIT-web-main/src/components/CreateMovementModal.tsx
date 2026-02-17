@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,13 +32,22 @@ export const CreateMovementModal = ({
   onSuccess,
 }: CreateMovementModalProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
+  const { data: session } = useSession();
+
+  const userName = session?.user?.name || "";
 
   const [formData, setFormData] = useState({
     assetID: preselectedAssetID || 0,
     movementType: "" as MovementType | "",
     description: "",
-    responsible: "",
+    responsible: userName,
   });
+
+  useEffect(() => {
+    if (userName) {
+      setFormData((prev) => ({ ...prev, responsible: userName }));
+    }
+  }, [userName]);
 
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -109,7 +119,7 @@ export const CreateMovementModal = ({
       assetID: preselectedAssetID || 0,
       movementType: "",
       description: "",
-      responsible: "",
+      responsible: userName,
     });
     setErrors({});
   };
@@ -247,11 +257,8 @@ export const CreateMovementModal = ({
               <Input
                 id="responsible"
                 value={formData.responsible}
-                onChange={(e) =>
-                  handleInputChange("responsible", e.target.value)
-                }
-                placeholder="Nombre del responsable del movimiento"
-                disabled={isLoading}
+                readOnly
+                className="bg-gray-100 cursor-not-allowed"
               />
             </div>
 
