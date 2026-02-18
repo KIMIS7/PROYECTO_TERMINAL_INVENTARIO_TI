@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
-import { X, Search, ChevronRight } from "lucide-react";
+import { X, Search, ChevronRight, Pin, PinOff } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 export interface FilterChip {
@@ -30,6 +30,9 @@ interface OmniboxFilterProps {
   searchQuery: string;
   onSearchQueryChange: (query: string) => void;
   placeholder?: string;
+  /** Si true, la barra siempre está expandida */
+  pinned?: boolean;
+  onPinnedChange?: (pinned: boolean) => void;
 }
 
 type DropdownMode = "facets" | "values";
@@ -60,6 +63,8 @@ export function OmniboxFilter({
   searchQuery,
   onSearchQueryChange,
   placeholder = "Buscar o filtrar por atributo...",
+  pinned = false,
+  onPinnedChange,
 }: OmniboxFilterProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
@@ -84,15 +89,15 @@ export function OmniboxFilter({
       ) {
         // Close dropdown always
         resetDropdown();
-        // Collapse if no active filters/search
-        if (!hasContent) {
+        // Collapse if no active filters/search and not pinned
+        if (!hasContent && !pinned) {
           setIsExpanded(false);
         }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, [hasContent]);
+  }, [hasContent, pinned]);
 
   const resetDropdown = useCallback(() => {
     setIsDropdownOpen(false);
@@ -108,7 +113,7 @@ export function OmniboxFilter({
   };
 
   const handleCollapse = () => {
-    if (!hasContent) {
+    if (!hasContent && !pinned) {
       setIsExpanded(false);
     }
     resetDropdown();
@@ -254,9 +259,11 @@ export function OmniboxFilter({
     setInputValue("");
     setSelectedFacet(null);
     setMode("facets");
-    // Collapse since there's no content anymore
-    setIsExpanded(false);
     setIsDropdownOpen(false);
+    // Collapse only if not pinned
+    if (!pinned) {
+      setIsExpanded(false);
+    }
   };
 
   const getChipColors = (facetKey: string) =>
@@ -265,8 +272,8 @@ export function OmniboxFilter({
       badge: "bg-gray-100 text-gray-700",
     };
 
-  // === Collapsed state: just a search icon ===
-  if (!isExpanded && !hasContent) {
+  // === Collapsed state: just a search icon (only if not pinned) ===
+  if (!isExpanded && !hasContent && !pinned) {
     return (
       <button
         onClick={handleExpand}
@@ -349,17 +356,38 @@ export function OmniboxFilter({
           }
         />
 
+        {/* Pin toggle */}
+        {onPinnedChange && (
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onPinnedChange(!pinned);
+            }}
+            className={cn(
+              "shrink-0 p-1 rounded-md transition-colors",
+              pinned
+                ? "text-blue-500 hover:text-blue-700 hover:bg-blue-50"
+                : "text-gray-400 hover:text-gray-600 hover:bg-gray-100"
+            )}
+            title={pinned ? "Desfijar barra de búsqueda" : "Fijar barra de búsqueda"}
+          >
+            {pinned ? <Pin className="h-3.5 w-3.5" /> : <PinOff className="h-3.5 w-3.5" />}
+          </button>
+        )}
+
         {/* Clear all / Close button */}
-        <button
-          onClick={hasContent ? handleClearAll : (e) => {
-            e.stopPropagation();
-            handleCollapse();
-          }}
-          className="shrink-0 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-          title={hasContent ? "Limpiar todo" : "Cerrar"}
-        >
-          <X className="h-3.5 w-3.5" />
-        </button>
+        {(hasContent || !pinned) && (
+          <button
+            onClick={hasContent ? handleClearAll : (e) => {
+              e.stopPropagation();
+              handleCollapse();
+            }}
+            className="shrink-0 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+            title={hasContent ? "Limpiar todo" : "Cerrar"}
+          >
+            <X className="h-3.5 w-3.5" />
+          </button>
+        )}
       </div>
 
       {/* Dropdown */}

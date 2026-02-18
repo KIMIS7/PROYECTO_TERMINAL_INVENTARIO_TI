@@ -64,6 +64,7 @@ export default function Altas() {
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
+  const [isSearchPinned, setIsSearchPinned] = useState(false);
 
   // Estados para paginación y vista
   const [currentPage, setCurrentPage] = useState(1);
@@ -391,6 +392,8 @@ export default function Altas() {
               onChipsChange={setFilterChips}
               searchQuery={searchQuery}
               onSearchQueryChange={setSearchQuery}
+              pinned={isSearchPinned}
+              onPinnedChange={setIsSearchPinned}
             />
 
             {/* Acciones */}
