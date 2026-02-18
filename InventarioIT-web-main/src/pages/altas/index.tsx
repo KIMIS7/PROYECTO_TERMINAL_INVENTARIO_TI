@@ -4,6 +4,7 @@ import { ProductType, Vendor, AssetState, Company, Site, Asset } from "@/types";
 import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
 import { EditAssetModal } from "@/components/EditAssetModal";
+import { AssetDetailModal } from "@/components/AssetDetailModal";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -59,6 +60,8 @@ export default function Altas() {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailAssetID, setDetailAssetID] = useState<number | null>(null);
 
   // Estados para filtros y selección
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
@@ -221,6 +224,21 @@ export default function Altas() {
   const handleEditSuccess = () => {
     loadAssets();
     setSelectedAssets(new Set());
+  };
+
+  const handleOpenDetail = (assetID: number) => {
+    setDetailAssetID(assetID);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleDetailToEdit = (asset: Asset) => {
+    setEditingAsset(asset);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDirectEdit = (asset: Asset) => {
+    setEditingAsset(asset);
+    setIsEditModalOpen(true);
   };
 
   const handleDelete = async () => {
@@ -527,16 +545,32 @@ export default function Altas() {
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">
-                            <button className="p-1 hover:bg-gray-100 rounded">
-                              <Settings className="h-4 w-4 text-gray-400" />
+                            <button
+                              className="p-1 hover:bg-amber-50 rounded transition-colors"
+                              title="Editar activo"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDirectEdit(asset);
+                              }}
+                            >
+                              <Pencil className="h-4 w-4 text-gray-400 hover:text-amber-600" />
                             </button>
                             {asset.user && (
                               <Paperclip className="h-4 w-4 text-gray-400" />
                             )}
                           </div>
                         </TableCell>
-                        <TableCell className="font-medium text-gray-900 max-w-[250px] truncate">
-                          {asset.name}
+                        <TableCell className="max-w-[250px]">
+                          <button
+                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate block text-left max-w-full"
+                            title="Ver ficha tecnica"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDetail(asset.assetID);
+                            }}
+                          >
+                            {asset.name}
+                          </button>
                         </TableCell>
                         <TableCell className="text-gray-600">
                           {asset.user?.name || "-"}
@@ -597,6 +631,19 @@ export default function Altas() {
                 setEditingAsset(null);
               }}
               onSuccess={handleEditSuccess}
+            />
+          )}
+
+          {/* Modal de Ficha Tecnica */}
+          {detailAssetID && (
+            <AssetDetailModal
+              assetID={detailAssetID}
+              isOpen={isDetailModalOpen}
+              onClose={() => {
+                setIsDetailModalOpen(false);
+                setDetailAssetID(null);
+              }}
+              onEdit={handleDetailToEdit}
             />
           )}
         </div>
