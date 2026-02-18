@@ -61,7 +61,8 @@ export function OmniboxFilter({
   onSearchQueryChange,
   placeholder = "Buscar o filtrar por atributo...",
 }: OmniboxFilterProps) {
-  const [isOpen, setIsOpen] = useState(false);
+  const [isExpanded, setIsExpanded] = useState(false);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [mode, setMode] = useState<DropdownMode>("facets");
   const [selectedFacet, setSelectedFacet] = useState<Facet | null>(null);
   const [inputValue, setInputValue] = useState("");
@@ -71,26 +72,47 @@ export function OmniboxFilter({
   const containerRef = useRef<HTMLDivElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Click outside to close
+  // Whether the bar should stay expanded (has active content)
+  const hasContent = chips.length > 0 || searchQuery.trim().length > 0;
+
+  // Click outside handler
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
       if (
         containerRef.current &&
         !containerRef.current.contains(e.target as Node)
       ) {
-        closeDropdown();
+        // Close dropdown always
+        resetDropdown();
+        // Collapse if no active filters/search
+        if (!hasContent) {
+          setIsExpanded(false);
+        }
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
+  }, [hasContent]);
 
-  const closeDropdown = useCallback(() => {
-    setIsOpen(false);
+  const resetDropdown = useCallback(() => {
+    setIsDropdownOpen(false);
     setMode("facets");
     setSelectedFacet(null);
     setInputValue("");
   }, []);
+
+  const handleExpand = () => {
+    setIsExpanded(true);
+    // Focus input on next tick after render
+    setTimeout(() => inputRef.current?.focus(), 0);
+  };
+
+  const handleCollapse = () => {
+    if (!hasContent) {
+      setIsExpanded(false);
+    }
+    resetDropdown();
+  };
 
   // Filtered facet list
   const filteredFacets = useMemo(() => {
@@ -102,7 +124,6 @@ export function OmniboxFilter({
   // Filtered values for selected facet
   const filteredValues = useMemo(() => {
     if (!selectedFacet) return [];
-    // Exclude values already selected for this facet
     const usedValues = new Set(
       chips.filter((c) => c.facet === selectedFacet.key).map((c) => c.value)
     );
@@ -160,23 +181,24 @@ export function OmniboxFilter({
   };
 
   const handleRemoveChip = (chipId: string) => {
-    onChipsChange(chips.filter((c) => c.id !== chipId));
+    const newChips = chips.filter((c) => c.id !== chipId);
+    onChipsChange(newChips);
+    // If removing last chip and no search query, keep expanded but let click-outside handle collapse
     inputRef.current?.focus();
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const val = e.target.value;
     setInputValue(val);
-    if (!isOpen) setIsOpen(true);
+    if (!isDropdownOpen) setIsDropdownOpen(true);
 
-    // In facets mode, update the search query for free-text search
     if (mode === "facets") {
       onSearchQueryChange(val);
     }
   };
 
   const handleInputFocus = () => {
-    setIsOpen(true);
+    setIsDropdownOpen(true);
     if (mode === "facets") {
       setInputValue(searchQuery);
     }
@@ -184,25 +206,23 @@ export function OmniboxFilter({
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
     if (e.key === "Escape") {
-      closeDropdown();
+      handleCollapse();
       inputRef.current?.blur();
       return;
     }
 
     if (e.key === "Backspace" && inputValue === "") {
       if (selectedFacet) {
-        // Go back to facet selection
         setSelectedFacet(null);
         setMode("facets");
         setInputValue(searchQuery);
       } else if (chips.length > 0) {
-        // Remove last chip
         handleRemoveChip(chips[chips.length - 1].id);
       }
       return;
     }
 
-    if (!isOpen) return;
+    if (!isDropdownOpen) return;
 
     const itemCount =
       mode === "facets" ? filteredFacets.length : filteredValues.length;
@@ -227,21 +247,45 @@ export function OmniboxFilter({
     }
   };
 
+  const handleClearAll = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onChipsChange([]);
+    onSearchQueryChange("");
+    setInputValue("");
+    setSelectedFacet(null);
+    setMode("facets");
+    // Collapse since there's no content anymore
+    setIsExpanded(false);
+    setIsDropdownOpen(false);
+  };
+
   const getChipColors = (facetKey: string) =>
     FACET_COLORS[facetKey] || {
       chip: "bg-gray-50 text-gray-700 border-gray-200",
       badge: "bg-gray-100 text-gray-700",
     };
 
-  const activeFilterCount = chips.length;
+  // === Collapsed state: just a search icon ===
+  if (!isExpanded && !hasContent) {
+    return (
+      <button
+        onClick={handleExpand}
+        className="flex items-center justify-center h-8 w-8 rounded-md text-gray-500 hover:text-gray-700 hover:bg-gray-100 transition-colors"
+        title="Buscar y filtrar"
+      >
+        <Search className="h-4 w-4" />
+      </button>
+    );
+  }
 
+  // === Expanded state: full omnibox ===
   return (
     <div ref={containerRef} className="relative flex-1 min-w-0">
-      {/* Omnibox input area */}
+      {/* Input area with chips */}
       <div
         className={cn(
           "flex items-center flex-wrap gap-1.5 min-h-[38px] pl-3 pr-2 py-1 border rounded-lg bg-white transition-all cursor-text",
-          isOpen
+          isDropdownOpen
             ? "border-blue-400 ring-2 ring-blue-50 shadow-sm"
             : "border-gray-200 hover:border-gray-300"
         )}
@@ -277,7 +321,7 @@ export function OmniboxFilter({
           );
         })}
 
-        {/* Active facet label (when selecting a value) */}
+        {/* Active facet label */}
         {selectedFacet && (
           <span
             className={cn(
@@ -305,27 +349,21 @@ export function OmniboxFilter({
           }
         />
 
-        {/* Clear all button */}
-        {(activeFilterCount > 0 || searchQuery) && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onChipsChange([]);
-              onSearchQueryChange("");
-              setInputValue("");
-              setSelectedFacet(null);
-              setMode("facets");
-            }}
-            className="shrink-0 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
-            title="Limpiar todo"
-          >
-            <X className="h-3.5 w-3.5" />
-          </button>
-        )}
+        {/* Clear all / Close button */}
+        <button
+          onClick={hasContent ? handleClearAll : (e) => {
+            e.stopPropagation();
+            handleCollapse();
+          }}
+          className="shrink-0 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+          title={hasContent ? "Limpiar todo" : "Cerrar"}
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
       </div>
 
       {/* Dropdown */}
-      {isOpen && (
+      {isDropdownOpen && (
         <div
           ref={dropdownRef}
           className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto"
