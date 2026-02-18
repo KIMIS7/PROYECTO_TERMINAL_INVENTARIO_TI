@@ -379,6 +379,10 @@ export const EditAssetModal = ({
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
+                  <Label htmlFor="hddCapacity" className="text-sm font-medium">Capacidad de Disco</Label>
+                  <Input id="hddCapacity" value={formData.hddCapacity} onChange={(e) => handleInputChange("hddCapacity", e.target.value)} placeholder="Ej: 512 GB" disabled={isLoading} />
+                </div>
+                <div>
                   <Label htmlFor="hddModel" className="text-sm font-medium">Tipo de Disco</Label>
                   <Select
                     value={formData.hddModel || "none"}
@@ -396,10 +400,6 @@ export const EditAssetModal = ({
                     </SelectContent>
                   </Select>
                 </div>
-                <div>
-                  <Label htmlFor="hddCapacity" className="text-sm font-medium">Capacidad de Disco</Label>
-                  <Input id="hddCapacity" value={formData.hddCapacity} onChange={(e) => handleInputChange("hddCapacity", e.target.value)} placeholder="Ej: 512 GB" disabled={isLoading} />
-                </div>
               </div>
             </div>
 
@@ -411,7 +411,22 @@ export const EditAssetModal = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <Label htmlFor="operatingSystem" className="text-sm font-medium">Sistema Operativo</Label>
-                  <Input id="operatingSystem" value={formData.operatingSystem} onChange={(e) => handleInputChange("operatingSystem", e.target.value)} placeholder="Ej: Windows 11 Pro" disabled={isLoading} />
+                  <Select
+                    value={formData.operatingSystem || "none"}
+                    onValueChange={(value) => handleInputChange("operatingSystem", value === "none" ? "" : value)}
+                    disabled={isLoading} 
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar tipo</SelectItem>
+                      <SelectItem value="Windows 7">Windows 7</SelectItem>
+                      <SelectItem value="Windows 8">Windows 8</SelectItem>
+                      <SelectItem value="Windows 10">Windows 10</SelectItem>
+                      <SelectItem value="Windows 11">Windows 11</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
               </div>
             </div>
@@ -425,6 +440,11 @@ export const EditAssetModal = ({
                 Componentes
               </h4>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ram" className="text-sm font-medium">Memoria RAM</Label>
+                  <Input id="ram" value={formData.ram} onChange={(e) => handleInputChange("ram", e.target.value)} placeholder="Ej: 16 GB" disabled={isLoading} />
+                </div>
+                
                 <div>
                   <Label htmlFor="physicalMemory" className="text-sm font-medium">Tipo de Memoria</Label>
                   <Select
@@ -443,6 +463,12 @@ export const EditAssetModal = ({
                     </SelectContent>
                   </Select>
                 </div>
+
+                <div>
+                  <Label htmlFor="hddCapacity" className="text-sm font-medium">Capacidad de Disco</Label>
+                  <Input id="hddCapacity" value={formData.hddCapacity} onChange={(e) => handleInputChange("hddCapacity", e.target.value)} placeholder="Ej: 512 GB" disabled={isLoading} />
+                </div>
+
                 <div>
                   <Label htmlFor="hddModel" className="text-sm font-medium">Tipo de Disco</Label>
                   <Select
