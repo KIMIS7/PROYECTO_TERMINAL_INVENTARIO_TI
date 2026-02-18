@@ -49,11 +49,12 @@ export const EditAssetModal = ({
     macAddress: "",
     domain: "",
     processor: "",
+    processorInfo: "",
     ram: "",
-    hddCapacity: "",
-    operatingSystem: "",
     physicalMemory: "",
     hddModel: "",
+    hddCapacity: "",
+    operatingSystem: "",
     hddSerial: "",
     imei: "",
     platform: "",
@@ -99,11 +100,12 @@ export const EditAssetModal = ({
         macAddress: detail.macAddress || "",
         domain: detail.domain || "",
         processor: detail.processor || "",
+        processorInfo: detail.processorInfo || "",
         ram: detail.ram || "",
-        hddCapacity: detail.hddCapacity || "",
-        operatingSystem: detail.operatingSystem || "",
         physicalMemory: detail.physicalMemory || "",
         hddModel: detail.hddModel || "",
+        hddCapacity: detail.hddCapacity || "",
+        operatingSystem: detail.operatingSystem || "",
         hddSerial: detail.hddSerial || "",
         imei: detail.imei || "",
         platform: detail.platform || "",
@@ -195,14 +197,17 @@ export const EditAssetModal = ({
         detail.macAddress = formData.macAddress || undefined;
         detail.domain = formData.domain || undefined;
         detail.processor = formData.processor || undefined;
+        detail.processorInfo = formData.processorInfo || undefined;
         detail.ram = formData.ram || undefined;
+        detail.physicalMemory = formData.physicalMemory || undefined;
+        detail.hddModel = formData.hddModel || undefined;
         detail.hddCapacity = formData.hddCapacity || undefined;
         detail.operatingSystem = formData.operatingSystem || undefined;
       }
 
       if (productTypeCategory === "Componente" || productTypeCategory === "Otros") {
-        detail.physicalMemory = formData.physicalMemory || undefined;
-        detail.hddModel = formData.hddModel || undefined;
+        if (!detail.physicalMemory) detail.physicalMemory = formData.physicalMemory || undefined;
+        if (!detail.hddModel) detail.hddModel = formData.hddModel || undefined;
         detail.hddSerial = formData.hddSerial || undefined;
       }
 
@@ -307,12 +312,52 @@ export const EditAssetModal = ({
               <Input id="processor" value={formData.processor} onChange={(e) => handleInputChange("processor", e.target.value)} placeholder="Ej: Intel Core i7-1185G7" disabled={isLoading} />
             </div>
             <div>
+              <Label htmlFor="processorInfo" className="text-sm font-medium">Velocidad del Procesador</Label>
+              <Input id="processorInfo" value={formData.processorInfo} onChange={(e) => handleInputChange("processorInfo", e.target.value)} placeholder="Ej: 3.5 GHz" disabled={isLoading} />
+            </div>
+            <div>
               <Label htmlFor="ram" className="text-sm font-medium">Memoria RAM</Label>
               <Input id="ram" value={formData.ram} onChange={(e) => handleInputChange("ram", e.target.value)} placeholder="Ej: 16 GB" disabled={isLoading} />
             </div>
             <div>
-              <Label htmlFor="hddCapacity" className="text-sm font-medium">Capacidad Almacenamiento</Label>
-              <Input id="hddCapacity" value={formData.hddCapacity} onChange={(e) => handleInputChange("hddCapacity", e.target.value)} placeholder="Ej: 512 GB SSD" disabled={isLoading} />
+              <Label htmlFor="physicalMemory" className="text-sm font-medium">Tipo de Memoria</Label>
+              <Select
+                value={formData.physicalMemory || "none"}
+                onValueChange={(value) => handleInputChange("physicalMemory", value === "none" ? "" : value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Seleccionar tipo</SelectItem>
+                  <SelectItem value="DDR3">DDR3</SelectItem>
+                  <SelectItem value="DDR4">DDR4</SelectItem>
+                  <SelectItem value="DDR5">DDR5</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="hddModel" className="text-sm font-medium">Tipo de Disco</Label>
+              <Select
+                value={formData.hddModel || "none"}
+                onValueChange={(value) => handleInputChange("hddModel", value === "none" ? "" : value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Seleccionar tipo</SelectItem>
+                  <SelectItem value="HDD">HDD</SelectItem>
+                  <SelectItem value="SSD">SSD</SelectItem>
+                  <SelectItem value="NVME">NVME</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label htmlFor="hddCapacity" className="text-sm font-medium">Capacidad de Disco</Label>
+              <Input id="hddCapacity" value={formData.hddCapacity} onChange={(e) => handleInputChange("hddCapacity", e.target.value)} placeholder="Ej: 512 GB" disabled={isLoading} />
             </div>
             <div>
               <Label htmlFor="operatingSystem" className="text-sm font-medium">Sistema Operativo</Label>
@@ -324,12 +369,40 @@ export const EditAssetModal = ({
         {(productTypeCategory === "Componente" || productTypeCategory === "Otros") && (
           <>
             <div>
-              <Label htmlFor="physicalMemory" className="text-sm font-medium">Memoria Fisica</Label>
-              <Input id="physicalMemory" value={formData.physicalMemory} onChange={(e) => handleInputChange("physicalMemory", e.target.value)} placeholder="Ej: 8 GB DDR4" disabled={isLoading} />
+              <Label htmlFor="physicalMemory" className="text-sm font-medium">Tipo de Memoria</Label>
+              <Select
+                value={formData.physicalMemory || "none"}
+                onValueChange={(value) => handleInputChange("physicalMemory", value === "none" ? "" : value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Seleccionar tipo</SelectItem>
+                  <SelectItem value="DDR3">DDR3</SelectItem>
+                  <SelectItem value="DDR4">DDR4</SelectItem>
+                  <SelectItem value="DDR5">DDR5</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
-              <Label htmlFor="hddModel" className="text-sm font-medium">Modelo HDD/SSD</Label>
-              <Input id="hddModel" value={formData.hddModel} onChange={(e) => handleInputChange("hddModel", e.target.value)} placeholder="Ej: Samsung 970 EVO" disabled={isLoading} />
+              <Label htmlFor="hddModel" className="text-sm font-medium">Tipo de Disco</Label>
+              <Select
+                value={formData.hddModel || "none"}
+                onValueChange={(value) => handleInputChange("hddModel", value === "none" ? "" : value)}
+                disabled={isLoading}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Seleccionar tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">Seleccionar tipo</SelectItem>
+                  <SelectItem value="HDD">HDD</SelectItem>
+                  <SelectItem value="SSD">SSD</SelectItem>
+                  <SelectItem value="NVME">NVME</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <Label htmlFor="hddSerial" className="text-sm font-medium">Serial HDD/SSD</Label>

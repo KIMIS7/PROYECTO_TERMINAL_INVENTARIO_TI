@@ -186,11 +186,12 @@ export const AssetDetailModal = ({
   const macAddress = getDetail(detail, "macAddress", "MACAddress");
   const domain = getDetail(detail, "domain", "Domain");
   const processor = getDetail(detail, "processor", "Processor");
+  const processorInfo = getDetail(detail, "processorInfo", "ProcessorInfo");
   const ram = getDetail(detail, "ram", "RAM");
-  const hddCapacity = getDetail(detail, "hddCapacity", "HDDCapacity");
-  const operatingSystem = getDetail(detail, "operatingSystem", "OperatingSystem");
   const physicalMemory = getDetail(detail, "physicalMemory", "PhysicalMemory");
   const hddModel = getDetail(detail, "hddModel", "HDDModel");
+  const hddCapacity = getDetail(detail, "hddCapacity", "HDDCapacity");
+  const operatingSystem = getDetail(detail, "operatingSystem", "OperatingSystem");
   const hddSerial = getDetail(detail, "hddSerial", "HDDSerial");
   const imei = getDetail(detail, "imei", "IMEI");
   const platform = getDetail(detail, "platform", "Platform");
@@ -202,7 +203,7 @@ export const AssetDetailModal = ({
 
   const hasTechnicalInfo = serialNum || assetTAG || model || productManuf;
   const hasNetworkInfo = ipAddress || macAddress || domain;
-  const hasHardwareInfo = processor || ram || hddCapacity || operatingSystem;
+  const hasHardwareInfo = processor || processorInfo || ram || physicalMemory || hddModel || hddCapacity || operatingSystem;
   const hasStorageInfo = physicalMemory || hddModel || hddSerial;
   const hasMobileInfo = imei || platform || osName || osVersion;
   const hasDateInfo = purchaseDate || warrantyExpiryDate;
@@ -331,8 +332,11 @@ export const AssetDetailModal = ({
                   />
                   <div className="bg-gray-50 rounded-lg px-4 py-1">
                     <DetailRow label="Procesador" value={processor} />
+                    <DetailRow label="Velocidad CPU" value={processorInfo} />
                     <DetailRow label="Memoria RAM" value={ram} />
-                    <DetailRow label="Almacenamiento" value={hddCapacity} />
+                    <DetailRow label="Tipo de Memoria" value={physicalMemory} />
+                    <DetailRow label="Tipo de Disco" value={hddModel} />
+                    <DetailRow label="Capacidad de Disco" value={hddCapacity} />
                     <DetailRow label="Sistema Operativo" value={operatingSystem} />
                   </div>
                 </>
