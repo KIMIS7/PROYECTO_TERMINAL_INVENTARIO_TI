@@ -5,16 +5,13 @@ import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
 import { EditAssetModal } from "@/components/EditAssetModal";
 import { AssetDetailModal } from "@/components/AssetDetailModal";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  OmniboxFilter,
+  type FilterChip,
+  type Facet,
+} from "@/components/OmniboxFilter";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,9 +34,7 @@ import {
   Download,
   FileText,
   Pencil,
-  Search,
   RefreshCw,
-  X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -68,17 +63,11 @@ export default function Altas() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-
-  // Filtros avanzados
-  const [filterCompany, setFilterCompany] = useState<string | null>(null);
-  const [filterUser, setFilterUser] = useState<string | null>(null);
-  const [filterState, setFilterState] = useState<string | null>(null);
-  const [filterProductType, setFilterProductType] = useState<string | null>(null);
+  const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
 
   // Estados para paginación y vista
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
-  const [currentView, setCurrentView] = useState<"list" | "grid">("list");
 
   // Cargar catálogos al montar el componente
   useEffect(() => {
@@ -129,70 +118,6 @@ export default function Altas() {
     }
   };
 
-  // Aplicar filtros cuando cambien
-  useEffect(() => {
-    let result = [...assets];
-
-    // Filtrar por categoría (botones)
-    if (selectedCategory) {
-      result = result.filter(
-        (asset) => asset.productType?.category === selectedCategory
-      );
-    }
-
-    // Filtrar por empresa
-    if (filterCompany) {
-      const companyID = Number(filterCompany);
-      result = result.filter((asset) => asset.companyID === companyID);
-    }
-
-    // Filtrar por usuario
-    if (filterUser) {
-      const userID = Number(filterUser);
-      result = result.filter((asset) => asset.userID === userID);
-    }
-
-    // Filtrar por estado
-    if (filterState) {
-      const stateID = Number(filterState);
-      result = result.filter((asset) => asset.assetState === stateID);
-    }
-
-    // Filtrar por tipo de activo
-    if (filterProductType) {
-      const ptID = Number(filterProductType);
-      result = result.filter((asset) => asset.productTypeID === ptID);
-    }
-
-    // Filtrar por búsqueda
-    if (searchQuery.trim()) {
-      const query = searchQuery.toLowerCase();
-      result = result.filter(
-        (asset) =>
-          asset.name.toLowerCase().includes(query) ||
-          asset.assetDetail?.serialNum?.toLowerCase().includes(query) ||
-          asset.assetDetail?.assetTAG?.toLowerCase().includes(query) ||
-          asset.user?.name?.toLowerCase().includes(query) ||
-          asset.user?.department?.toLowerCase().includes(query) ||
-          asset.vendor?.name?.toLowerCase().includes(query) ||
-          asset.productType?.name?.toLowerCase().includes(query)
-      );
-    }
-
-    setFilteredAssets(result);
-    setCurrentPage(1);
-  }, [assets, selectedCategory, filterCompany, filterUser, filterState, filterProductType, searchQuery]);
-
-  // Paginación
-  const paginatedAssets = useMemo(() => {
-    const start = (currentPage - 1) * pageSize;
-    return filteredAssets.slice(start, start + pageSize);
-  }, [filteredAssets, currentPage, pageSize]);
-
-  const totalPages = Math.ceil(filteredAssets.length / pageSize);
-  const startItem = filteredAssets.length > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-  const endItem = Math.min(currentPage * pageSize, filteredAssets.length);
-
   // Obtener usuarios únicos de los activos
   const uniqueUsers = useMemo(() => {
     const userMap = new Map<number, { userID: number; name: string }>();
@@ -217,15 +142,114 @@ export default function Altas() {
     return productTypes;
   }, [productTypes, selectedCategory]);
 
-  // Verificar si hay algún filtro activo
-  const hasActiveFilters = filterCompany || filterUser || filterState || filterProductType;
+  // Definir facetas para el omnibox
+  const facets: Facet[] = useMemo(
+    () => [
+      {
+        key: "empresa",
+        label: "Empresa",
+        color: "blue",
+        options: companies.map((c) => ({
+          value: String(c.companyID),
+          label: c.description,
+        })),
+      },
+      {
+        key: "usuario",
+        label: "Usuario",
+        color: "emerald",
+        options: uniqueUsers.map((u) => ({
+          value: String(u.userID),
+          label: u.name,
+        })),
+      },
+      {
+        key: "estado",
+        label: "Estado",
+        color: "amber",
+        options: assetStates.map((s) => ({
+          value: String(s.assetStateID),
+          label: s.name,
+        })),
+      },
+      {
+        key: "tipo",
+        label: "Tipo",
+        color: "purple",
+        options: filteredProductTypes.map((pt) => ({
+          value: String(pt.productTypeID),
+          label: pt.name,
+        })),
+      },
+    ],
+    [companies, uniqueUsers, assetStates, filteredProductTypes]
+  );
 
-  const clearAllFilters = () => {
-    setFilterCompany(null);
-    setFilterUser(null);
-    setFilterState(null);
-    setFilterProductType(null);
-  };
+  // Aplicar filtros cuando cambien
+  useEffect(() => {
+    let result = [...assets];
+
+    // Filtrar por categoría (botones)
+    if (selectedCategory) {
+      result = result.filter(
+        (asset) => asset.productType?.category === selectedCategory
+      );
+    }
+
+    // Aplicar chips: AND entre facetas distintas, OR dentro de la misma faceta
+    const chipsByFacet = new Map<string, Set<string>>();
+    filterChips.forEach((chip) => {
+      if (!chipsByFacet.has(chip.facet)) {
+        chipsByFacet.set(chip.facet, new Set());
+      }
+      chipsByFacet.get(chip.facet)!.add(chip.value);
+    });
+
+    if (chipsByFacet.has("empresa")) {
+      const values = chipsByFacet.get("empresa")!;
+      result = result.filter((a) => values.has(String(a.companyID)));
+    }
+    if (chipsByFacet.has("usuario")) {
+      const values = chipsByFacet.get("usuario")!;
+      result = result.filter((a) => values.has(String(a.userID)));
+    }
+    if (chipsByFacet.has("estado")) {
+      const values = chipsByFacet.get("estado")!;
+      result = result.filter((a) => values.has(String(a.assetState)));
+    }
+    if (chipsByFacet.has("tipo")) {
+      const values = chipsByFacet.get("tipo")!;
+      result = result.filter((a) => values.has(String(a.productTypeID)));
+    }
+
+    // Filtrar por búsqueda de texto libre
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(
+        (asset) =>
+          asset.name.toLowerCase().includes(query) ||
+          asset.assetDetail?.serialNum?.toLowerCase().includes(query) ||
+          asset.assetDetail?.assetTAG?.toLowerCase().includes(query) ||
+          asset.user?.name?.toLowerCase().includes(query) ||
+          asset.user?.department?.toLowerCase().includes(query) ||
+          asset.vendor?.name?.toLowerCase().includes(query) ||
+          asset.productType?.name?.toLowerCase().includes(query)
+      );
+    }
+
+    setFilteredAssets(result);
+    setCurrentPage(1);
+  }, [assets, selectedCategory, filterChips, searchQuery]);
+
+  // Paginación
+  const paginatedAssets = useMemo(() => {
+    const start = (currentPage - 1) * pageSize;
+    return filteredAssets.slice(start, start + pageSize);
+  }, [filteredAssets, currentPage, pageSize]);
+
+  const totalPages = Math.ceil(filteredAssets.length / pageSize);
+  const startItem = filteredAssets.length > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endItem = Math.min(currentPage * pageSize, filteredAssets.length);
 
   // Handlers
   const handleRefresh = () => {
@@ -267,17 +291,6 @@ export default function Altas() {
       newSelected.delete(assetID);
     }
     setSelectedAssets(newSelected);
-  };
-
-  const handleEdit = () => {
-    if (selectedAssets.size === 1) {
-      const assetID = Array.from(selectedAssets)[0];
-      const asset = assets.find((a) => a.assetID === assetID);
-      if (asset) {
-        setEditingAsset(asset);
-        setIsEditModalOpen(true);
-      }
-    }
   };
 
   const handleEditSuccess = () => {
@@ -327,14 +340,6 @@ export default function Altas() {
     toast.info("Funcionalidad de importación en desarrollo");
   };
 
-  const handleAssignUsers = () => {
-    if (selectedAssets.size === 0) {
-      toast.warning("Seleccione al menos un activo");
-      return;
-    }
-    toast.info("Funcionalidad de asignación en desarrollo");
-  };
-
   const isAllSelected = paginatedAssets.length > 0 &&
     paginatedAssets.every((a) => selectedAssets.has(a.assetID));
 
@@ -346,156 +351,50 @@ export default function Altas() {
         <div className="flex flex-col h-full bg-white">
           {/* Header - Botones de categoría */}
           <div className="px-4 py-3 border-b">
-            <div className="flex items-center justify-between">
-              {/* Botones de categoría */}
-              <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2">
+              <Button
+                variant={selectedCategory === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedCategory(null)}
+                className="h-9 text-sm font-medium"
+              >
+                Todos
+              </Button>
+              {ASSET_CATEGORIES.map((category) => (
                 <Button
-                  variant={selectedCategory === null ? "default" : "outline"}
+                  key={category}
+                  variant={selectedCategory === category ? "default" : "outline"}
                   size="sm"
-                  onClick={() => setSelectedCategory(null)}
+                  onClick={() => {
+                    setSelectedCategory(
+                      selectedCategory === category ? null : category
+                    );
+                    // Limpiar chips de tipo de activo al cambiar categoría
+                    setFilterChips((prev) =>
+                      prev.filter((c) => c.facet !== "tipo")
+                    );
+                  }}
                   className="h-9 text-sm font-medium"
                 >
-                  Todos
+                  {category}
                 </Button>
-                {ASSET_CATEGORIES.map((category) => (
-                  <Button
-                    key={category}
-                    variant={selectedCategory === category ? "default" : "outline"}
-                    size="sm"
-                    onClick={() => {
-                      setSelectedCategory(
-                        selectedCategory === category ? null : category
-                      );
-                      // Limpiar filtro de tipo de activo al cambiar categoría
-                      setFilterProductType(null);
-                    }}
-                    className="h-9 text-sm font-medium"
-                  >
-                    {category}
-                  </Button>
-                ))}
-              </div>
+              ))}
             </div>
           </div>
 
-          {/* Toolbar con búsqueda y filtros integrados */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
-            {/* Búsqueda + Filtros + Acciones */}
-            <div className="flex items-center gap-1.5 flex-wrap">
-              {/* Búsqueda */}
-              <div className="flex items-center">
-                <Search className="h-4 w-4 text-gray-400 mr-1.5" />
-                <Input
-                  placeholder="Buscar activos..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="h-8 w-44 text-sm"
-                />
-              </div>
+          {/* Toolbar con omnibox y acciones */}
+          <div className="flex items-center gap-3 px-4 py-2 border-b bg-gray-50">
+            {/* Omnibox */}
+            <OmniboxFilter
+              facets={facets}
+              chips={filterChips}
+              onChipsChange={setFilterChips}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+            />
 
-              {/* Filtros inline */}
-              <Select
-                value={filterCompany ?? ""}
-                onValueChange={(val) =>
-                  setFilterCompany(val === "all" ? null : val)
-                }
-              >
-                <SelectTrigger className="h-8 w-[150px] text-sm">
-                  <SelectValue placeholder="Empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las empresas</SelectItem>
-                  {companies.map((company) => (
-                    <SelectItem
-                      key={company.companyID}
-                      value={String(company.companyID)}
-                    >
-                      {company.description}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filterUser ?? ""}
-                onValueChange={(val) =>
-                  setFilterUser(val === "all" ? null : val)
-                }
-              >
-                <SelectTrigger className="h-8 w-[150px] text-sm">
-                  <SelectValue placeholder="Usuario" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los usuarios</SelectItem>
-                  {uniqueUsers.map((user) => (
-                    <SelectItem
-                      key={user.userID}
-                      value={String(user.userID)}
-                    >
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filterState ?? ""}
-                onValueChange={(val) =>
-                  setFilterState(val === "all" ? null : val)
-                }
-              >
-                <SelectTrigger className="h-8 w-[140px] text-sm">
-                  <SelectValue placeholder="Estado" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los estados</SelectItem>
-                  {assetStates.map((state) => (
-                    <SelectItem
-                      key={state.assetStateID}
-                      value={String(state.assetStateID)}
-                    >
-                      {state.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select
-                value={filterProductType ?? ""}
-                onValueChange={(val) =>
-                  setFilterProductType(val === "all" ? null : val)
-                }
-              >
-                <SelectTrigger className="h-8 w-[160px] text-sm">
-                  <SelectValue placeholder="Tipo de activo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los tipos</SelectItem>
-                  {filteredProductTypes.map((pt) => (
-                    <SelectItem
-                      key={pt.productTypeID}
-                      value={String(pt.productTypeID)}
-                    >
-                      {pt.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              {hasActiveFilters && (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={clearAllFilters}
-                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
-                  title="Limpiar filtros"
-                >
-                  <X className="h-4 w-4" />
-                </Button>
-              )}
-
-              <div className="h-6 w-px bg-gray-300 mx-1" />
-
+            {/* Acciones */}
+            <div className="flex items-center gap-1 shrink-0">
               <Button
                 variant="outline"
                 size="sm"
@@ -522,14 +421,19 @@ export default function Altas() {
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
+                <DropdownMenuContent align="end">
                   <DropdownMenuItem onClick={handleExport}>
-                      <Download className="h-4 w-4 mr-2" />
+                    <Download className="h-4 w-4 mr-2" />
                     Export to CSV
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => toast.info("Export PDF en desarrollo")}>
                     <FileText className="h-4 w-4 mr-2" />
                     Export to PDF
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleImportCSV}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    Import from CSV
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleRefresh}>
@@ -538,27 +442,13 @@ export default function Altas() {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
-              <div className="h-6 w-px bg-gray-300 mx-1" />
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleImportCSV}
-                className="h-8 text-sm font-normal"
-              >
-                Import from CSV
-              </Button>
-
             </div>
 
-            {/* Paginación derecha */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
-                {startItem} - {endItem} of {filteredAssets.length}
+            {/* Paginación */}
+            <div className="flex items-center gap-1.5 text-sm text-gray-600 shrink-0">
+              <span className="whitespace-nowrap">
+                {startItem}-{endItem} de {filteredAssets.length}
               </span>
-              <span className="text-gray-400">...</span>
-
               <Button
                 variant="ghost"
                 size="icon"
@@ -568,7 +458,6 @@ export default function Altas() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
-              
               <Button
                 variant="ghost"
                 size="icon"
@@ -578,11 +467,6 @@ export default function Altas() {
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
-
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleExport}>
-                <Download className="h-4 w-4" />
-              </Button>
-              
             </div>
           </div>
 
@@ -615,7 +499,7 @@ export default function Altas() {
                 <TableBody>
                   {paginatedAssets.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={10} className="h-24 text-center text-gray-500">
+                      <TableCell colSpan={9} className="h-24 text-center text-gray-500">
                         No se encontraron activos
                       </TableCell>
                     </TableRow>
