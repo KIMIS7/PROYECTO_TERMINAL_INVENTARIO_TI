@@ -55,7 +55,7 @@ interface AssetFullData {
     department: string;
   } | null;
   assetDetail?: Record<string, unknown> | null;
-  history?: { AssetHistoryID: number; Operation: string; Description: string; CreatedTime: string }[];
+  history?: { assetHistoryID: number; operation: string; description: string; createdTime: string }[];
 }
 
 function formatDate(dateStr: string | null | undefined): string {
@@ -424,7 +424,7 @@ export const AssetDetailModal = ({
                     <div className="space-y-2">
                       {data.history.map((entry) => (
                         <div
-                          key={entry.AssetHistoryID}
+                          key={entry.assetHistoryID}
                           className="flex items-start gap-3 py-1.5 border-b border-gray-100 last:border-0"
                         >
                           <div className="flex items-center justify-center h-6 w-6 rounded-full bg-blue-100 text-blue-600 shrink-0 mt-0.5">
@@ -432,14 +432,14 @@ export const AssetDetailModal = ({
                           </div>
                           <div className="min-w-0 flex-1">
                             <p className="text-sm text-gray-800 break-words">
-                              {entry.Description}
+                              {entry.description}
                             </p>
                             <p className="text-xs text-gray-400 mt-0.5">
-                              {formatDateTime(entry.CreatedTime)}
+                              {formatDateTime(entry.createdTime)}
                             </p>
                           </div>
                           <span className="text-xs font-medium text-gray-500 bg-gray-200 px-2 py-0.5 rounded shrink-0">
-                            {entry.Operation}
+                            {entry.operation}
                           </span>
                         </div>
                       ))}

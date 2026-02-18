@@ -254,8 +254,54 @@ export class AssetService {
               lastName: asset.User.LastName,
             }
           : null,
-        assetDetail: asset.AssetDetail[0] || null,
-        history: asset.AssetHistory,
+        assetDetail: asset.AssetDetail[0]
+          ? {
+              assetDetailID: asset.AssetDetail[0].AssetDetailID,
+              assetID: asset.AssetDetail[0].AssetID,
+              productManuf: asset.AssetDetail[0].ProductManuf,
+              ipAddress: asset.AssetDetail[0].IPAddress,
+              macAddress: asset.AssetDetail[0].MACAddress,
+              loanable: asset.AssetDetail[0].Loanable,
+              vmPlatform: asset.AssetDetail[0].VMPlatform,
+              virtualHost: asset.AssetDetail[0].VirtualHost,
+              operatingSystem: asset.AssetDetail[0].OperatingSystem,
+              domain: asset.AssetDetail[0].Domain,
+              processorInfo: asset.AssetDetail[0].ProcessorInfo,
+              processor: asset.AssetDetail[0].Processor,
+              physicalMemory: asset.AssetDetail[0].PhysicalMemory,
+              hddModel: asset.AssetDetail[0].HDDModel,
+              hddSerial: asset.AssetDetail[0].HDDSerial,
+              hddCapacity: asset.AssetDetail[0].HDDCapacity,
+              keyboardType: asset.AssetDetail[0].KeyboardType,
+              mouseType: asset.AssetDetail[0].MouseType,
+              numModel: asset.AssetDetail[0].NumModel,
+              model: asset.AssetDetail[0].Model,
+              imei: asset.AssetDetail[0].IMEI,
+              modemFirmwareVersion: asset.AssetDetail[0].ModemFirmwareVersion,
+              platform: asset.AssetDetail[0].Platform,
+              osName: asset.AssetDetail[0].OSName,
+              osVersion: asset.AssetDetail[0].OSVersion,
+              ram: asset.AssetDetail[0].RAM,
+              serialNum: asset.AssetDetail[0].SerialNum,
+              purchaseDate: asset.AssetDetail[0].PurchaseDate,
+              warrantyExpiryDate: asset.AssetDetail[0].WarrantyExpiryDate,
+              assetACQDate: asset.AssetDetail[0].AssetACQDate,
+              assetExpiryDate: asset.AssetDetail[0].AssetExpiryDate,
+              assetTAG: asset.AssetDetail[0].AssetTAG,
+              warrantyExpiry: asset.AssetDetail[0].WarrantyExpiry,
+              barcode: asset.AssetDetail[0].Barcode,
+              createdTime: asset.AssetDetail[0].CreatedTime,
+              lastUpdateTime: asset.AssetDetail[0].LastUpdateTime,
+              lastUpdateBy: asset.AssetDetail[0].LastUpdateBy,
+            }
+          : null,
+        history: asset.AssetHistory.map((h) => ({
+          assetHistoryID: h.AssetHistoryID,
+          assetID: h.AssetID,
+          operation: h.Operation,
+          description: h.Description,
+          createdTime: h.CreatedTime,
+        })),
       };
     } catch (error) {
       if (error instanceof NotFoundException) {
@@ -310,47 +356,53 @@ export class AssetService {
           where: { AssetID: id },
         });
 
-        if (existingDetail) {
-          await this.prismaShopic.assetDetail.update({
-            where: { AssetDetailID: existingDetail.AssetDetailID },
-            data: {
+        const detailData = {
               ProductManuf: detail.productManuf,
               IPAddress: detail.ipAddress,
               MACAddress: detail.macAddress,
+              Loanable: detail.loanable,
+              VMPlatform: detail.vmPlatform,
+              VirtualHost: detail.virtualHost,
               OperatingSystem: detail.operatingSystem,
               Domain: detail.domain,
+              ProcessorInfo: detail.processorInfo,
               Processor: detail.processor,
-              RAM: detail.ram,
+              PhysicalMemory: detail.physicalMemory,
+              HDDModel: detail.hddModel,
+              HDDSerial: detail.hddSerial,
               HDDCapacity: detail.hddCapacity,
+              KeyboardType: detail.keyboardType,
+              MouseType: detail.mouseType,
+              NumModel: detail.numModel,
               Model: detail.model,
+              IMEI: detail.imei,
+              ModemFirmwareVersion: detail.modemFirmwareVersion,
+              Platform: detail.platform,
+              OSName: detail.osName,
+              OSVersion: detail.osVersion,
+              RAM: detail.ram,
               SerialNum: detail.serialNum,
               AssetTAG: detail.assetTAG,
+              Barcode: detail.barcode,
               PurchaseDate: detail.purchaseDate ? new Date(detail.purchaseDate) : undefined,
               WarrantyExpiryDate: detail.warrantyExpiryDate ? new Date(detail.warrantyExpiryDate) : undefined,
               LastUpdateTime: new Date(),
               LastUpdateBy: lastUpdateBy,
-            },
+            };
+
+        if (existingDetail) {
+          await this.prismaShopic.assetDetail.update({
+            where: { AssetDetailID: existingDetail.AssetDetailID },
+            data: detailData,
           });
         } else {
           await this.prismaShopic.assetDetail.create({
             data: {
               AssetID: id,
-              ProductManuf: detail.productManuf,
-              IPAddress: detail.ipAddress,
-              MACAddress: detail.macAddress,
-              OperatingSystem: detail.operatingSystem,
-              Domain: detail.domain,
-              Processor: detail.processor,
-              RAM: detail.ram,
-              HDDCapacity: detail.hddCapacity,
-              Model: detail.model,
-              SerialNum: detail.serialNum,
-              AssetTAG: detail.assetTAG,
+              ...detailData,
               PurchaseDate: detail.purchaseDate ? new Date(detail.purchaseDate) : null,
               WarrantyExpiryDate: detail.warrantyExpiryDate ? new Date(detail.warrantyExpiryDate) : null,
               CreatedTime: new Date(),
-              LastUpdateTime: new Date(),
-              LastUpdateBy: lastUpdateBy,
             },
           });
         }
