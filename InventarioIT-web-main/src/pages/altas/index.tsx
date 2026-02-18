@@ -36,7 +36,6 @@ import {
   ChevronRight,
   Download,
   FileText,
-  Filter,
   Pencil,
   Search,
   RefreshCw,
@@ -69,7 +68,6 @@ export default function Altas() {
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // Filtros avanzados
   const [filterCompany, setFilterCompany] = useState<string | null>(null);
@@ -380,22 +378,29 @@ export default function Altas() {
             </div>
           </div>
 
-          {/* Filtros avanzados */}
-          <div className="px-4 py-2 border-b bg-gray-50/50">
-            <div className="flex items-center gap-3 flex-wrap">
-              <div className="flex items-center gap-1.5 text-sm text-gray-500">
-                <Filter className="h-4 w-4" />
-                <span className="font-medium">Filtros:</span>
+          {/* Toolbar con búsqueda y filtros integrados */}
+          <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
+            {/* Búsqueda + Filtros + Acciones */}
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {/* Búsqueda */}
+              <div className="flex items-center">
+                <Search className="h-4 w-4 text-gray-400 mr-1.5" />
+                <Input
+                  placeholder="Buscar activos..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="h-8 w-44 text-sm"
+                />
               </div>
 
-              {/* Filtro por Empresa */}
+              {/* Filtros inline */}
               <Select
                 value={filterCompany ?? ""}
                 onValueChange={(val) =>
                   setFilterCompany(val === "all" ? null : val)
                 }
               >
-                <SelectTrigger className="h-8 w-[180px] text-sm">
+                <SelectTrigger className="h-8 w-[150px] text-sm">
                   <SelectValue placeholder="Empresa" />
                 </SelectTrigger>
                 <SelectContent>
@@ -411,14 +416,13 @@ export default function Altas() {
                 </SelectContent>
               </Select>
 
-              {/* Filtro por Usuario */}
               <Select
                 value={filterUser ?? ""}
                 onValueChange={(val) =>
                   setFilterUser(val === "all" ? null : val)
                 }
               >
-                <SelectTrigger className="h-8 w-[180px] text-sm">
+                <SelectTrigger className="h-8 w-[150px] text-sm">
                   <SelectValue placeholder="Usuario" />
                 </SelectTrigger>
                 <SelectContent>
@@ -434,14 +438,13 @@ export default function Altas() {
                 </SelectContent>
               </Select>
 
-              {/* Filtro por Estado */}
               <Select
                 value={filterState ?? ""}
                 onValueChange={(val) =>
                   setFilterState(val === "all" ? null : val)
                 }
               >
-                <SelectTrigger className="h-8 w-[180px] text-sm">
+                <SelectTrigger className="h-8 w-[140px] text-sm">
                   <SelectValue placeholder="Estado" />
                 </SelectTrigger>
                 <SelectContent>
@@ -457,14 +460,13 @@ export default function Altas() {
                 </SelectContent>
               </Select>
 
-              {/* Filtro por Tipo de Activo */}
               <Select
                 value={filterProductType ?? ""}
                 onValueChange={(val) =>
                   setFilterProductType(val === "all" ? null : val)
                 }
               >
-                <SelectTrigger className="h-8 w-[200px] text-sm">
+                <SelectTrigger className="h-8 w-[160px] text-sm">
                   <SelectValue placeholder="Tipo de activo" />
                 </SelectTrigger>
                 <SelectContent>
@@ -480,59 +482,15 @@ export default function Altas() {
                 </SelectContent>
               </Select>
 
-              {/* Botón limpiar filtros */}
               {hasActiveFilters && (
                 <Button
                   variant="ghost"
-                  size="sm"
-                  onClick={clearAllFilters}
-                  className="h-8 text-sm text-red-500 hover:text-red-700 hover:bg-red-50"
-                >
-                  <X className="h-3.5 w-3.5 mr-1" />
-                  Limpiar filtros
-                </Button>
-              )}
-            </div>
-          </div>
-
-          {/* Toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
-            {/* Acciones izquierda */}
-            <div className="flex items-center gap-1">
-              <Button variant="ghost" size="icon" className="h-8 w-8">
-                <FileText className="h-4 w-4 text-gray-500" />
-              </Button>
-
-              {/* Búsqueda */}
-              {isSearchOpen ? (
-                <div className="flex items-center">
-                  <Input
-                    placeholder="Buscar activos..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 w-64 text-sm"
-                    autoFocus
-                  />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="h-8 w-8"
-                      onClick={() => {
-                        setIsSearchOpen(false);
-                        setSearchQuery("");
-                      }}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsSearchOpen(true)}
+                  onClick={clearAllFilters}
+                  className="h-8 w-8 text-red-500 hover:text-red-700 hover:bg-red-50"
+                  title="Limpiar filtros"
                 >
-                  <Search className="h-4 w-4 text-gray-500" />
+                  <X className="h-4 w-4" />
                 </Button>
               )}
 
