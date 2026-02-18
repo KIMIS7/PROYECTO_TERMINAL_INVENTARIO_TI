@@ -19,6 +19,8 @@ import {
   Clock,
   Package,
   ShieldCheck,
+  MemoryStick,
+  AppWindow,
 } from "lucide-react";
 
 interface AssetDetailModalProps {
@@ -203,8 +205,10 @@ export const AssetDetailModal = ({
 
   const hasTechnicalInfo = serialNum || assetTAG || model || productManuf;
   const hasNetworkInfo = ipAddress || macAddress || domain;
-  const hasHardwareInfo = processor || processorInfo || ram || physicalMemory || hddModel || hddCapacity || operatingSystem;
-  const hasStorageInfo = physicalMemory || hddModel || hddSerial;
+  const hasProcessingInfo = processor || processorInfo;
+  const hasMemoryInfo = ram || physicalMemory;
+  const hasStorageInfo = hddModel || hddCapacity || hddSerial;
+  const hasSoftwareInfo = operatingSystem;
   const hasMobileInfo = imei || platform || osName || osVersion;
   const hasDateInfo = purchaseDate || warrantyExpiryDate;
 
@@ -299,10 +303,10 @@ export const AssetDetailModal = ({
                     title="Identificacion"
                   />
                   <div className="bg-gray-50 rounded-lg px-4 py-1">
+                    <DetailRow label="Fabricante" value={productManuf} />
+                    <DetailRow label="Modelo" value={model} />
                     <DetailRow label="Numero de Serie" value={serialNum} />
                     <DetailRow label="Asset TAG" value={assetTAG} />
-                    <DetailRow label="Modelo" value={model} />
-                    <DetailRow label="Fabricante" value={productManuf} />
                     {barcode && <DetailRow label="Codigo de Barras" value={barcode} />}
                   </div>
                 </>
@@ -323,36 +327,58 @@ export const AssetDetailModal = ({
                 </>
               )}
 
-              {/* Hardware */}
-              {hasHardwareInfo && (
+              {/* Procesamiento */}
+              {hasProcessingInfo && (
                 <>
                   <SectionHeader
                     icon={<Cpu className="h-4 w-4" />}
-                    title="Hardware"
+                    title="Procesamiento"
                   />
                   <div className="bg-gray-50 rounded-lg px-4 py-1">
                     <DetailRow label="Procesador" value={processor} />
                     <DetailRow label="Velocidad CPU" value={processorInfo} />
-                    <DetailRow label="Memoria RAM" value={ram} />
-                    <DetailRow label="Tipo de Memoria" value={physicalMemory} />
-                    <DetailRow label="Tipo de Disco" value={hddModel} />
-                    <DetailRow label="Capacidad de Disco" value={hddCapacity} />
-                    <DetailRow label="Sistema Operativo" value={operatingSystem} />
                   </div>
                 </>
               )}
 
-              {/* Almacenamiento (componentes) */}
+              {/* Memoria */}
+              {hasMemoryInfo && (
+                <>
+                  <SectionHeader
+                    icon={<MemoryStick className="h-4 w-4" />}
+                    title="Memoria"
+                  />
+                  <div className="bg-gray-50 rounded-lg px-4 py-1">
+                    <DetailRow label="Memoria RAM" value={ram} />
+                    <DetailRow label="Tipo de Memoria" value={physicalMemory} />
+                  </div>
+                </>
+              )}
+
+              {/* Almacenamiento */}
               {hasStorageInfo && (
                 <>
                   <SectionHeader
                     icon={<HardDrive className="h-4 w-4" />}
-                    title="Componentes de Almacenamiento"
+                    title="Almacenamiento"
                   />
                   <div className="bg-gray-50 rounded-lg px-4 py-1">
-                    <DetailRow label="Memoria Fisica" value={physicalMemory} />
-                    <DetailRow label="Modelo HDD/SSD" value={hddModel} />
+                    <DetailRow label="Tipo de Disco" value={hddModel} />
+                    <DetailRow label="Capacidad de Disco" value={hddCapacity} />
                     <DetailRow label="Serial HDD/SSD" value={hddSerial} />
+                  </div>
+                </>
+              )}
+
+              {/* Software */}
+              {hasSoftwareInfo && (
+                <>
+                  <SectionHeader
+                    icon={<AppWindow className="h-4 w-4" />}
+                    title="Software"
+                  />
+                  <div className="bg-gray-50 rounded-lg px-4 py-1">
+                    <DetailRow label="Sistema Operativo" value={operatingSystem} />
                   </div>
                 </>
               )}

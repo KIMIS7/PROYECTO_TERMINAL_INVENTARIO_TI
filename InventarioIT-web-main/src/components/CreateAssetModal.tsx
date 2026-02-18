@@ -293,207 +293,254 @@ export const CreateAssetModal = ({
     }
 
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {/* Campos basicos - siempre visibles */}
+      <div className="space-y-5">
+        {/* 1. Identificacion - Lo que ves fisicamente sin encender el equipo */}
         <div>
-          <Label htmlFor="serialNum" className="text-sm font-medium">
-            Numero de Serie
-          </Label>
-          <Input
-            id="serialNum"
-            value={formData.serialNum}
-            onChange={(e) => handleInputChange("serialNum", e.target.value)}
-            placeholder="Ej: SN123456789"
-            disabled={isLoading}
-          />
-        </div>
+          <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+            Identificacion
+          </h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <Label htmlFor="productManuf" className="text-sm font-medium">
+                Fabricante
+              </Label>
+              <Input
+                id="productManuf"
+                value={formData.productManuf}
+                onChange={(e) => handleInputChange("productManuf", e.target.value)}
+                placeholder="Ej: Dell, HP, Lenovo"
+                disabled={isLoading}
+              />
+            </div>
 
-        <div>
-          <Label htmlFor="assetTAG" className="text-sm font-medium">
-            Asset TAG
-          </Label>
-          <Input
-            id="assetTAG"
-            value={formData.assetTAG}
-            onChange={(e) => handleInputChange("assetTAG", e.target.value)}
-            placeholder="Ej: TAG-001"
-            disabled={isLoading}
-          />
-        </div>
+            <div>
+              <Label htmlFor="model" className="text-sm font-medium">
+                Modelo
+              </Label>
+              <Input
+                id="model"
+                value={formData.model}
+                onChange={(e) => handleInputChange("model", e.target.value)}
+                placeholder="Ej: Dell Latitude 5520"
+                disabled={isLoading}
+              />
+            </div>
 
-        <div>
-          <Label htmlFor="model" className="text-sm font-medium">
-            Modelo
-          </Label>
-          <Input
-            id="model"
-            value={formData.model}
-            onChange={(e) => handleInputChange("model", e.target.value)}
-            placeholder="Ej: Dell Latitude 5520"
-            disabled={isLoading}
-          />
-        </div>
+            <div>
+              <Label htmlFor="serialNum" className="text-sm font-medium">
+                Numero de Serie
+              </Label>
+              <Input
+                id="serialNum"
+                value={formData.serialNum}
+                onChange={(e) => handleInputChange("serialNum", e.target.value)}
+                placeholder="Ej: SN123456789"
+                disabled={isLoading}
+              />
+            </div>
 
-        <div>
-          <Label htmlFor="productManuf" className="text-sm font-medium">
-            Fabricante
-          </Label>
-          <Input
-            id="productManuf"
-            value={formData.productManuf}
-            onChange={(e) => handleInputChange("productManuf", e.target.value)}
-            placeholder="Ej: Dell, HP, Lenovo"
-            disabled={isLoading}
-          />
+            <div>
+              <Label htmlFor="assetTAG" className="text-sm font-medium">
+                Asset TAG
+              </Label>
+              <Input
+                id="assetTAG"
+                value={formData.assetTAG}
+                onChange={(e) => handleInputChange("assetTAG", e.target.value)}
+                placeholder="Ej: TAG-001"
+                disabled={isLoading}
+              />
+            </div>
+          </div>
         </div>
 
         {/* Campos de Equipo y Otros */}
         {(productTypeCategory === "Equipo" || productTypeCategory === "Otros") && (
           <>
+            {/* 2. Red y Acceso */}
             <div>
-              <Label htmlFor="ipAddress" className="text-sm font-medium">
-                Direccion IP
-              </Label>
-              <Input
-                id="ipAddress"
-                value={formData.ipAddress}
-                onChange={(e) => handleInputChange("ipAddress", e.target.value)}
-                placeholder="Ej: 192.168.1.100"
-                disabled={isLoading}
-              />
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Red y Acceso
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ipAddress" className="text-sm font-medium">
+                    Direccion IP
+                  </Label>
+                  <Input
+                    id="ipAddress"
+                    value={formData.ipAddress}
+                    onChange={(e) => handleInputChange("ipAddress", e.target.value)}
+                    placeholder="Ej: 192.168.1.100"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="macAddress" className="text-sm font-medium">
+                    Direccion MAC
+                  </Label>
+                  <Input
+                    id="macAddress"
+                    value={formData.macAddress}
+                    onChange={(e) => handleInputChange("macAddress", e.target.value)}
+                    placeholder="Ej: AA:BB:CC:DD:EE:FF"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="domain" className="text-sm font-medium">
+                    Dominio
+                  </Label>
+                  <Input
+                    id="domain"
+                    value={formData.domain}
+                    onChange={(e) => handleInputChange("domain", e.target.value)}
+                    placeholder="Ej: empresa.local"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* 3. Procesamiento */}
             <div>
-              <Label htmlFor="macAddress" className="text-sm font-medium">
-                Direccion MAC
-              </Label>
-              <Input
-                id="macAddress"
-                value={formData.macAddress}
-                onChange={(e) => handleInputChange("macAddress", e.target.value)}
-                placeholder="Ej: AA:BB:CC:DD:EE:FF"
-                disabled={isLoading}
-              />
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Procesamiento
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="processor" className="text-sm font-medium">
+                    Procesador
+                  </Label>
+                  <Input
+                    id="processor"
+                    value={formData.processor}
+                    onChange={(e) => handleInputChange("processor", e.target.value)}
+                    placeholder="Ej: Intel Core i7-1185G7"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="processorInfo" className="text-sm font-medium">
+                    Velocidad del Procesador
+                  </Label>
+                  <Input
+                    id="processorInfo"
+                    value={formData.processorInfo}
+                    onChange={(e) => handleInputChange("processorInfo", e.target.value)}
+                    placeholder="Ej: 3.5 GHz"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* 4. Memoria */}
             <div>
-              <Label htmlFor="domain" className="text-sm font-medium">
-                Dominio
-              </Label>
-              <Input
-                id="domain"
-                value={formData.domain}
-                onChange={(e) => handleInputChange("domain", e.target.value)}
-                placeholder="Ej: empresa.local"
-                disabled={isLoading}
-              />
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Memoria
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="ram" className="text-sm font-medium">
+                    Memoria RAM
+                  </Label>
+                  <Input
+                    id="ram"
+                    value={formData.ram}
+                    onChange={(e) => handleInputChange("ram", e.target.value)}
+                    placeholder="Ej: 16 GB"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="physicalMemory" className="text-sm font-medium">
+                    Tipo de Memoria
+                  </Label>
+                  <Select
+                    value={formData.physicalMemory || "none"}
+                    onValueChange={(value) => handleInputChange("physicalMemory", value === "none" ? "" : value)}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar tipo</SelectItem>
+                      <SelectItem value="DDR3">DDR3</SelectItem>
+                      <SelectItem value="DDR4">DDR4</SelectItem>
+                      <SelectItem value="DDR5">DDR5</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
             </div>
 
+            {/* 5. Almacenamiento */}
             <div>
-              <Label htmlFor="processor" className="text-sm font-medium">
-                Procesador
-              </Label>
-              <Input
-                id="processor"
-                value={formData.processor}
-                onChange={(e) => handleInputChange("processor", e.target.value)}
-                placeholder="Ej: Intel Core i7-1185G7"
-                disabled={isLoading}
-              />
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Almacenamiento
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="hddModel" className="text-sm font-medium">
+                    Tipo de Disco
+                  </Label>
+                  <Select
+                    value={formData.hddModel || "none"}
+                    onValueChange={(value) => handleInputChange("hddModel", value === "none" ? "" : value)}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar tipo</SelectItem>
+                      <SelectItem value="HDD">HDD</SelectItem>
+                      <SelectItem value="SSD">SSD</SelectItem>
+                      <SelectItem value="NVME">NVME</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div>
+                  <Label htmlFor="hddCapacity" className="text-sm font-medium">
+                    Capacidad de Disco
+                  </Label>
+                  <Input
+                    id="hddCapacity"
+                    value={formData.hddCapacity}
+                    onChange={(e) => handleInputChange("hddCapacity", e.target.value)}
+                    placeholder="Ej: 512 GB"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
             </div>
 
+            {/* 6. Software */}
             <div>
-              <Label htmlFor="processorInfo" className="text-sm font-medium">
-                Velocidad del Procesador
-              </Label>
-              <Input
-                id="processorInfo"
-                value={formData.processorInfo}
-                onChange={(e) => handleInputChange("processorInfo", e.target.value)}
-                placeholder="Ej: 3.5 GHz"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="ram" className="text-sm font-medium">
-                Memoria RAM
-              </Label>
-              <Input
-                id="ram"
-                value={formData.ram}
-                onChange={(e) => handleInputChange("ram", e.target.value)}
-                placeholder="Ej: 16 GB"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="physicalMemory" className="text-sm font-medium">
-                Tipo de Memoria
-              </Label>
-              <Select
-                value={formData.physicalMemory || "none"}
-                onValueChange={(value) => handleInputChange("physicalMemory", value === "none" ? "" : value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Seleccionar tipo</SelectItem>
-                  <SelectItem value="DDR3">DDR3</SelectItem>
-                  <SelectItem value="DDR4">DDR4</SelectItem>
-                  <SelectItem value="DDR5">DDR5</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="hddModel" className="text-sm font-medium">
-                Tipo de Disco
-              </Label>
-              <Select
-                value={formData.hddModel || "none"}
-                onValueChange={(value) => handleInputChange("hddModel", value === "none" ? "" : value)}
-                disabled={isLoading}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="Seleccionar tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Seleccionar tipo</SelectItem>
-                  <SelectItem value="HDD">HDD</SelectItem>
-                  <SelectItem value="SSD">SSD</SelectItem>
-                  <SelectItem value="NVME">NVME</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div>
-              <Label htmlFor="hddCapacity" className="text-sm font-medium">
-                Capacidad de Disco
-              </Label>
-              <Input
-                id="hddCapacity"
-                value={formData.hddCapacity}
-                onChange={(e) => handleInputChange("hddCapacity", e.target.value)}
-                placeholder="Ej: 512 GB"
-                disabled={isLoading}
-              />
-            </div>
-
-            <div>
-              <Label htmlFor="operatingSystem" className="text-sm font-medium">
-                Sistema Operativo
-              </Label>
-              <Input
-                id="operatingSystem"
-                value={formData.operatingSystem}
-                onChange={(e) => handleInputChange("operatingSystem", e.target.value)}
-                placeholder="Ej: Windows 11 Pro"
-                disabled={isLoading}
-              />
+              <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
+                Software
+              </h4>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="operatingSystem" className="text-sm font-medium">
+                    Sistema Operativo
+                  </Label>
+                  <Input
+                    id="operatingSystem"
+                    value={formData.operatingSystem}
+                    onChange={(e) => handleInputChange("operatingSystem", e.target.value)}
+                    placeholder="Ej: Windows 11 Pro"
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
             </div>
           </>
         )}
