@@ -501,7 +501,7 @@ export const EditAssetModal = ({
                   </div>
 
                   <div>
-                    <Label htmlFor="siteID" className="text-sm font-medium">Sitio/Ubicacion *</Label>
+                    <Label htmlFor="siteID" className="text-sm font-medium">Site *</Label>
                     <Select
                       value={formData.siteID ? formData.siteID.toString() : "none"}
                       onValueChange={(value) => handleInputChange("siteID", value === "none" ? 0 : Number(value))}

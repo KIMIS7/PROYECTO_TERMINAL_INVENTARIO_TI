@@ -603,7 +603,7 @@ export const CreateAssetModal = ({
                       className="h-6 text-xs text-blue-600 hover:text-blue-700"
                     >
                       <Plus className="h-3 w-3 mr-1" />
-                      Crear nuevo
+                      Crear Tipo de Activo
                     </Button>
                   </div>
                   <Select
@@ -709,7 +709,7 @@ export const CreateAssetModal = ({
                 {/* Sitio */}
                 <div>
                   <Label htmlFor="siteID" className="text-sm font-medium">
-                    Sitio/Ubicacion *
+                    Site *
                   </Label>
                   <Select
                     value={formData.siteID ? formData.siteID.toString() : "none"}

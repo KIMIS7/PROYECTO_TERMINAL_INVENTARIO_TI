@@ -292,8 +292,6 @@ export default function Altas() {
         <div className="flex flex-col h-full bg-white">
           {/* Header */}
           <div className="px-4 py-3 border-b">
-            {/* Breadcrumb */}
-            <div className="text-xs text-gray-500 mb-1">All Assets</div>
 
             {/* Título con dropdown y vista toggle */}
             <div className="flex items-center justify-between">
@@ -322,22 +320,7 @@ export default function Altas() {
 
               {/* Vista toggle */}
               <div className="flex items-center border rounded overflow-hidden">
-                <Button
-                  variant={currentView === "list" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 rounded-none"
-                  onClick={() => setCurrentView("list")}
-                >
-                  <List className="h-4 w-4" />
-                </Button>
-                <Button
-                  variant={currentView === "grid" ? "secondary" : "ghost"}
-                  size="icon"
-                  className="h-8 w-8 rounded-none"
-                  onClick={() => setCurrentView("grid")}
-                >
-                  <LayoutGrid className="h-4 w-4" />
-                </Button>
+              
               </div>
             </div>
           </div>
@@ -391,17 +374,7 @@ export default function Altas() {
                 onClick={handleCreateAsset}
                 className="h-8 text-sm font-normal"
               >
-                New
-              </Button>
-
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleEdit}
-                disabled={selectedAssets.size !== 1}
-                className="h-8 text-sm font-normal"
-              >
-                Edit
+                Nuevo
               </Button>
 
               <Button
@@ -411,19 +384,19 @@ export default function Altas() {
                 disabled={selectedAssets.size === 0}
                 className="h-8 text-sm font-normal"
               >
-                Delete
+                Eliminar
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
-                    Actions
+                    Acciones
                     <ChevronDown className="h-4 w-4 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   <DropdownMenuItem onClick={handleExport}>
-                    <Download className="h-4 w-4 mr-2" />
+                      <Download className="h-4 w-4 mr-2" />
                     Export to CSV
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={() => toast.info("Export PDF en desarrollo")}>
@@ -449,14 +422,6 @@ export default function Altas() {
                 Import from CSV
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleAssignUsers}
-                className="h-8 text-sm font-normal"
-              >
-                Assign Users
-              </Button>
             </div>
 
             {/* Paginación derecha */}
@@ -465,6 +430,7 @@ export default function Altas() {
                 {startItem} - {endItem} of {filteredAssets.length}
               </span>
               <span className="text-gray-400">...</span>
+
               <Button
                 variant="ghost"
                 size="icon"
@@ -474,6 +440,7 @@ export default function Altas() {
               >
                 <ChevronLeft className="h-4 w-4" />
               </Button>
+              
               <Button
                 variant="ghost"
                 size="icon"
@@ -483,12 +450,11 @@ export default function Altas() {
               >
                 <ChevronRight className="h-4 w-4" />
               </Button>
+
               <Button variant="ghost" size="icon" className="h-7 w-7" onClick={handleExport}>
                 <Download className="h-4 w-4" />
               </Button>
-              <Button variant="ghost" size="icon" className="h-7 w-7">
-                <Settings className="h-4 w-4" />
-              </Button>
+              
             </div>
           </div>
 
@@ -509,14 +475,13 @@ export default function Altas() {
                       />
                     </TableHead>
                     <TableHead className="w-16"></TableHead>
-                    <TableHead className="font-semibold text-gray-700">Name ↓</TableHead>
-                    <TableHead className="font-semibold text-gray-700">User</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Department</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Associated To</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Product</TableHead>
-                    <TableHead className="font-semibold text-gray-700">Product Type</TableHead>
-                    <TableHead className="font-semibold text-gray-700">State</TableHead>
-                    <TableHead className="font-semibold text-gray-700">AssetTag</TableHead>
+                    <TableHead className="font-semibold text-gray-700">NOMBRE</TableHead>
+                    <TableHead className="font-semibold text-gray-700">COMPAÑIA</TableHead>
+                    <TableHead className="font-semibold text-gray-700">SITE</TableHead>
+                    <TableHead className="font-semibold text-gray-700">SERIAL</TableHead>
+                    <TableHead className="font-semibold text-gray-700">MODELO</TableHead>
+                    <TableHead className="font-semibold text-gray-700">ESTADO</TableHead>
+                    <TableHead className="font-semibold text-gray-700">TIPO</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -573,27 +538,22 @@ export default function Altas() {
                           </button>
                         </TableCell>
                         <TableCell className="text-gray-600">
-                          {asset.user?.name || "-"}
-                        </TableCell>
-                        <TableCell className="text-gray-600">
-                          {asset.user?.department || "-"}
+                          {asset.company?.description || "-"}
                         </TableCell>
                         <TableCell className="text-gray-600">
                           {asset.site?.name || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600 max-w-[180px] truncate">
-                          {asset.vendor?.name && asset.assetDetail?.model
-                            ? `${asset.vendor.name} ${asset.assetDetail.model}`
-                            : asset.vendor?.name || asset.assetDetail?.model || "-"}
+                        <TableCell className="text-gray-600">
+                          {asset.assetDetail?.serialNum || "-"}
                         </TableCell>
                         <TableCell className="text-gray-600">
-                          {asset.productType?.subCategory || asset.productType?.name || "-"}
+                          {asset.assetDetail?.model || "-"}
                         </TableCell>
                         <TableCell className="text-gray-600">
                           {asset.assetStateInfo?.name || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600 font-mono text-xs">
-                          {asset.assetDetail?.assetTAG || "-"}
+                        <TableCell className="text-gray-600">
+                          {asset.productType?.name || "-"}
                         </TableCell>
                       </TableRow>
                     ))
