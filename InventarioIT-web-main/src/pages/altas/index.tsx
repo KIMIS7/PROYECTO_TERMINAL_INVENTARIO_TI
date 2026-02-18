@@ -9,6 +9,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
@@ -29,21 +36,16 @@ import {
   ChevronRight,
   Download,
   FileText,
-  List,
-  LayoutGrid,
+  Filter,
   Pencil,
-  Plus,
   Search,
-  Settings,
-  Trash2,
-  Upload,
-  UserPlus,
-  Paperclip,
   RefreshCw,
   X,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+
+const ASSET_CATEGORIES = ["Equipo", "Accesorio", "Componente", "Otro"] as const;
 
 export default function Altas() {
   // Estados para los catálogos
@@ -68,6 +70,12 @@ export default function Altas() {
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+
+  // Filtros avanzados
+  const [filterCompany, setFilterCompany] = useState<string | null>(null);
+  const [filterUser, setFilterUser] = useState<string | null>(null);
+  const [filterState, setFilterState] = useState<string | null>(null);
+  const [filterProductType, setFilterProductType] = useState<string | null>(null);
 
   // Estados para paginación y vista
   const [currentPage, setCurrentPage] = useState(1);
@@ -127,11 +135,35 @@ export default function Altas() {
   useEffect(() => {
     let result = [...assets];
 
-    // Filtrar por categoría
+    // Filtrar por categoría (botones)
     if (selectedCategory) {
       result = result.filter(
         (asset) => asset.productType?.category === selectedCategory
       );
+    }
+
+    // Filtrar por empresa
+    if (filterCompany) {
+      const companyID = Number(filterCompany);
+      result = result.filter((asset) => asset.companyID === companyID);
+    }
+
+    // Filtrar por usuario
+    if (filterUser) {
+      const userID = Number(filterUser);
+      result = result.filter((asset) => asset.userID === userID);
+    }
+
+    // Filtrar por estado
+    if (filterState) {
+      const stateID = Number(filterState);
+      result = result.filter((asset) => asset.assetState === stateID);
+    }
+
+    // Filtrar por tipo de activo
+    if (filterProductType) {
+      const ptID = Number(filterProductType);
+      result = result.filter((asset) => asset.productTypeID === ptID);
     }
 
     // Filtrar por búsqueda
@@ -151,7 +183,7 @@ export default function Altas() {
 
     setFilteredAssets(result);
     setCurrentPage(1);
-  }, [assets, selectedCategory, searchQuery]);
+  }, [assets, selectedCategory, filterCompany, filterUser, filterState, filterProductType, searchQuery]);
 
   // Paginación
   const paginatedAssets = useMemo(() => {
@@ -163,10 +195,39 @@ export default function Altas() {
   const startItem = filteredAssets.length > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endItem = Math.min(currentPage * pageSize, filteredAssets.length);
 
-  // Obtener categorías únicas
-  const uniqueCategories = useMemo(() => {
-    return Array.from(new Set(productTypes.map((pt) => pt.category))).filter(Boolean);
-  }, [productTypes]);
+  // Obtener usuarios únicos de los activos
+  const uniqueUsers = useMemo(() => {
+    const userMap = new Map<number, { userID: number; name: string }>();
+    assets.forEach((asset) => {
+      if (asset.user && asset.user.userID && asset.user.name) {
+        userMap.set(asset.user.userID, {
+          userID: asset.user.userID,
+          name: asset.user.name,
+        });
+      }
+    });
+    return Array.from(userMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [assets]);
+
+  // Tipos de activo filtrados por categoría seleccionada
+  const filteredProductTypes = useMemo(() => {
+    if (selectedCategory) {
+      return productTypes.filter((pt) => pt.category === selectedCategory);
+    }
+    return productTypes;
+  }, [productTypes, selectedCategory]);
+
+  // Verificar si hay algún filtro activo
+  const hasActiveFilters = filterCompany || filterUser || filterState || filterProductType;
+
+  const clearAllFilters = () => {
+    setFilterCompany(null);
+    setFilterUser(null);
+    setFilterState(null);
+    setFilterProductType(null);
+  };
 
   // Handlers
   const handleRefresh = () => {
@@ -276,11 +337,6 @@ export default function Altas() {
     toast.info("Funcionalidad de asignación en desarrollo");
   };
 
-  const getFilterTitle = () => {
-    if (!selectedCategory) return "ASSETS";
-    return selectedCategory;
-  };
-
   const isAllSelected = paginatedAssets.length > 0 &&
     paginatedAssets.every((a) => selectedAssets.has(a.assetID));
 
@@ -290,38 +346,152 @@ export default function Altas() {
     >
       {() => (
         <div className="flex flex-col h-full bg-white">
-          {/* Header */}
+          {/* Header - Botones de categoría */}
           <div className="px-4 py-3 border-b">
-
-            {/* Título con dropdown y vista toggle */}
             <div className="flex items-center justify-between">
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <button className="flex items-center gap-1 text-xl font-semibold text-gray-900 hover:text-gray-700">
-                    {getFilterTitle()}
-                    <ChevronDown className="h-5 w-5" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="start">
-                  <DropdownMenuItem onClick={() => setSelectedCategory(null)}>
-                    Todo
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  {uniqueCategories.map((category) => (
-                    <DropdownMenuItem
-                      key={category}
-                      onClick={() => setSelectedCategory(category)}
-                    >
-                      {category}
-                    </DropdownMenuItem>
-                  ))}
-                </DropdownMenuContent>
-              </DropdownMenu>
-
-              {/* Vista toggle */}
-              <div className="flex items-center border rounded overflow-hidden">
-              
+              {/* Botones de categoría */}
+              <div className="flex items-center gap-2">
+                <Button
+                  variant={selectedCategory === null ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => setSelectedCategory(null)}
+                  className="h-9 text-sm font-medium"
+                >
+                  Todos
+                </Button>
+                {ASSET_CATEGORIES.map((category) => (
+                  <Button
+                    key={category}
+                    variant={selectedCategory === category ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => {
+                      setSelectedCategory(
+                        selectedCategory === category ? null : category
+                      );
+                      // Limpiar filtro de tipo de activo al cambiar categoría
+                      setFilterProductType(null);
+                    }}
+                    className="h-9 text-sm font-medium"
+                  >
+                    {category}
+                  </Button>
+                ))}
               </div>
+            </div>
+          </div>
+
+          {/* Filtros avanzados */}
+          <div className="px-4 py-2 border-b bg-gray-50/50">
+            <div className="flex items-center gap-3 flex-wrap">
+              <div className="flex items-center gap-1.5 text-sm text-gray-500">
+                <Filter className="h-4 w-4" />
+                <span className="font-medium">Filtros:</span>
+              </div>
+
+              {/* Filtro por Empresa */}
+              <Select
+                value={filterCompany ?? ""}
+                onValueChange={(val) =>
+                  setFilterCompany(val === "all" ? null : val)
+                }
+              >
+                <SelectTrigger className="h-8 w-[180px] text-sm">
+                  <SelectValue placeholder="Empresa" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todas las empresas</SelectItem>
+                  {companies.map((company) => (
+                    <SelectItem
+                      key={company.companyID}
+                      value={String(company.companyID)}
+                    >
+                      {company.description}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Filtro por Usuario */}
+              <Select
+                value={filterUser ?? ""}
+                onValueChange={(val) =>
+                  setFilterUser(val === "all" ? null : val)
+                }
+              >
+                <SelectTrigger className="h-8 w-[180px] text-sm">
+                  <SelectValue placeholder="Usuario" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los usuarios</SelectItem>
+                  {uniqueUsers.map((user) => (
+                    <SelectItem
+                      key={user.userID}
+                      value={String(user.userID)}
+                    >
+                      {user.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Filtro por Estado */}
+              <Select
+                value={filterState ?? ""}
+                onValueChange={(val) =>
+                  setFilterState(val === "all" ? null : val)
+                }
+              >
+                <SelectTrigger className="h-8 w-[180px] text-sm">
+                  <SelectValue placeholder="Estado" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los estados</SelectItem>
+                  {assetStates.map((state) => (
+                    <SelectItem
+                      key={state.assetStateID}
+                      value={String(state.assetStateID)}
+                    >
+                      {state.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Filtro por Tipo de Activo */}
+              <Select
+                value={filterProductType ?? ""}
+                onValueChange={(val) =>
+                  setFilterProductType(val === "all" ? null : val)
+                }
+              >
+                <SelectTrigger className="h-8 w-[200px] text-sm">
+                  <SelectValue placeholder="Tipo de activo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">Todos los tipos</SelectItem>
+                  {filteredProductTypes.map((pt) => (
+                    <SelectItem
+                      key={pt.productTypeID}
+                      value={String(pt.productTypeID)}
+                    >
+                      {pt.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              {/* Botón limpiar filtros */}
+              {hasActiveFilters && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearAllFilters}
+                  className="h-8 text-sm text-red-500 hover:text-red-700 hover:bg-red-50"
+                >
+                  <X className="h-3.5 w-3.5 mr-1" />
+                  Limpiar filtros
+                </Button>
+              )}
             </div>
           </div>
 
