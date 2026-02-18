@@ -277,7 +277,7 @@ export default function Altas() {
   };
 
   const getFilterTitle = () => {
-    if (!selectedCategory) return "All Assets";
+    if (!selectedCategory) return "ASSETS";
     return selectedCategory;
   };
 
@@ -304,7 +304,7 @@ export default function Altas() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="start">
                   <DropdownMenuItem onClick={() => setSelectedCategory(null)}>
-                    All Assets
+                    Todo
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   {uniqueCategories.map((category) => (
@@ -343,17 +343,17 @@ export default function Altas() {
                     className="h-8 w-64 text-sm"
                     autoFocus
                   />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      setIsSearchOpen(false);
-                      setSearchQuery("");
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="h-8 w-8"
+                      onClick={() => {
+                        setIsSearchOpen(false);
+                        setSearchQuery("");
+                      }}
+                    >
+                      <X className="h-4 w-4" />
+                    </Button>
                 </div>
               ) : (
                 <Button
@@ -520,9 +520,6 @@ export default function Altas() {
                             >
                               <Pencil className="h-4 w-4 text-gray-400 hover:text-amber-600" />
                             </button>
-                            {asset.user && (
-                              <Paperclip className="h-4 w-4 text-gray-400" />
-                            )}
                           </div>
                         </TableCell>
                         <TableCell className="max-w-[250px]">
