@@ -210,6 +210,7 @@ export const AssetDetailModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
+        
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-4 border-b bg-gradient-to-r from-blue-50 to-white">
           <div className="flex items-center gap-3 min-w-0">
@@ -220,35 +221,10 @@ export const AssetDetailModal = ({
               <h2 className="text-lg font-semibold text-gray-900 truncate">
                 {isLoading ? "Cargando..." : data?.name || "Activo"}
               </h2>
-              {data && (
-                <div className="flex items-center gap-2 mt-0.5">
-                  <span className="text-xs text-gray-500">ID: {data.assetID}</span>
-                  {data.assetStateInfo && (
-                    <StateBadge name={data.assetStateInfo.name} />
-                  )}
-                </div>
-              )}
             </div>
           </div>
           <div className="flex items-center gap-2 shrink-0">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleEdit}
-              disabled={isLoading || !data}
-              className="h-8 text-sm"
-            >
-              <Pencil className="h-3.5 w-3.5 mr-1.5" />
-              Editar
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onClose}
-              className="h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
+            
           </div>
         </div>
 
@@ -268,7 +244,7 @@ export const AssetDetailModal = ({
               <div className="bg-gray-50 rounded-lg px-4 py-1">
                 <DetailRow label="Nombre" value={data.name} />
                 <DetailRow
-                  label="Tipo de Producto"
+                  label="Tipo"
                   value={
                     data.productType
                       ? `${data.productType.name} (${data.productType.category})`
@@ -293,7 +269,7 @@ export const AssetDetailModal = ({
               />
               <div className="bg-gray-50 rounded-lg px-4 py-1">
                 <DetailRow label="Empresa" value={data.company?.description} />
-                <DetailRow label="Sitio / Ubicacion" value={data.site?.name} />
+                <DetailRow label="Site" value={data.site?.name} />
               </div>
 
               {/* Usuario Asignado */}
