@@ -24,14 +24,16 @@ export default function Users() {
   useEffect(() => {
     (async () => {
       try {
-        const [rolesRes, departmentsRes] = await Promise.all([
-          api.role.getAll(),
-          api.user.getDepartments(),
-        ]);
+        const rolesRes = await api.role.getAll();
         setRoles(rolesRes);
+      } catch (error) {
+        console.error("Error fetching roles data:", error);
+      }
+      try {
+        const departmentsRes = await api.user.getDepartments();
         setDepartments(departmentsRes);
       } catch (error) {
-        console.error("Error fetching roles/departments data:", error);
+        console.error("Error fetching departments data:", error);
       }
     })();
   }, []);

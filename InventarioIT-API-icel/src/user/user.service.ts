@@ -81,9 +81,22 @@ export class UserService {
         excludeExtraneousValues: true,
       });
     } catch (error) {
-      throw new InternalServerErrorException({
-        message: error.message || 'Error al obtener los usuarios',
-      });
+      console.error('Error en findAll (con Depart):', error);
+      // Si falla con Depart, intentar sin la relacion
+      try {
+        const users = await this.prismaShopic.user.findMany({
+          include: {
+            rol: true,
+          },
+        });
+        return plainToInstance(UserDto, users, {
+          excludeExtraneousValues: true,
+        });
+      } catch (fallbackError) {
+        throw new InternalServerErrorException({
+          message: fallbackError.message || 'Error al obtener los usuarios',
+        });
+      }
     }
   }
 
@@ -330,6 +343,7 @@ export class UserService {
         name: d.Name,
       }));
     } catch (error) {
+      console.error('Error en getDepartments:', error);
       throw new InternalServerErrorException({
         message: error.message || 'Error al obtener los departamentos',
       });
