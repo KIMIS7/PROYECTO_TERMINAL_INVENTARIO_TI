@@ -169,7 +169,22 @@ const api = {
         },
         update : async (userId: number, data: { rolID: number, name: string, email: string, DepartmentID?: number }) => {
             try {
-                const response = await apiClient.patch<{ success: boolean, message: string, data: { userID: number, name: string, email: string, isActive: boolean, role: string, rolID: number } }>(`/user/${userId}`, data);
+                // Map frontend field names to backend DTO field names
+                const nameParts = data.name.trim().split(/\s+/);
+                const FirstName = nameParts[0] || '';
+                const LastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
+                const payload: Record<string, unknown> = {
+                    Email: data.email,
+                    FirstName,
+                    rolD: data.rolID,
+                    DepartmentID: data.DepartmentID,
+                };
+                if (LastName) {
+                    payload.LastName = LastName;
+                }
+
+                const response = await apiClient.patch<{ success: boolean, message: string, data: { userID: number, name: string, email: string, isActive: boolean, role: string, rolID: number } }>(`/user/${userId}`, payload);
                 return response.data;
             } catch (error: unknown) {
                 // Re-lanzar el error para que sea manejado por el componente
