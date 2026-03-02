@@ -15,7 +15,7 @@ export class UserService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createUserDto: CreateUserDto) {
-    const { Email, FirstName, LastName, Department, SiteID, rolD } =
+    const { Email, FirstName, LastName, DepartmentID, SiteID, rolD } =
       createUserDto;
 
     if (!Email) throw new NotFoundException('El email es requerido');
@@ -42,7 +42,7 @@ export class UserService {
           Email,
           FirstName,
           LastName,
-          Department,
+          DepartmentID,
           SiteID,
           rolD,
           isActive: true,
@@ -102,7 +102,7 @@ export class UserService {
   }
 
   async update(userID: number, updateUserDto: UpdateUserDto) {
-    const { Email, FirstName, LastName, Department, SiteID, rolD } =
+    const { Email, FirstName, LastName, DepartmentID, SiteID, rolD } =
       updateUserDto;
 
     const userExists = await this.prismaShopic.user.findUnique({
@@ -139,7 +139,7 @@ export class UserService {
           ...(Email && { Email: Email.toLowerCase() }),
           ...(FirstName && { FirstName }),
           ...(LastName && { LastName }),
-          ...(Department && { Department }),
+          ...(DepartmentID && { DepartmentID }),
           ...(SiteID && { SiteID }),
           ...(rolD && { rolD }),
         },

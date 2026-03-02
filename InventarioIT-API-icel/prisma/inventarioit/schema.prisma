@@ -141,13 +141,20 @@ model sysdiagrams {
   @@unique([principal_id, name], map: "UK_principal_name")
 }
 
+model Depart {
+  DepartID Int    @id(map: "PK_Depart") @default(autoincrement())
+  ReportID Int
+  Name     String @db.NVarChar(100)
+  User     User[]
+}
+
 model User {
   UserID                Int                     @id(map: "PK_User") @default(autoincrement())
   Email                 String                  @db.NVarChar(100)
   FirstName             String                  @db.NVarChar(100)
   LastName              String                  @db.NVarChar(100)
   Name                  String                  @db.NVarChar(200)
-  Department            String                  @db.NVarChar(100)
+  DepartmentID          Int
   SiteID                Int
   rolD                  Int
   isActive              Boolean
@@ -156,6 +163,7 @@ model User {
   Asset                 Asset[]
   AssetDetail           AssetDetail[]
   AssetOwnershipHistory AssetOwnershipHistory[]
+  Depart                Depart                  @relation(fields: [DepartmentID], references: [DepartID], onUpdate: NoAction, map: "FK_User_Depart")
   rol                   rol                     @relation(fields: [rolD], references: [rolID], onUpdate: NoAction, map: "FK_User_rol")
 }
 

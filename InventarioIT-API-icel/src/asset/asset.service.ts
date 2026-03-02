@@ -158,7 +158,7 @@ export class AssetService {
               userID: asset.User.UserID,
               name: asset.User.Name,
               email: asset.User.Email,
-              department: asset.User.Department,
+              departmentID: asset.User.DepartmentID,
               firstName: asset.User.FirstName,
               lastName: asset.User.LastName,
             }
@@ -252,7 +252,7 @@ export class AssetService {
               userID: asset.User.UserID,
               name: asset.User.Name,
               email: asset.User.Email,
-              department: asset.User.Department,
+              departmentID: asset.User.DepartmentID,
               firstName: asset.User.FirstName,
               lastName: asset.User.LastName,
             }

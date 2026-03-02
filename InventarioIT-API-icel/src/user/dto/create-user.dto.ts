@@ -13,9 +13,9 @@ export class CreateUserDto {
   @IsNotEmpty()
   LastName: string;
 
-  @IsString()
+  @IsNumber()
   @IsNotEmpty()
-  Department: string;
+  DepartmentID: number;
 
   @IsNumber()
   @IsNotEmpty()

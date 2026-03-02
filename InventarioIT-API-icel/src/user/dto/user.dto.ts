@@ -21,6 +21,10 @@ export class UserDto {
   @Transform(({ obj }) => obj?.token || '')
   pin: string;
 
+  @Expose({ name: 'departmentID' })
+  @Transform(({ obj }) => obj?.DepartmentID)
+  departmentID: number;
+
   @Expose({ name: 'rolID' })
   @Transform(({ obj }) => obj?.rolD)
   rolID: number;
