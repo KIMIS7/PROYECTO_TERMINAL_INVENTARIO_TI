@@ -143,7 +143,6 @@ model sysdiagrams {
 
 model Depart {
   DepartID Int    @id(map: "PK_Depart") @default(autoincrement())
-  ReportID Int
   Name     String @db.NVarChar(100)
   User     User[]
 }
