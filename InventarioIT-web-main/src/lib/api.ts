@@ -1,6 +1,6 @@
 import axios from "axios";
 import { getSession } from "next-auth/react";
-import { User, Movement, CreateMovementDto } from "@/types";
+import { User, Movement, CreateMovementDto, Department } from "@/types";
 
 // Verificar que la URL de la API esté configurada correctamente
 const apiBaseUrl = process.env.NEXT_PUBLIC_API || "http://localhost:5000/";
@@ -150,7 +150,11 @@ const api = {
             const response = await apiClient.get<{ rolID: string, name: string, statusUser: boolean, traqueo_Rol_Permisos: [] }>(`/user/permissions/${email}`);
             return response.data;
         },
-        create: async (data: { rolID: number, name: string, email: string }) => {
+        getDepartments: async () => {
+            const response = await apiClient.get<Department[]>("/user/departments");
+            return response.data;
+        },
+        create: async (data: { rolID: number, name: string, email: string, DepartmentID?: number }) => {
             try {
                 const response = await apiClient.post<{ success: boolean, message: string, data: {userID: number, name: string, email: string, isActive: boolean, pin: string, role: string, rolID: number} }>("/user", data);
                 return response.data;
@@ -163,7 +167,7 @@ const api = {
             const response = await apiClient.get<User[]>("/user");
             return response.data;
         },
-        update : async (userId: number, data: { rolID: number, name: string, email: string }) => {
+        update : async (userId: number, data: { rolID: number, name: string, email: string, DepartmentID?: number }) => {
             try {
                 const response = await apiClient.patch<{ success: boolean, message: string, data: { userID: number, name: string, email: string, isActive: boolean, role: string, rolID: number } }>(`/user/${userId}`, data);
                 return response.data;

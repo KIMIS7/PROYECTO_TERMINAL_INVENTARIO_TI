@@ -51,6 +51,7 @@ export class UserService {
         },
         include: {
           rol: true,
+          Depart: true,
         },
       });
 
@@ -72,6 +73,7 @@ export class UserService {
       const users = await this.prismaShopic.user.findMany({
         include: {
           rol: true,
+          Depart: true,
         },
       });
 
@@ -88,6 +90,10 @@ export class UserService {
   async findOne(userID: number) {
     const user = await this.prismaShopic.user.findUnique({
       where: { UserID: userID },
+      include: {
+        rol: true,
+        Depart: true,
+      },
     });
     if (!user) throw new NotFoundException('El usuario no existe');
     try {
@@ -145,6 +151,7 @@ export class UserService {
         },
         include: {
           rol: true,
+          Depart: true,
         },
       });
 
@@ -174,6 +181,7 @@ export class UserService {
         data: { isActive },
         include: {
           rol: true,
+          Depart: true,
         },
       });
 
@@ -308,6 +316,22 @@ export class UserService {
     } catch (error) {
       throw new InternalServerErrorException({
         message: error.message || 'Error al eliminar el usuario',
+      });
+    }
+  }
+
+  async getDepartments() {
+    try {
+      const departments = await this.prismaShopic.depart.findMany({
+        orderBy: { Name: 'asc' },
+      });
+      return departments.map((d) => ({
+        departID: d.DepartID,
+        name: d.Name,
+      }));
+    } catch (error) {
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al obtener los departamentos',
       });
     }
   }

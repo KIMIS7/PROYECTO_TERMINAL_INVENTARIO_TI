@@ -1,6 +1,6 @@
 import { MainLayout } from "@/components/MainLayout";
 import { useEffect, useState } from "react";
-import { Role, User } from "@/types";
+import { Role, User, Department } from "@/types";
 import api from "@/lib/api";
 import { ColumnDef } from "@tanstack/react-table";
 import { Badge } from "@/components/ui/badge";
@@ -13,6 +13,7 @@ import { CreateUserModal } from "@/components/CreateUserModal";
 export default function Users() {
 
   const [roles, setRoles] = useState<Role[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [isLoading, setIsLoading] = useState(false);
@@ -23,10 +24,14 @@ export default function Users() {
   useEffect(() => {
     (async () => {
       try {
-        const response = await api.role.getAll();
-        setRoles(response);
+        const [rolesRes, departmentsRes] = await Promise.all([
+          api.role.getAll(),
+          api.user.getDepartments(),
+        ]);
+        setRoles(rolesRes);
+        setDepartments(departmentsRes);
       } catch (error) {
-        console.error("Error fetching role data:", error);
+        console.error("Error fetching roles/departments data:", error);
       }
     })();
   }, []);
@@ -78,7 +83,8 @@ export default function Users() {
     const filtered = users.filter(user =>
       user.name.toLowerCase().includes(query.toLowerCase()) ||
       user.email.toLowerCase().includes(query.toLowerCase()) ||
-      user.rolName.toLowerCase().includes(query.toLowerCase())
+      user.rolName.toLowerCase().includes(query.toLowerCase()) ||
+      (user.departmentName && user.departmentName.toLowerCase().includes(query.toLowerCase()))
     );
     setFilteredUsers(filtered);
   };
@@ -115,6 +121,14 @@ export default function Users() {
     {
       accessorKey: "rolName",
       header: "Rol",
+    },
+    {
+      accessorKey: "departmentName",
+      header: "Departamento",
+      cell: ({ getValue }) => {
+        const value = getValue();
+        return typeof value === "string" && value ? value : "Sin asignar";
+      },
     },
     {
       accessorKey: "email",
@@ -164,13 +178,14 @@ export default function Users() {
         className: "text-center",
       },
       cell: ({ row }) => (
-        <ActionCell 
-          row={row} 
-          roles={roles} 
+        <ActionCell
+          row={row}
+          roles={roles}
+          departments={departments}
           setUsers={(newUsers) => {
             setUsers(newUsers);
             setFilteredUsers(newUsers);
-          }} 
+          }}
         />
       ),
     },
@@ -203,6 +218,7 @@ export default function Users() {
           {/* Modal de Crear Usuario */}
           <CreateUserModal
             roles={roles}
+            departments={departments}
             isOpen={isCreateModalOpen}
             onClose={() => setIsCreateModalOpen(false)}
             onSuccess={handleCreateSuccess}

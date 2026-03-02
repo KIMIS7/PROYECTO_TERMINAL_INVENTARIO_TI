@@ -32,5 +32,9 @@ export class UserDto {
   @Expose({ name: 'rolName' })
   @Transform(({ obj }) => obj?.rol?.name)
   rolName: string;
+
+  @Expose({ name: 'departmentName' })
+  @Transform(({ obj }) => obj?.Depart?.Name || '')
+  departmentName: string;
 }
 

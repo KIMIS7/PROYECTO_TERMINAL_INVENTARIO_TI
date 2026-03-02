@@ -3,24 +3,26 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { User, Role } from "@/types";
+import { User, Role, Department } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 
 interface EditUserModalProps {
   user: User | null;
   roles: Role[];
+  departments: Department[];
   isOpen: boolean;
   onClose: () => void;
   onSave: (updatedUser: User) => void;
 }
 
-export const EditUserModal = ({ user, roles, isOpen, onClose, onSave }: EditUserModalProps) => {
+export const EditUserModal = ({ user, roles, departments, isOpen, onClose, onSave }: EditUserModalProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     rolID: 0,
+    DepartmentID: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -31,6 +33,7 @@ export const EditUserModal = ({ user, roles, isOpen, onClose, onSave }: EditUser
         name: user.name,
         email: user.email,
         rolID: user.rolID,
+        DepartmentID: user.departmentID || 0,
       });
       setErrors({});
     }
@@ -91,13 +94,17 @@ export const EditUserModal = ({ user, roles, isOpen, onClose, onSave }: EditUser
       newErrors.rolID = "El rol es requerido";
     }
 
+    if (!formData.DepartmentID) {
+      newErrors.DepartmentID = "El departamento es requerido";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm() || !user) return;
 
     try {
@@ -111,6 +118,8 @@ export const EditUserModal = ({ user, roles, isOpen, onClose, onSave }: EditUser
         email: formData.email,
         rolID: formData.rolID,
         rolName: roles.find(r => r.rolID === formData.rolID)?.name || "",
+        departmentID: formData.DepartmentID,
+        departmentName: departments.find(d => d.departID === formData.DepartmentID)?.name || "",
       };
       
       showSuccess("Usuario actualizado exitosamente");
@@ -230,6 +239,31 @@ export const EditUserModal = ({ user, roles, isOpen, onClose, onSave }: EditUser
             {errors.rolID && (
               <p id="rolID-error" className="text-red-500 text-sm mt-1">
                 {errors.rolID}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="edit-departmentID" className="block text-left mb-2">Departamento</Label>
+            <Select
+              value={formData.DepartmentID ? formData.DepartmentID.toString() : "none"}
+              onValueChange={(value) => handleInputChange("DepartmentID", value === "none" ? 0 : Number(value))}
+            >
+              <SelectTrigger className={`w-full ${errors.DepartmentID ? "border-red-500" : ""}`}>
+                <SelectValue placeholder="Seleccionar departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Seleccionar departamento</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.departID} value={dept.departID.toString()}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.DepartmentID && (
+              <p id="edit-departmentID-error" className="text-red-500 text-sm mt-1">
+                {errors.DepartmentID}
               </p>
             )}
           </div>

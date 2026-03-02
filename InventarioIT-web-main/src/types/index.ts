@@ -13,6 +13,13 @@ export interface User {
   pin: string;
   rolName: string;
   rolID: number;
+  departmentID: number;
+  departmentName: string;
+}
+
+export interface Department {
+  departID: number;
+  name: string;
 }
 
 export interface DashboardPath {

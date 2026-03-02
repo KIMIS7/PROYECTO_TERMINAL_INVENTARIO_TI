@@ -3,23 +3,25 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Role } from "@/types";
+import { Role, Department } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 
 interface CreateUserModalProps {
   roles: Role[];
+  departments: Department[];
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUserModalProps) => {
+export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess }: CreateUserModalProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     rolID: 0,
+    DepartmentID: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -79,13 +81,17 @@ export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUse
       newErrors.rolID = "El rol es requerido";
     }
 
+    if (!formData.DepartmentID) {
+      newErrors.DepartmentID = "El departamento es requerido";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!validateForm()) return;
 
     try {
@@ -228,6 +234,32 @@ export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUse
             {errors.rolID && (
               <p id="create-rolID-error" className="text-red-500 text-sm mt-1">
                 {errors.rolID}
+              </p>
+            )}
+          </div>
+
+          <div>
+            <Label htmlFor="create-departmentID" className="block text-left mb-2">Departamento</Label>
+            <Select
+              value={formData.DepartmentID ? formData.DepartmentID.toString() : "none"}
+              onValueChange={(value) => handleInputChange("DepartmentID", value === "none" ? 0 : Number(value))}
+              disabled={isLoading}
+            >
+              <SelectTrigger className={`w-full ${errors.DepartmentID ? "border-red-500" : ""}`}>
+                <SelectValue placeholder="Seleccionar departamento" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Seleccionar departamento</SelectItem>
+                {departments.map((dept) => (
+                  <SelectItem key={dept.departID} value={dept.departID.toString()}>
+                    {dept.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.DepartmentID && (
+              <p id="create-departmentID-error" className="text-red-500 text-sm mt-1">
+                {errors.DepartmentID}
               </p>
             )}
           </div>

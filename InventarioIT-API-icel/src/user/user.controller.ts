@@ -25,6 +25,11 @@ export class UserController {
     return this.userService.findAll();
   }
 
+  @Get('departments')
+  getDepartments() {
+    return this.userService.getDepartments();
+  }
+
   @Get('verify/:email')
   async verifyUser(@Param('email') email: string) {
     return this.userService.verifyUser(email);

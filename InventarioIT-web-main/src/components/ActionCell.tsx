@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { Edit, Trash2, UserCheck, UserX } from "lucide-react";
-import { User, Role } from "@/types";
+import { User, Role, Department } from "@/types";
 import api from "@/lib/api";
 import { EditUserModal } from "./EditUserModal";
 import { ConfirmDialog } from "./ConfirmDialog";
@@ -13,10 +13,11 @@ interface ActionCellProps {
     original: User;
   };
   roles: Role[];
+  departments: Department[];
   setUsers: React.Dispatch<React.SetStateAction<User[]>>;
 }
 
-export const ActionCell = ({ row, roles, setUsers }: ActionCellProps) => {
+export const ActionCell = ({ row, roles, departments, setUsers }: ActionCellProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
@@ -181,6 +182,7 @@ export const ActionCell = ({ row, roles, setUsers }: ActionCellProps) => {
       <EditUserModal
         user={user}
         roles={roles}
+        departments={departments}
         isOpen={isEditModalOpen}
         onClose={() => setIsEditModalOpen(false)}
         onSave={handleEditSave}
