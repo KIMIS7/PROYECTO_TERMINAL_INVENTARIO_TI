@@ -25,15 +25,23 @@ export class MovementService {
     try {
       const newStateID = await this.resolveNewState(movementType);
 
+      const descriptionParts: string[] = [];
+      descriptionParts.push(description || this.getDefaultDescription(movementType, asset.Name));
+      if (responsible) {
+        descriptionParts.push(`Responsable: ${responsible}`);
+      }
+      if (userEmail) {
+        descriptionParts.push(`Registrado por: ${userEmail}`);
+      }
+      const fullDescription = descriptionParts.join(' | ');
+
       const result = await this.prismaShopic.$transaction(async (tx) => {
-        const movement = await tx.movement.create({
+        const assetHistory = await tx.assetHistory.create({
           data: {
             AssetID: assetID,
-            MovementType: movementType,
-            Description: description || this.getDefaultDescription(movementType, asset.Name),
-            Responsible: responsible || null,
+            Operation: movementType,
+            Description: fullDescription,
             CreatedTime: new Date(),
-            CreatedBy: userEmail || null,
           },
         });
 
@@ -44,25 +52,16 @@ export class MovementService {
           });
         }
 
-        await tx.assetHistory.create({
-          data: {
-            AssetID: assetID,
-            Operation: 'MOVEMENT',
-            Description: `Movimiento "${movementType}" registrado para activo "${asset.Name}"`,
-            CreatedTime: new Date(),
-          },
-        });
-
-        return movement;
+        return assetHistory;
       });
 
       return {
         success: true,
         message: `Movimiento de tipo "${movementType}" registrado exitosamente`,
         data: {
-          movementID: result.MovementID,
+          movementID: result.AssetHistoryID,
           assetID: result.AssetID,
-          movementType: result.MovementType,
+          movementType: result.Operation,
         },
       };
     } catch (error) {
@@ -85,8 +84,11 @@ export class MovementService {
     }
 
     try {
-      const movements = await this.prismaShopic.movement.findMany({
-        where: { AssetID: assetID },
+      const movements = await this.prismaShopic.assetHistory.findMany({
+        where: {
+          AssetID: assetID,
+          Operation: { in: ['ALTA', 'BAJA', 'REASIGNACION', 'PRESTAMO'] },
+        },
         orderBy: { CreatedTime: 'desc' },
         include: {
           Asset: {
@@ -98,16 +100,7 @@ export class MovementService {
         },
       });
 
-      return movements.map((m) => ({
-        movementID: m.MovementID,
-        assetID: m.AssetID,
-        assetName: m.Asset.Name,
-        movementType: m.MovementType,
-        description: m.Description,
-        responsible: m.Responsible,
-        createdTime: m.CreatedTime,
-        createdBy: m.CreatedBy,
-      }));
+      return movements.map((m) => this.mapToMovementResponse(m));
     } catch (error) {
       throw new InternalServerErrorException({
         message: error.message || 'Error al obtener el historial de movimientos',
@@ -117,7 +110,10 @@ export class MovementService {
 
   async findAll() {
     try {
-      const movements = await this.prismaShopic.movement.findMany({
+      const movements = await this.prismaShopic.assetHistory.findMany({
+        where: {
+          Operation: { in: ['ALTA', 'BAJA', 'REASIGNACION', 'PRESTAMO'] },
+        },
         orderBy: { CreatedTime: 'desc' },
         include: {
           Asset: {
@@ -129,21 +125,55 @@ export class MovementService {
         },
       });
 
-      return movements.map((m) => ({
-        movementID: m.MovementID,
-        assetID: m.AssetID,
-        assetName: m.Asset.Name,
-        movementType: m.MovementType,
-        description: m.Description,
-        responsible: m.Responsible,
-        createdTime: m.CreatedTime,
-        createdBy: m.CreatedBy,
-      }));
+      return movements.map((m) => this.mapToMovementResponse(m));
     } catch (error) {
       throw new InternalServerErrorException({
         message: error.message || 'Error al obtener los movimientos',
       });
     }
+  }
+
+  private mapToMovementResponse(m: {
+    AssetHistoryID: number;
+    AssetID: number;
+    Operation: string;
+    Description: string;
+    CreatedTime: Date;
+    Asset: { AssetID: number; Name: string };
+  }) {
+    const { description, responsible, createdBy } = this.parseDescription(m.Description);
+
+    return {
+      movementID: m.AssetHistoryID,
+      assetID: m.AssetID,
+      assetName: m.Asset.Name,
+      movementType: m.Operation,
+      description,
+      responsible,
+      createdTime: m.CreatedTime,
+      createdBy,
+    };
+  }
+
+  private parseDescription(fullDescription: string): {
+    description: string;
+    responsible: string | null;
+    createdBy: string | null;
+  } {
+    const parts = fullDescription.split(' | ');
+    let description = parts[0] || fullDescription;
+    let responsible: string | null = null;
+    let createdBy: string | null = null;
+
+    for (const part of parts.slice(1)) {
+      if (part.startsWith('Responsable: ')) {
+        responsible = part.replace('Responsable: ', '');
+      } else if (part.startsWith('Registrado por: ')) {
+        createdBy = part.replace('Registrado por: ', '');
+      }
+    }
+
+    return { description, responsible, createdBy };
   }
 
   private async resolveNewState(movementType: MovementType): Promise<number | null> {
@@ -178,8 +208,8 @@ export class MovementService {
     const descriptions: Record<MovementType, string> = {
       ALTA: `Alta del activo "${assetName}"`,
       BAJA: `Baja del activo "${assetName}"`,
-      REASIGNACION: `Reasignación del activo "${assetName}"`,
-      PRESTAMO: `Préstamo del activo "${assetName}"`,
+      REASIGNACION: `Reasignacion del activo "${assetName}"`,
+      PRESTAMO: `Prestamo del activo "${assetName}"`,
     };
     return descriptions[movementType];
   }
