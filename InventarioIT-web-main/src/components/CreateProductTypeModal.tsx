@@ -13,11 +13,9 @@ import {
   Layers,
 } from "lucide-react";
 
-// Categorias fijas para tipos de activo
 export const PRODUCT_CATEGORIES = ["Equipo", "Accesorio", "Componente", "Otros"] as const;
 export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
 
-// Iconos por categoria
 const categoryIcons: Record<ProductCategory, React.ReactNode> = {
   "Equipo": <Monitor className="h-5 w-5" />,
   "Accesorio": <Headphones className="h-5 w-5" />,
@@ -25,7 +23,6 @@ const categoryIcons: Record<ProductCategory, React.ReactNode> = {
   "Otros": <Package className="h-5 w-5" />,
 };
 
-// Descripciones de categorias
 const categoryDescriptions: Record<ProductCategory, string> = {
   "Equipo": "Computadoras, laptops, servidores, impresoras",
   "Accesorio": "Teclados, mouse, monitores, audifonos",
@@ -77,7 +74,7 @@ export const CreateProductTypeModal = ({
     }
 
     if (!formData.category) {
-      newErrors.category = "La categoria es requerida";
+      newErrors.category = "La categoría es requerida";
     }
 
     if (!formData.group.trim()) {
@@ -85,7 +82,7 @@ export const CreateProductTypeModal = ({
     }
 
     if (!formData.subCategory.trim()) {
-      newErrors.subCategory = "La subcategoria es requerida";
+      newErrors.subCategory = "La subcategoría es requerida";
     }
 
     setErrors(newErrors);
@@ -123,14 +120,14 @@ export const CreateProductTypeModal = ({
         const message = axiosError.response.data?.message || "Error desconocido";
 
         if (status === 409) {
-          showWarning("Ya existe un tipo de activo con este nombre en esta categoria");
+          showWarning("Ya existe un tipo de activo con este nombre en esta categoría");
         } else if (status === 400) {
-          showError(`Error de validacion: ${message}`);
+          showError(`Error de validación: ${message}`);
         } else {
           showError(`Error: ${message}`);
         }
       } else {
-        showError("Error inesperado. Por favor, intenta mas tarde.");
+        showError("Error inesperado. Por favor, intenta más tarde.");
       }
     } finally {
       setIsLoading(false);
@@ -159,68 +156,36 @@ export const CreateProductTypeModal = ({
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4">
       <div className="bg-white rounded-lg w-full max-w-lg overflow-hidden flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700">
           <div className="flex items-center gap-2 text-white">
             <Layers className="h-5 w-5" />
             <h2 className="text-lg font-semibold">Crear Tipo de Activo</h2>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="h-8 w-8 text-white hover:bg-white/20"
-          >
+          <Button variant="ghost" size="icon" onClick={handleClose} disabled={isLoading} className="h-8 w-8 text-white hover:bg-white/20">
             <X className="h-4 w-4" />
           </Button>
         </div>
 
-        {/* Formulario */}
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* Nombre del tipo de activo */}
           <div>
-            <Label htmlFor="name" className="text-sm font-medium">
-              Nombre del Tipo de Activo *
-            </Label>
-            <Input
-              id="name"
-              value={formData.name}
-              onChange={(e) => handleInputChange("name", e.target.value)}
-              className={errors.name ? "border-red-500" : ""}
-              placeholder="Ej: Teclado Mecanico, Laptop Dell, RAM DDR4"
-              disabled={isLoading}
-            />
+            <Label htmlFor="name" className="text-sm font-medium">Nombre del Tipo de Activo *</Label>
+            <Input id="name" value={formData.name} onChange={(e) => handleInputChange("name", e.target.value)} className={errors.name ? "border-red-500" : ""} placeholder="Ej: Teclado Mecánico, Laptop Dell, RAM DDR4" disabled={isLoading} />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
           </div>
 
-          {/* Categoria */}
           <div>
-            <Label className="text-sm font-medium">
-              Categoria *
-            </Label>
+            <Label className="text-sm font-medium">Categoría *</Label>
             {errors.category && <p className="text-red-500 text-xs mt-1 mb-2">{errors.category}</p>}
             <div className="grid grid-cols-2 gap-2">
               {PRODUCT_CATEGORIES.map((category) => (
                 <button
-                  key={category}
-                  type="button"
-                  onClick={() => handleInputChange("category", category)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${
-                    formData.category === category
-                      ? "border-blue-500 bg-blue-50"
-                      : "border-gray-200 hover:border-gray-300"
-                  }`}
-                  disabled={isLoading}
+                  key={category} type="button" onClick={() => handleInputChange("category", category)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${formData.category === category ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`} disabled={isLoading}
                 >
                   <div className="flex items-center gap-2">
-                    <div className={`${formData.category === category ? "text-blue-600" : "text-gray-500"}`}>
-                      {categoryIcons[category]}
-                    </div>
+                    <div className={`${formData.category === category ? "text-blue-600" : "text-gray-500"}`}>{categoryIcons[category]}</div>
                     <div>
-                      <p className={`text-sm font-medium ${formData.category === category ? "text-blue-700" : "text-gray-700"}`}>
-                        {category}
-                      </p>
+                      <p className={`text-sm font-medium ${formData.category === category ? "text-blue-700" : "text-gray-700"}`}>{category}</p>
                       <p className="text-xs text-gray-500">{categoryDescriptions[category]}</p>
                     </div>
                   </div>
@@ -229,62 +194,24 @@ export const CreateProductTypeModal = ({
             </div>
           </div>
 
-          {/* Grupo */}
           <div>
-            <Label htmlFor="group" className="text-sm font-medium">
-              Grupo *
-            </Label>
-            <Input
-              id="group"
-              value={formData.group}
-              onChange={(e) => handleInputChange("group", e.target.value)}
-              className={errors.group ? "border-red-500" : ""}
-              placeholder="Ej: Teclados Latino, Workstations, Memoria"
-              disabled={isLoading}
-            />
+            <Label htmlFor="group" className="text-sm font-medium">Grupo *</Label>
+            <Input id="group" value={formData.group} onChange={(e) => handleInputChange("group", e.target.value)} className={errors.group ? "border-red-500" : ""} placeholder="Ej: Teclados Latino, Workstations, Memoria" disabled={isLoading} />
             {errors.group && <p className="text-red-500 text-xs mt-1">{errors.group}</p>}
-            <p className="text-xs text-gray-500 mt-1">
-              Agrupa tipos de activos similares (ej: todos los teclados)
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Agrupa tipos de activos similares (ej: todos los teclados)</p>
           </div>
 
-          {/* Subcategoria */}
           <div>
-            <Label htmlFor="subCategory" className="text-sm font-medium">
-              Subcategoria *
-            </Label>
-            <Input
-              id="subCategory"
-              value={formData.subCategory}
-              onChange={(e) => handleInputChange("subCategory", e.target.value)}
-              className={errors.subCategory ? "border-red-500" : ""}
-              placeholder="Ej: Alambrico, Inalambrico, 15 pulgadas"
-              disabled={isLoading}
-            />
+            <Label htmlFor="subCategory" className="text-sm font-medium">Subcategoría *</Label>
+            <Input id="subCategory" value={formData.subCategory} onChange={(e) => handleInputChange("subCategory", e.target.value)} className={errors.subCategory ? "border-red-500" : ""} placeholder="Ej: Alámbrico, Inalámbrico, 15 pulgadas" disabled={isLoading} />
             {errors.subCategory && <p className="text-red-500 text-xs mt-1">{errors.subCategory}</p>}
-            <p className="text-xs text-gray-500 mt-1">
-              Especifica caracteristicas del tipo (ej: alambrico vs inalambrico)
-            </p>
+            <p className="text-xs text-gray-500 mt-1">Especifica características del tipo (ej: alámbrico vs inalámbrico)</p>
           </div>
         </form>
 
-        {/* Footer */}
         <div className="flex gap-2 p-4 border-t bg-gray-50">
-          <Button
-            type="button"
-            variant="outline"
-            onClick={handleClose}
-            disabled={isLoading}
-            className="flex-1"
-          >
-            Cancelar
-          </Button>
-          <Button
-            type="submit"
-            onClick={handleSubmit}
-            disabled={isLoading}
-            className="flex-1 bg-blue-600 hover:bg-blue-700"
-          >
+          <Button type="button" variant="outline" onClick={handleClose} disabled={isLoading} className="flex-1">Cancelar</Button>
+          <Button type="submit" onClick={handleSubmit} disabled={isLoading} className="flex-1 bg-blue-600 hover:bg-blue-700">
             {isLoading ? "Creando..." : "Crear Tipo de Activo"}
           </Button>
         </div>

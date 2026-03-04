@@ -493,10 +493,11 @@ export default function Altas() {
                     <TableHead className="font-semibold text-gray-700">NOMBRE</TableHead>
                     <TableHead className="font-semibold text-gray-700">COMPAÑIA</TableHead>
                     <TableHead className="font-semibold text-gray-700">SITE</TableHead>
+                    <TableHead className="font-semibold text-gray-700">USUARIO</TableHead>
                     <TableHead className="font-semibold text-gray-700">SERIAL</TableHead>
                     <TableHead className="font-semibold text-gray-700">MODELO</TableHead>
                     <TableHead className="font-semibold text-gray-700">ESTADO</TableHead>
-                    <TableHead className="font-semibold text-gray-700">TIPO</TableHead>
+                    <TableHead className="font-semibold text-gray-700">GRUPO</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -556,6 +557,9 @@ export default function Altas() {
                           {asset.site?.name || "-"}
                         </TableCell>
                         <TableCell className="text-gray-600">
+                          {asset.user?.name || "-"}
+                        </TableCell>
+                        <TableCell className="text-gray-600">
                           {asset.assetDetail?.serialNum || "-"}
                         </TableCell>
                         <TableCell className="text-gray-600">
@@ -565,7 +569,7 @@ export default function Altas() {
                           {asset.assetStateInfo?.name || "-"}
                         </TableCell>
                         <TableCell className="text-gray-600">
-                          {asset.productType?.name || "-"}
+                          {asset.productType?.group || "-"}
                         </TableCell>
                       </TableRow>
                     ))

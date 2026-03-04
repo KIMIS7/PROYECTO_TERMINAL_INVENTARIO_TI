@@ -79,7 +79,6 @@ model AssetHistory {
   Asset          Asset    @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_AssetHistory_Asset")
 }
 
-
 model AssetOwnershipHistory {
   AssetOwnershipHistoryID Int      @id(map: "PK_AssetOwnershipHistory") @default(autoincrement())
   UserID                  Int
@@ -130,24 +129,18 @@ model sysdiagrams {
   @@unique([principal_id, name], map: "UK_principal_name")
 }
 
-model Depart {
-  DepartID Int    @id(map: "PK_Depart") @default(autoincrement())
-  Name     String @db.NVarChar(100)
-  User     User[]
-}
-
 model User {
   UserID                Int                     @id(map: "PK_User") @default(autoincrement())
   Email                 String                  @db.NVarChar(100)
   FirstName             String                  @db.NVarChar(100)
   LastName              String                  @db.NVarChar(100)
   Name                  String                  @db.NVarChar(200)
-  DepartmentID          Int
   SiteID                Int
   rolD                  Int
   isActive              Boolean
   token                 String?                 @db.NVarChar(Max)
   createdAt             DateTime                @db.DateTime
+  DepartmentID          Int
   Asset                 Asset[]
   AssetDetail           AssetDetail[]
   AssetOwnershipHistory AssetOwnershipHistory[]
@@ -183,4 +176,10 @@ model rol_dashboard_path {
   dashboarpathID     Int
   dashboard_paths    dashboard_paths @relation(fields: [dashboarpathID], references: [dashboarpathID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_path")
   rol                rol             @relation(fields: [rolID], references: [rolID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_rol")
+}
+
+model Depart {
+  DepartID Int    @id(map: "PK_Depart") @default(autoincrement())
+  Name     String @db.NVarChar(255)
+  User     User[]
 }

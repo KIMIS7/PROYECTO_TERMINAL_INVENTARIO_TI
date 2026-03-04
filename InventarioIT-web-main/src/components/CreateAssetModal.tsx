@@ -784,7 +784,7 @@ export const CreateAssetModal = ({
                       <SelectItem value="none">Seleccionar tipo</SelectItem>
                       {localProductTypes.map((pt) => (
                         <SelectItem key={pt.productTypeID} value={pt.productTypeID.toString()}>
-                          {pt.name} ({pt.category} - {pt.subCategory})
+                          {pt.name} ({pt.group} - {pt.category})
                         </SelectItem>
                       ))}
                     </SelectContent>
