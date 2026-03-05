@@ -8,18 +8,10 @@ export class CreateProductTypeDto {
   @IsString()
   name: string;
 
-  @IsNotEmpty({ message: 'La categoría es requerida' })
-  @IsString()
-  category: string;
-
   @IsNotEmpty({ message: 'El grupo es requerido' })
   @IsString()
   @IsIn(PRODUCT_GROUPS, {
     message: 'El grupo debe ser: Equipo, Accesorio, Componente u Otros',
   })
   group: ProductGroup;
-
-  @IsNotEmpty({ message: 'La subcategoría es requerida' })
-  @IsString()
-  subCategory: string;
 }

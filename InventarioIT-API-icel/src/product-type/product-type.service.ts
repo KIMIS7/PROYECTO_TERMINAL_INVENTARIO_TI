@@ -30,9 +30,9 @@ export class ProductTypeService {
       const productType = await this.prismaShopic.productType.create({
         data: {
           Name: createProductTypeDto.name,
-          Category: createProductTypeDto.category,
+          Category: createProductTypeDto.group,
           Group: createProductTypeDto.group,
-          SubCategory: createProductTypeDto.subCategory,
+          SubCategory: '-',
         },
       });
 

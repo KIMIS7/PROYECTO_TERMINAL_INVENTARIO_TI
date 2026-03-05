@@ -51,9 +51,7 @@ export const CreateProductTypeModal = ({
 
   const [formData, setFormData] = useState({
     name: "",
-    category: "",
     group: "" as ProductGroup | "",
-    subCategory: "",
   });
 
   const [isLoading, setIsLoading] = useState(false);
@@ -73,16 +71,8 @@ export const CreateProductTypeModal = ({
       newErrors.name = "El nombre es requerido";
     }
 
-    if (!formData.category.trim()) {
-      newErrors.category = "La categoría es requerida";
-    }
-
     if (!formData.group) {
       newErrors.group = "El grupo es requerido";
-    }
-
-    if (!formData.subCategory.trim()) {
-      newErrors.subCategory = "La subcategoría es requerida";
     }
 
     setErrors(newErrors);
@@ -102,9 +92,9 @@ export const CreateProductTypeModal = ({
 
       const response = await api.productType.create({
         name: formData.name,
-        category: formData.category,
+        category: formData.group,
         group: formData.group,
-        subCategory: formData.subCategory,
+        subCategory: "-",
       });
 
       showSuccess("Tipo de activo creado exitosamente");
@@ -137,9 +127,7 @@ export const CreateProductTypeModal = ({
   const resetForm = () => {
     setFormData({
       name: "",
-      category: "",
       group: "",
-      subCategory: "",
     });
     setErrors({});
   };
@@ -194,19 +182,6 @@ export const CreateProductTypeModal = ({
             </div>
           </div>
 
-          <div>
-            <Label htmlFor="category" className="text-sm font-medium">Categoría *</Label>
-            <Input id="category" value={formData.category} onChange={(e) => handleInputChange("category", e.target.value)} className={errors.category ? "border-red-500" : ""} placeholder="Ej: Teclados Latino, Workstations, Memoria" disabled={isLoading} />
-            {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
-            <p className="text-xs text-gray-500 mt-1">Categoriza el tipo de activo (ej: todos los teclados)</p>
-          </div>
-
-          <div>
-            <Label htmlFor="subCategory" className="text-sm font-medium">Subcategoría *</Label>
-            <Input id="subCategory" value={formData.subCategory} onChange={(e) => handleInputChange("subCategory", e.target.value)} className={errors.subCategory ? "border-red-500" : ""} placeholder="Ej: Alámbrico, Inalámbrico, 15 pulgadas" disabled={isLoading} />
-            {errors.subCategory && <p className="text-red-500 text-xs mt-1">{errors.subCategory}</p>}
-            <p className="text-xs text-gray-500 mt-1">Especifica características del tipo (ej: alámbrico vs inalámbrico)</p>
-          </div>
         </form>
 
         <div className="flex gap-2 p-4 border-t bg-gray-50">
