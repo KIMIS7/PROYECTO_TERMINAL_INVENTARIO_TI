@@ -5,7 +5,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaShopic } from 'src/database/database.service';
-import { CreateProductTypeDto, PRODUCT_CATEGORIES } from './dto/create-product-type.dto';
+import { CreateProductTypeDto, PRODUCT_GROUPS } from './dto/create-product-type.dto';
 
 @Injectable()
 export class ProductTypeService {
@@ -13,17 +13,17 @@ export class ProductTypeService {
 
   async create(createProductTypeDto: CreateProductTypeDto) {
     try {
-      // Verificar si ya existe un tipo de producto con el mismo nombre
+      // Verificar si ya existe un tipo de producto con el mismo nombre y grupo
       const existing = await this.prismaShopic.productType.findFirst({
         where: {
           Name: createProductTypeDto.name,
-          Category: createProductTypeDto.category,
+          Group: createProductTypeDto.group,
         },
       });
 
       if (existing) {
         throw new ConflictException(
-          'Ya existe un tipo de producto con este nombre en esta categoría',
+          'Ya existe un tipo de producto con este nombre en este grupo',
         );
       }
 
@@ -101,10 +101,10 @@ export class ProductTypeService {
     }
   }
 
-  getAvailableCategories() {
+  getAvailableGroups() {
     return {
       success: true,
-      data: PRODUCT_CATEGORIES,
+      data: PRODUCT_GROUPS,
     };
   }
 
@@ -125,10 +125,10 @@ export class ProductTypeService {
     }
   }
 
-  async findByCategory(category: string) {
+  async findByGroup(group: string) {
     try {
       const productTypes = await this.prismaShopic.productType.findMany({
-        where: { Category: category },
+        where: { Group: group },
       });
       return productTypes.map((pt) => ({
         productTypeID: pt.ProductTypeID,
@@ -139,21 +139,21 @@ export class ProductTypeService {
       }));
     } catch (error) {
       throw new InternalServerErrorException({
-        message: error.message || 'Error al obtener los tipos de producto por categoría',
+        message: error.message || 'Error al obtener los tipos de producto por grupo',
       });
     }
   }
 
-  async getCategories() {
+  async getGroups() {
     try {
       const productTypes = await this.prismaShopic.productType.findMany({
-        select: { Category: true },
-        distinct: ['Category'],
+        select: { Group: true },
+        distinct: ['Group'],
       });
-      return productTypes.map((pt) => pt.Category);
+      return productTypes.map((pt) => pt.Group);
     } catch (error) {
       throw new InternalServerErrorException({
-        message: error.message || 'Error al obtener las categorías',
+        message: error.message || 'Error al obtener los grupos',
       });
     }
   }

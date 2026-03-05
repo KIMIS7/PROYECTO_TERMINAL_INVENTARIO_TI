@@ -334,21 +334,21 @@ const api = {
       }[]>("/product-type");
       return response.data;
     },
-    getByCategory: async (category: string) => {
+    getByGroup: async (group: string) => {
       const response = await apiClient.get<{
         productTypeID: number;
         name: string;
         category: string;
         group: string;
         subCategory: string;
-      }[]>(`/product-type/category/${category}`);
+      }[]>(`/product-type/group/${group}`);
       return response.data;
     },
-    getAvailableCategories: async () => {
+    getAvailableGroups: async () => {
       const response = await apiClient.get<{
         success: boolean;
         data: string[];
-      }>("/product-type/available-categories");
+      }>("/product-type/available-groups");
       return response.data;
     },
     create: async (data: { name: string; category: string; group: string; subCategory: string }) => {

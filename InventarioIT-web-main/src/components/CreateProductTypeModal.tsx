@@ -13,17 +13,17 @@ import {
   Layers,
 } from "lucide-react";
 
-export const PRODUCT_CATEGORIES = ["Equipo", "Accesorio", "Componente", "Otros"] as const;
-export type ProductCategory = (typeof PRODUCT_CATEGORIES)[number];
+export const PRODUCT_GROUPS = ["Equipo", "Accesorio", "Componente", "Otros"] as const;
+export type ProductGroup = (typeof PRODUCT_GROUPS)[number];
 
-const categoryIcons: Record<ProductCategory, React.ReactNode> = {
+const groupIcons: Record<ProductGroup, React.ReactNode> = {
   "Equipo": <Monitor className="h-5 w-5" />,
   "Accesorio": <Headphones className="h-5 w-5" />,
   "Componente": <Cpu className="h-5 w-5" />,
   "Otros": <Package className="h-5 w-5" />,
 };
 
-const categoryDescriptions: Record<ProductCategory, string> = {
+const groupDescriptions: Record<ProductGroup, string> = {
   "Equipo": "Computadoras, laptops, servidores, impresoras",
   "Accesorio": "Teclados, mouse, monitores, audifonos",
   "Componente": "RAM, discos duros, procesadores, tarjetas",
@@ -51,8 +51,8 @@ export const CreateProductTypeModal = ({
 
   const [formData, setFormData] = useState({
     name: "",
-    category: "" as ProductCategory | "",
-    group: "",
+    category: "",
+    group: "" as ProductGroup | "",
     subCategory: "",
   });
 
@@ -73,11 +73,11 @@ export const CreateProductTypeModal = ({
       newErrors.name = "El nombre es requerido";
     }
 
-    if (!formData.category) {
+    if (!formData.category.trim()) {
       newErrors.category = "La categoría es requerida";
     }
 
-    if (!formData.group.trim()) {
+    if (!formData.group) {
       newErrors.group = "El grupo es requerido";
     }
 
@@ -174,19 +174,19 @@ export const CreateProductTypeModal = ({
           </div>
 
           <div>
-            <Label className="text-sm font-medium">Categoría *</Label>
-            {errors.category && <p className="text-red-500 text-xs mt-1 mb-2">{errors.category}</p>}
+            <Label className="text-sm font-medium">Grupo *</Label>
+            {errors.group && <p className="text-red-500 text-xs mt-1 mb-2">{errors.group}</p>}
             <div className="grid grid-cols-2 gap-2">
-              {PRODUCT_CATEGORIES.map((category) => (
+              {PRODUCT_GROUPS.map((group) => (
                 <button
-                  key={category} type="button" onClick={() => handleInputChange("category", category)}
-                  className={`p-3 rounded-lg border-2 text-left transition-all ${formData.category === category ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`} disabled={isLoading}
+                  key={group} type="button" onClick={() => handleInputChange("group", group)}
+                  className={`p-3 rounded-lg border-2 text-left transition-all ${formData.group === group ? "border-blue-500 bg-blue-50" : "border-gray-200 hover:border-gray-300"}`} disabled={isLoading}
                 >
                   <div className="flex items-center gap-2">
-                    <div className={`${formData.category === category ? "text-blue-600" : "text-gray-500"}`}>{categoryIcons[category]}</div>
+                    <div className={`${formData.group === group ? "text-blue-600" : "text-gray-500"}`}>{groupIcons[group]}</div>
                     <div>
-                      <p className={`text-sm font-medium ${formData.category === category ? "text-blue-700" : "text-gray-700"}`}>{category}</p>
-                      <p className="text-xs text-gray-500">{categoryDescriptions[category]}</p>
+                      <p className={`text-sm font-medium ${formData.group === group ? "text-blue-700" : "text-gray-700"}`}>{group}</p>
+                      <p className="text-xs text-gray-500">{groupDescriptions[group]}</p>
                     </div>
                   </div>
                 </button>
@@ -195,10 +195,10 @@ export const CreateProductTypeModal = ({
           </div>
 
           <div>
-            <Label htmlFor="group" className="text-sm font-medium">Grupo *</Label>
-            <Input id="group" value={formData.group} onChange={(e) => handleInputChange("group", e.target.value)} className={errors.group ? "border-red-500" : ""} placeholder="Ej: Teclados Latino, Workstations, Memoria" disabled={isLoading} />
-            {errors.group && <p className="text-red-500 text-xs mt-1">{errors.group}</p>}
-            <p className="text-xs text-gray-500 mt-1">Agrupa tipos de activos similares (ej: todos los teclados)</p>
+            <Label htmlFor="category" className="text-sm font-medium">Categoría *</Label>
+            <Input id="category" value={formData.category} onChange={(e) => handleInputChange("category", e.target.value)} className={errors.category ? "border-red-500" : ""} placeholder="Ej: Teclados Latino, Workstations, Memoria" disabled={isLoading} />
+            {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
+            <p className="text-xs text-gray-500 mt-1">Categoriza el tipo de activo (ej: todos los teclados)</p>
           </div>
 
           <div>

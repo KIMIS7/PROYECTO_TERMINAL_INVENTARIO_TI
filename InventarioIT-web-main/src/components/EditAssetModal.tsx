@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Asset, ProductType, Vendor, AssetState, Company, Site } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
-import { ProductCategory } from "./CreateProductTypeModal";
+import { ProductGroup } from "./CreateProductTypeModal";
 import { Pencil, ChevronDown, ChevronUp } from "lucide-react";
 
 interface EditAssetModalProps {
@@ -127,7 +127,7 @@ export const EditAssetModal = ({
   };
 
   const selectedProductType = productTypes.find(pt => pt.productTypeID === formData.productTypeID);
-  const productTypeCategory = selectedProductType?.category as ProductCategory | undefined;
+  const productTypeGroup = selectedProductType?.group as ProductGroup | undefined;
 
   // Filtrar sitios cuando cambia la compania
   useEffect(() => {
@@ -192,7 +192,7 @@ export const EditAssetModal = ({
         warrantyExpiryDate: formData.warrantyExpiryDate || undefined,
       };
 
-      if (productTypeCategory === "Equipo" || productTypeCategory === "Otros") {
+      if (productTypeGroup === "Equipo" || productTypeGroup === "Otros") {
         detail.ipAddress = formData.ipAddress || undefined;
         detail.macAddress = formData.macAddress || undefined;
         detail.domain = formData.domain || undefined;
@@ -205,13 +205,13 @@ export const EditAssetModal = ({
         detail.operatingSystem = formData.operatingSystem || undefined;
       }
 
-      if (productTypeCategory === "Componente" || productTypeCategory === "Otros") {
+      if (productTypeGroup === "Componente" || productTypeGroup === "Otros") {
         if (!detail.physicalMemory) detail.physicalMemory = formData.physicalMemory || undefined;
         if (!detail.hddModel) detail.hddModel = formData.hddModel || undefined;
         detail.hddSerial = formData.hddSerial || undefined;
       }
 
-      if (productTypeCategory === "Otros") {
+      if (productTypeGroup === "Otros") {
         detail.imei = formData.imei || undefined;
         detail.platform = formData.platform || undefined;
         detail.osName = formData.osName || undefined;
@@ -266,7 +266,7 @@ export const EditAssetModal = ({
   };
 
   const renderTechnicalFields = () => {
-    if (!productTypeCategory) {
+    if (!productTypeGroup) {
       return (
         <p className="text-sm text-gray-500 italic">
           Selecciona un tipo de activo para ver los campos disponibles
@@ -301,7 +301,7 @@ export const EditAssetModal = ({
           </div>
         </div>
 
-        {(productTypeCategory === "Equipo" || productTypeCategory === "Otros") && (
+        {(productTypeGroup === "Equipo" || productTypeGroup === "Otros") && (
           <>
             {/* 2. Red y Acceso */}
             <div>
@@ -433,7 +433,7 @@ export const EditAssetModal = ({
           </>
         )}
 
-        {(productTypeCategory === "Componente" || productTypeCategory === "Otros") && (
+        {(productTypeGroup === "Componente" || productTypeGroup === "Otros") && (
           <>
             <div>
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -496,7 +496,7 @@ export const EditAssetModal = ({
           </>
         )}
 
-        {productTypeCategory === "Otros" && (
+        {productTypeGroup === "Otros" && (
           <>
             <div>
               <h4 className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-3">
@@ -698,9 +698,9 @@ export const EditAssetModal = ({
                 >
                   <span>
                     Detalles Tecnicos
-                    {productTypeCategory && (
+                    {productTypeGroup && (
                       <span className="ml-2 text-xs font-normal text-blue-600">
-                        (Plantilla: {productTypeCategory})
+                        (Plantilla: {productTypeGroup})
                       </span>
                     )}
                   </span>

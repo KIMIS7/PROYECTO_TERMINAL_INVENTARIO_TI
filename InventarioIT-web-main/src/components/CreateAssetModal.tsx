@@ -6,7 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { ProductType, Vendor, AssetState, Company, Site } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
-import { CreateProductTypeModal, ProductCategory } from "./CreateProductTypeModal";
+import { CreateProductTypeModal, ProductGroup } from "./CreateProductTypeModal";
 import {
   Package,
   ChevronDown,
@@ -90,9 +90,9 @@ export const CreateAssetModal = ({
     setLocalProductTypes(productTypes);
   }, [productTypes]);
 
-  // Obtener la categoria del tipo de producto seleccionado
+  // Obtener el grupo del tipo de producto seleccionado
   const selectedProductType = localProductTypes.find(pt => pt.productTypeID === formData.productTypeID);
-  const productTypeCategory = selectedProductType?.category as ProductCategory | undefined;
+  const productTypeGroup = selectedProductType?.group as ProductGroup | undefined;
 
   // Filtrar sitios cuando cambia la compania
   useEffect(() => {
@@ -167,7 +167,7 @@ export const CreateAssetModal = ({
       };
 
       // Agregar campos segun la categoria
-      if (productTypeCategory === "Equipo" || productTypeCategory === "Otros") {
+      if (productTypeGroup === "Equipo" || productTypeGroup === "Otros") {
         detail.ipAddress = formData.ipAddress || undefined;
         detail.macAddress = formData.macAddress || undefined;
         detail.domain = formData.domain || undefined;
@@ -180,13 +180,13 @@ export const CreateAssetModal = ({
         detail.operatingSystem = formData.operatingSystem || undefined;
       }
 
-      if (productTypeCategory === "Componente" || productTypeCategory === "Otros") {
+      if (productTypeGroup === "Componente" || productTypeGroup === "Otros") {
         if (!detail.physicalMemory) detail.physicalMemory = formData.physicalMemory || undefined;
         if (!detail.hddModel) detail.hddModel = formData.hddModel || undefined;
         detail.hddSerial = formData.hddSerial || undefined;
       }
 
-      if (productTypeCategory === "Otros") {
+      if (productTypeGroup === "Otros") {
         detail.imei = formData.imei || undefined;
         detail.platform = formData.platform || undefined;
         detail.osName = formData.osName || undefined;
@@ -284,7 +284,7 @@ export const CreateAssetModal = ({
 
   // Renderizar campos de detalles tecnicos segun la categoria
   const renderTechnicalFields = () => {
-    if (!productTypeCategory) {
+    if (!productTypeGroup) {
       return (
         <p className="text-sm text-gray-500 italic">
           Selecciona un tipo de activo para ver los campos disponibles
@@ -355,7 +355,7 @@ export const CreateAssetModal = ({
         </div>
 
         {/* Campos de Equipo y Otros */}
-        {(productTypeCategory === "Equipo" || productTypeCategory === "Otros") && (
+        {(productTypeGroup === "Equipo" || productTypeGroup === "Otros") && (
           <>
             {/* 2. Red y Acceso */}
             <div>
@@ -556,7 +556,7 @@ export const CreateAssetModal = ({
         )}
 
         {/* Campos de Componente y Otros */}
-        {(productTypeCategory === "Componente" || productTypeCategory === "Otros") && (
+        {(productTypeGroup === "Componente" || productTypeGroup === "Otros") && (
           <>
 
           
@@ -649,7 +649,7 @@ export const CreateAssetModal = ({
         )}
 
         {/* Campos adicionales solo para Otros */}
-        {productTypeCategory === "Otros" && (
+        {productTypeGroup === "Otros" && (
           <>
             <div>
               <Label htmlFor="imei" className="text-sm font-medium">
@@ -908,9 +908,9 @@ export const CreateAssetModal = ({
               >
                 <span>
                   Detalles Tecnicos
-                  {productTypeCategory && (
+                  {productTypeGroup && (
                     <span className="ml-2 text-xs font-normal text-blue-600">
-                      (Plantilla: {productTypeCategory})
+                      (Plantilla: {productTypeGroup})
                     </span>
                   )}
                 </span>

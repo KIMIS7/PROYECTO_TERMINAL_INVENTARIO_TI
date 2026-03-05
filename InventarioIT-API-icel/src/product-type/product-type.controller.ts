@@ -16,19 +16,19 @@ export class ProductTypeController {
     return this.productTypeService.findAll();
   }
 
-  @Get('available-categories')
-  getAvailableCategories() {
-    return this.productTypeService.getAvailableCategories();
+  @Get('available-groups')
+  getAvailableGroups() {
+    return this.productTypeService.getAvailableGroups();
   }
 
-  @Get('categories')
-  getCategories() {
-    return this.productTypeService.getCategories();
+  @Get('groups')
+  getGroups() {
+    return this.productTypeService.getGroups();
   }
 
-  @Get('category/:category')
-  findByCategory(@Param('category') category: string) {
-    return this.productTypeService.findByCategory(category);
+  @Get('group/:group')
+  findByGroup(@Param('group') group: string) {
+    return this.productTypeService.findByGroup(group);
   }
 
   @Delete(':id')

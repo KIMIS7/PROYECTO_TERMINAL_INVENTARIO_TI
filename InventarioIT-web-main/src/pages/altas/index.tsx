@@ -39,7 +39,7 @@ import {
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const ASSET_CATEGORIES = ["Equipo", "Accesorio", "Componente", "Otro"] as const;
+const ASSET_GROUPS = ["Equipo", "Accesorio", "Componente", "Otro"] as const;
 
 export default function Altas() {
   // Estados para los catálogos
@@ -60,7 +60,7 @@ export default function Altas() {
   const [detailAssetID, setDetailAssetID] = useState<number | null>(null);
 
   // Estados para filtros y selección
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
@@ -135,13 +135,13 @@ export default function Altas() {
     );
   }, [assets]);
 
-  // Tipos de activo filtrados por categoría seleccionada
+  // Tipos de activo filtrados por grupo seleccionado
   const filteredProductTypes = useMemo(() => {
-    if (selectedCategory) {
-      return productTypes.filter((pt) => pt.category === selectedCategory);
+    if (selectedGroup) {
+      return productTypes.filter((pt) => pt.group === selectedGroup);
     }
     return productTypes;
-  }, [productTypes, selectedCategory]);
+  }, [productTypes, selectedGroup]);
 
   // Definir facetas para el omnibox
   const facets: Facet[] = useMemo(
@@ -190,10 +190,10 @@ export default function Altas() {
   useEffect(() => {
     let result = [...assets];
 
-    // Filtrar por categoría (botones)
-    if (selectedCategory) {
+    // Filtrar por grupo (botones)
+    if (selectedGroup) {
       result = result.filter(
-        (asset) => asset.productType?.category === selectedCategory
+        (asset) => asset.productType?.group === selectedGroup
       );
     }
 
@@ -240,7 +240,7 @@ export default function Altas() {
 
     setFilteredAssets(result);
     setCurrentPage(1);
-  }, [assets, selectedCategory, filterChips, searchQuery]);
+  }, [assets, selectedGroup, filterChips, searchQuery]);
 
   // Paginación
   const paginatedAssets = useMemo(() => {
@@ -350,34 +350,34 @@ export default function Altas() {
     >
       {() => (
         <div className="flex flex-col h-full bg-white">
-          {/* Header - Botones de categoría */}
+          {/* Header - Botones de grupo */}
           <div className="px-4 py-3 border-b">
             <div className="flex items-center gap-2">
               <Button
-                variant={selectedCategory === null ? "default" : "outline"}
+                variant={selectedGroup === null ? "default" : "outline"}
                 size="sm"
-                onClick={() => setSelectedCategory(null)}
+                onClick={() => setSelectedGroup(null)}
                 className="h-9 text-sm font-medium"
               >
                 Todos
               </Button>
-              {ASSET_CATEGORIES.map((category) => (
+              {ASSET_GROUPS.map((group) => (
                 <Button
-                  key={category}
-                  variant={selectedCategory === category ? "default" : "outline"}
+                  key={group}
+                  variant={selectedGroup === group ? "default" : "outline"}
                   size="sm"
                   onClick={() => {
-                    setSelectedCategory(
-                      selectedCategory === category ? null : category
+                    setSelectedGroup(
+                      selectedGroup === group ? null : group
                     );
-                    // Limpiar chips de tipo de activo al cambiar categoría
+                    // Limpiar chips de tipo de activo al cambiar grupo
                     setFilterChips((prev) =>
                       prev.filter((c) => c.facet !== "tipo")
                     );
                   }}
                   className="h-9 text-sm font-medium"
                 >
-                  {category}
+                  {group}
                 </Button>
               ))}
             </div>
