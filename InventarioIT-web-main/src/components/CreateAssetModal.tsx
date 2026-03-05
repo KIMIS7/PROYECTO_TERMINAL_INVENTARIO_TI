@@ -1,9 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ProductType, Vendor, AssetState, Company, Site } from "@/types";
+import { ProductType, Vendor, AssetState, Company, Site, Department } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import { CreateProductTypeModal, ProductGroup } from "./CreateProductTypeModal";
@@ -12,6 +12,9 @@ import {
   ChevronDown,
   ChevronUp,
   Plus,
+  Search,
+  X,
+  User,
 } from "lucide-react";
 
 interface CreateAssetModalProps {
@@ -82,8 +85,34 @@ export const CreateAssetModal = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [showTechnical, setShowTechnical] = useState(true);
   const [showDates, setShowDates] = useState(false);
+  const [showUserAssignment, setShowUserAssignment] = useState(true);
   const [isProductTypeModalOpen, setIsProductTypeModalOpen] = useState(false);
   const [localProductTypes, setLocalProductTypes] = useState<ProductType[]>(productTypes);
+
+  // Estado para busqueda de usuarios
+  const [userSearchQuery, setUserSearchQuery] = useState("");
+  const [userSearchDepartmentID, setUserSearchDepartmentID] = useState<number>(0);
+  const [userSearchSiteID, setUserSearchSiteID] = useState<number>(0);
+  const [userSearchResults, setUserSearchResults] = useState<{
+    userID: number;
+    email: string;
+    name: string;
+    firstName: string;
+    lastName: string;
+    departmentID: number;
+    departmentName: string;
+    siteID: number;
+    rolName: string;
+  }[]>([]);
+  const [selectedUser, setSelectedUser] = useState<{
+    userID: number;
+    email: string;
+    name: string;
+    departmentName: string;
+  } | null>(null);
+  const [isSearchingUsers, setIsSearchingUsers] = useState(false);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Actualizar tipos de producto locales cuando cambien los props
   useEffect(() => {
@@ -106,6 +135,50 @@ export const CreateAssetModal = ({
       setFilteredSites(sites);
     }
   }, [formData.companyID, sites, formData.siteID]);
+
+  // Cargar departamentos al abrir el modal
+  useEffect(() => {
+    if (isOpen) {
+      api.user.getDepartments().then(setDepartments).catch(console.error);
+    }
+  }, [isOpen]);
+
+  // Buscar usuarios con debounce
+  const searchUsers = useCallback(async () => {
+    if (!userSearchQuery && !userSearchDepartmentID && !userSearchSiteID) {
+      setUserSearchResults([]);
+      return;
+    }
+
+    setIsSearchingUsers(true);
+    try {
+      const results = await api.user.search({
+        q: userSearchQuery || undefined,
+        departmentID: userSearchDepartmentID || undefined,
+        siteID: userSearchSiteID || undefined,
+      });
+      setUserSearchResults(results);
+    } catch (error) {
+      console.error("Error al buscar usuarios:", error);
+      setUserSearchResults([]);
+    } finally {
+      setIsSearchingUsers(false);
+    }
+  }, [userSearchQuery, userSearchDepartmentID, userSearchSiteID]);
+
+  useEffect(() => {
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    searchTimeoutRef.current = setTimeout(() => {
+      searchUsers();
+    }, 400);
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, [searchUsers]);
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -193,7 +266,7 @@ export const CreateAssetModal = ({
         detail.osVersion = formData.osVersion || undefined;
       }
 
-      const assetData = {
+      const assetData: Record<string, unknown> = {
         name: formData.name,
         vendorID: formData.vendorID,
         productTypeID: formData.productTypeID,
@@ -203,7 +276,11 @@ export const CreateAssetModal = ({
         detail,
       };
 
-      await api.asset.create(assetData);
+      if (selectedUser) {
+        assetData.userID = selectedUser.userID;
+      }
+
+      await api.asset.create(assetData as Parameters<typeof api.asset.create>[0]);
 
       resetForm();
       showSuccess("Activo registrado exitosamente");
@@ -265,6 +342,12 @@ export const CreateAssetModal = ({
     setErrors({});
     setShowTechnical(true);
     setShowDates(false);
+    setShowUserAssignment(true);
+    setSelectedUser(null);
+    setUserSearchQuery("");
+    setUserSearchDepartmentID(0);
+    setUserSearchSiteID(0);
+    setUserSearchResults([]);
   };
 
   const handleClose = () => {
@@ -897,6 +980,172 @@ export const CreateAssetModal = ({
                   {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
                 </div>
               </div>
+            </div>
+
+            {/* Asignar Usuario (Colapsable) */}
+            <div className="mb-6">
+              <button
+                type="button"
+                onClick={() => setShowUserAssignment(!showUserAssignment)}
+                className="flex items-center justify-between w-full text-sm font-semibold text-gray-700 mb-4 pb-2 border-b hover:text-blue-600"
+              >
+                <span className="flex items-center gap-2">
+                  <User className="h-4 w-4" />
+                  Asignar Usuario
+                  {selectedUser && (
+                    <span className="ml-2 text-xs font-normal text-green-600">
+                      ({selectedUser.name})
+                    </span>
+                  )}
+                </span>
+                {showUserAssignment ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+
+              {showUserAssignment && (
+                <div className="space-y-4">
+                  {/* Usuario seleccionado */}
+                  {selectedUser && (
+                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                      <div>
+                        <p className="text-sm font-medium text-blue-900">{selectedUser.name}</p>
+                        <p className="text-xs text-blue-700">{selectedUser.email}</p>
+                        {selectedUser.departmentName && (
+                          <p className="text-xs text-blue-600">{selectedUser.departmentName}</p>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setSelectedUser(null)}
+                        className="h-7 w-7 text-blue-600 hover:text-red-600 hover:bg-red-50"
+                      >
+                        <X className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  )}
+
+                  {/* Filtros de busqueda */}
+                  {!selectedUser && (
+                    <>
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        {/* Busqueda por texto */}
+                        <div>
+                          <Label className="text-xs text-gray-500">Buscar por nombre o correo</Label>
+                          <div className="relative">
+                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                            <Input
+                              value={userSearchQuery}
+                              onChange={(e) => setUserSearchQuery(e.target.value)}
+                              placeholder="Nombre o correo..."
+                              className="pl-9"
+                              disabled={isLoading}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Filtro por departamento */}
+                        <div>
+                          <Label className="text-xs text-gray-500">Departamento</Label>
+                          <Select
+                            value={userSearchDepartmentID ? userSearchDepartmentID.toString() : "all"}
+                            onValueChange={(value) => setUserSearchDepartmentID(value === "all" ? 0 : Number(value))}
+                            disabled={isLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos los departamentos</SelectItem>
+                              {departments.map((dept) => (
+                                <SelectItem key={dept.departID} value={dept.departID.toString()}>
+                                  {dept.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+
+                        {/* Filtro por site */}
+                        <div>
+                          <Label className="text-xs text-gray-500">Site</Label>
+                          <Select
+                            value={userSearchSiteID ? userSearchSiteID.toString() : "all"}
+                            onValueChange={(value) => setUserSearchSiteID(value === "all" ? 0 : Number(value))}
+                            disabled={isLoading}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Todos" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Todos los sites</SelectItem>
+                              {sites.map((site) => (
+                                <SelectItem key={site.siteID} value={site.siteID.toString()}>
+                                  {site.name}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      </div>
+
+                      {/* Resultados de busqueda */}
+                      {isSearchingUsers && (
+                        <p className="text-sm text-gray-500 text-center py-2">Buscando usuarios...</p>
+                      )}
+
+                      {!isSearchingUsers && userSearchResults.length > 0 && (
+                        <div className="border rounded-lg max-h-48 overflow-y-auto">
+                          {userSearchResults.map((user) => (
+                            <button
+                              key={user.userID}
+                              type="button"
+                              onClick={() => {
+                                setSelectedUser({
+                                  userID: user.userID,
+                                  email: user.email,
+                                  name: user.name,
+                                  departmentName: user.departmentName,
+                                });
+                                setUserSearchQuery("");
+                                setUserSearchDepartmentID(0);
+                                setUserSearchSiteID(0);
+                                setUserSearchResults([]);
+                              }}
+                              className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 text-left"
+                            >
+                              <div>
+                                <p className="text-sm font-medium">{user.name}</p>
+                                <p className="text-xs text-gray-500">{user.email}</p>
+                              </div>
+                              <div className="text-right">
+                                {user.departmentName && (
+                                  <p className="text-xs text-gray-400">{user.departmentName}</p>
+                                )}
+                                {user.rolName && (
+                                  <p className="text-xs text-gray-400">{user.rolName}</p>
+                                )}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+
+                      {!isSearchingUsers && !userSearchQuery && !userSearchDepartmentID && !userSearchSiteID && (
+                        <p className="text-xs text-gray-400 italic text-center">
+                          Usa los filtros para buscar un usuario a quien asignar el activo
+                        </p>
+                      )}
+
+                      {!isSearchingUsers && (userSearchQuery || userSearchDepartmentID || userSearchSiteID) && userSearchResults.length === 0 && (
+                        <p className="text-xs text-gray-500 italic text-center py-2">
+                          No se encontraron usuarios con los filtros seleccionados
+                        </p>
+                      )}
+                    </>
+                  )}
+                </div>
+              )}
             </div>
 
             {/* Detalles Tecnicos (Colapsable) */}

@@ -6,6 +6,7 @@ import {
   Patch,
   Param,
   Delete,
+  Query,
 } from '@nestjs/common';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -23,6 +24,19 @@ export class UserController {
   @Get()
   findAll() {
     return this.userService.findAll();
+  }
+
+  @Get('search')
+  searchUsers(
+    @Query('q') query?: string,
+    @Query('departmentID') departmentID?: string,
+    @Query('siteID') siteID?: string,
+  ) {
+    return this.userService.searchUsers(
+      query,
+      departmentID ? +departmentID : undefined,
+      siteID ? +siteID : undefined,
+    );
   }
 
   @Get('departments')

@@ -203,6 +203,24 @@ const api = {
             const response = await apiClient.delete<{ success: boolean, message: string, data: object }>(`/user/${userId}`);
             return response.data; 
         },
+        search: async (params: { q?: string; departmentID?: number; siteID?: number }) => {
+            const queryParams = new URLSearchParams();
+            if (params.q) queryParams.append('q', params.q);
+            if (params.departmentID) queryParams.append('departmentID', params.departmentID.toString());
+            if (params.siteID) queryParams.append('siteID', params.siteID.toString());
+            const response = await apiClient.get<{
+                userID: number;
+                email: string;
+                name: string;
+                firstName: string;
+                lastName: string;
+                departmentID: number;
+                departmentName: string;
+                siteID: number;
+                rolName: string;
+            }[]>(`/user/search?${queryParams.toString()}`);
+            return response.data;
+        },
         getUserProfile: async (email: string) => {
             console.log(`[API] Obteniendo perfil de usuario: ${email}`);
             try {

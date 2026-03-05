@@ -333,6 +333,61 @@ export class UserService {
     }
   }
 
+  async searchUsers(
+    query?: string,
+    departmentID?: number,
+    siteID?: number,
+  ) {
+    try {
+      const where: Record<string, unknown> = {
+        isActive: true,
+      };
+
+      if (query) {
+        where.OR = [
+          { Email: { contains: query } },
+          { Name: { contains: query } },
+          { FirstName: { contains: query } },
+          { LastName: { contains: query } },
+        ];
+      }
+
+      if (departmentID) {
+        where.DepartmentID = departmentID;
+      }
+
+      if (siteID) {
+        where.SiteID = siteID;
+      }
+
+      const users = await this.prismaShopic.user.findMany({
+        where,
+        include: {
+          Depart: true,
+          rol: true,
+        },
+        take: 20,
+        orderBy: { Name: 'asc' },
+      });
+
+      return users.map((user) => ({
+        userID: user.UserID,
+        email: user.Email,
+        name: user.Name,
+        firstName: user.FirstName,
+        lastName: user.LastName,
+        departmentID: user.DepartmentID,
+        departmentName: user.Depart?.Name || '',
+        siteID: user.SiteID,
+        rolName: user.rol?.name || '',
+      }));
+    } catch (error) {
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al buscar usuarios',
+      });
+    }
+  }
+
   async getDepartments() {
     try {
       const departments = await this.prismaShopic.depart.findMany({
