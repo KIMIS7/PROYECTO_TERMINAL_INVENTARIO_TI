@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,14 +7,17 @@ import { ProductType, Vendor, AssetState, Company, Site, Department } from "@/ty
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import { CreateProductTypeModal, ProductGroup } from "./CreateProductTypeModal";
+import { cn } from "@/lib/utils";
 import {
   Package,
   ChevronDown,
   ChevronUp,
+  ChevronRight,
   Plus,
   Search,
   X,
   User,
+  Calendar,
 } from "lucide-react";
 
 interface CreateAssetModalProps {
@@ -89,11 +92,8 @@ export const CreateAssetModal = ({
   const [isProductTypeModalOpen, setIsProductTypeModalOpen] = useState(false);
   const [localProductTypes, setLocalProductTypes] = useState<ProductType[]>(productTypes);
 
-  // Estado para busqueda de usuarios
-  const [userSearchQuery, setUserSearchQuery] = useState("");
-  const [userSearchDepartmentID, setUserSearchDepartmentID] = useState<number>(0);
-  const [userSearchSiteID, setUserSearchSiteID] = useState<number>(0);
-  const [userSearchResults, setUserSearchResults] = useState<{
+  // Estado para busqueda de usuarios (omnibox style)
+  type UserSearchResult = {
     userID: number;
     email: string;
     name: string;
@@ -103,15 +103,29 @@ export const CreateAssetModal = ({
     departmentName: string;
     siteID: number;
     rolName: string;
-  }[]>([]);
+  };
+  type OmniboxMode = "facets" | "values" | "results";
+  type FacetKey = "correo" | "departamento" | "site";
+
   const [selectedUser, setSelectedUser] = useState<{
     userID: number;
     email: string;
     name: string;
     departmentName: string;
   } | null>(null);
+  const [assignmentToDate, setAssignmentToDate] = useState("");
+  const [omniboxInput, setOmniboxInput] = useState("");
+  const [omniboxMode, setOmniboxMode] = useState<OmniboxMode>("facets");
+  const [omniboxActiveFacet, setOmniboxActiveFacet] = useState<FacetKey | null>(null);
+  const [omniboxDropdownOpen, setOmniboxDropdownOpen] = useState(false);
+  const [omniboxHighlightIndex, setOmniboxHighlightIndex] = useState(0);
+  const [omniboxFilters, setOmniboxFilters] = useState<{ facet: FacetKey; value: string; label: string }[]>([]);
+  const [userSearchResults, setUserSearchResults] = useState<UserSearchResult[]>([]);
   const [isSearchingUsers, setIsSearchingUsers] = useState(false);
   const [departments, setDepartments] = useState<Department[]>([]);
+  const omniboxInputRef = useRef<HTMLInputElement>(null);
+  const omniboxContainerRef = useRef<HTMLDivElement>(null);
+  const omniboxDropdownRef = useRef<HTMLDivElement>(null);
   const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   // Actualizar tipos de producto locales cuando cambien los props
@@ -143,9 +157,52 @@ export const CreateAssetModal = ({
     }
   }, [isOpen]);
 
-  // Buscar usuarios con debounce
-  const searchUsers = useCallback(async () => {
-    if (!userSearchQuery && !userSearchDepartmentID && !userSearchSiteID) {
+  // Click outside handler para omnibox
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (omniboxContainerRef.current && !omniboxContainerRef.current.contains(e.target as Node)) {
+        setOmniboxDropdownOpen(false);
+        setOmniboxMode("facets");
+        setOmniboxActiveFacet(null);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Facets definition
+  const FACET_CONFIG: Record<FacetKey, { label: string; color: string; badgeColor: string }> = {
+    correo: { label: "Correo", color: "bg-blue-50 text-blue-700 border-blue-200", badgeColor: "bg-blue-100 text-blue-700" },
+    departamento: { label: "Departamento", color: "bg-emerald-50 text-emerald-700 border-emerald-200", badgeColor: "bg-emerald-100 text-emerald-700" },
+    site: { label: "Site", color: "bg-amber-50 text-amber-700 border-amber-200", badgeColor: "bg-amber-100 text-amber-700" },
+  };
+
+  const facetKeys: FacetKey[] = ["correo", "departamento", "site"];
+
+  // Options for the selected facet
+  const facetOptions = useMemo(() => {
+    if (omniboxActiveFacet === "departamento") {
+      return departments.map(d => ({ value: d.departID.toString(), label: d.name }));
+    }
+    if (omniboxActiveFacet === "site") {
+      return sites.map(s => ({ value: s.siteID.toString(), label: s.name }));
+    }
+    return [];
+  }, [omniboxActiveFacet, departments, sites]);
+
+  const filteredFacetOptions = useMemo(() => {
+    if (!omniboxInput.trim()) return facetOptions;
+    const q = omniboxInput.toLowerCase();
+    return facetOptions.filter(o => o.label.toLowerCase().includes(q));
+  }, [facetOptions, omniboxInput]);
+
+  // Ejecutar busqueda cuando cambian filtros
+  const executeSearch = useCallback(async (filters: typeof omniboxFilters) => {
+    const emailFilter = filters.find(f => f.facet === "correo");
+    const deptFilter = filters.find(f => f.facet === "departamento");
+    const siteFilter = filters.find(f => f.facet === "site");
+
+    if (!emailFilter && !deptFilter && !siteFilter) {
       setUserSearchResults([]);
       return;
     }
@@ -153,32 +210,150 @@ export const CreateAssetModal = ({
     setIsSearchingUsers(true);
     try {
       const results = await api.user.search({
-        q: userSearchQuery || undefined,
-        departmentID: userSearchDepartmentID || undefined,
-        siteID: userSearchSiteID || undefined,
+        q: emailFilter?.value || undefined,
+        departmentID: deptFilter ? Number(deptFilter.value) : undefined,
+        siteID: siteFilter ? Number(siteFilter.value) : undefined,
       });
       setUserSearchResults(results);
+      setOmniboxMode("results");
+      setOmniboxDropdownOpen(true);
     } catch (error) {
       console.error("Error al buscar usuarios:", error);
       setUserSearchResults([]);
     } finally {
       setIsSearchingUsers(false);
     }
-  }, [userSearchQuery, userSearchDepartmentID, userSearchSiteID]);
+  }, []);
 
+  // Debounce search after adding email filter
   useEffect(() => {
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
+    if (omniboxFilters.length === 0) {
+      setUserSearchResults([]);
+      return;
     }
+    if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      searchUsers();
-    }, 400);
-    return () => {
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
+      executeSearch(omniboxFilters);
+    }, 300);
+    return () => { if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current); };
+  }, [omniboxFilters, executeSearch]);
+
+  // Reset highlight when options change
+  useEffect(() => {
+    setOmniboxHighlightIndex(0);
+  }, [omniboxMode, filteredFacetOptions.length, userSearchResults.length]);
+
+  // Omnibox handlers
+  const handleOmniboxFacetSelect = (facet: FacetKey) => {
+    if (facet === "correo") {
+      // Correo is free text, go to typing mode
+      setOmniboxActiveFacet("correo");
+      setOmniboxMode("values");
+      setOmniboxInput("");
+      omniboxInputRef.current?.focus();
+    } else {
+      setOmniboxActiveFacet(facet);
+      setOmniboxMode("values");
+      setOmniboxInput("");
+      setOmniboxHighlightIndex(0);
+      omniboxInputRef.current?.focus();
+    }
+  };
+
+  const handleOmniboxValueSelect = (value: string, label: string) => {
+    if (!omniboxActiveFacet) return;
+    // Remove existing filter for same facet
+    const newFilters = [...omniboxFilters.filter(f => f.facet !== omniboxActiveFacet), { facet: omniboxActiveFacet, value, label }];
+    setOmniboxFilters(newFilters);
+    setOmniboxActiveFacet(null);
+    setOmniboxMode("facets");
+    setOmniboxInput("");
+    omniboxInputRef.current?.focus();
+  };
+
+  const handleOmniboxRemoveFilter = (facet: FacetKey) => {
+    const newFilters = omniboxFilters.filter(f => f.facet !== facet);
+    setOmniboxFilters(newFilters);
+    if (newFilters.length === 0) {
+      setUserSearchResults([]);
+      setOmniboxMode("facets");
+    }
+    omniboxInputRef.current?.focus();
+  };
+
+  const handleOmniboxKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Escape") {
+      setOmniboxDropdownOpen(false);
+      setOmniboxMode("facets");
+      setOmniboxActiveFacet(null);
+      return;
+    }
+
+    if (e.key === "Backspace" && omniboxInput === "") {
+      if (omniboxActiveFacet) {
+        setOmniboxActiveFacet(null);
+        setOmniboxMode("facets");
+      } else if (omniboxFilters.length > 0) {
+        handleOmniboxRemoveFilter(omniboxFilters[omniboxFilters.length - 1].facet);
       }
-    };
-  }, [searchUsers]);
+      return;
+    }
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+      if (omniboxMode === "facets") {
+        const availableFacets = facetKeys.filter(k => !omniboxFilters.find(f => f.facet === k));
+        if (availableFacets[omniboxHighlightIndex]) {
+          handleOmniboxFacetSelect(availableFacets[omniboxHighlightIndex]);
+        }
+      } else if (omniboxMode === "values") {
+        if (omniboxActiveFacet === "correo" && omniboxInput.trim()) {
+          handleOmniboxValueSelect(omniboxInput.trim(), omniboxInput.trim());
+        } else if (filteredFacetOptions[omniboxHighlightIndex]) {
+          handleOmniboxValueSelect(filteredFacetOptions[omniboxHighlightIndex].value, filteredFacetOptions[omniboxHighlightIndex].label);
+        }
+      } else if (omniboxMode === "results") {
+        if (userSearchResults[omniboxHighlightIndex]) {
+          handleSelectUserFromResults(userSearchResults[omniboxHighlightIndex]);
+        }
+      }
+      return;
+    }
+
+    if (!omniboxDropdownOpen) return;
+
+    let itemCount = 0;
+    if (omniboxMode === "facets") itemCount = facetKeys.filter(k => !omniboxFilters.find(f => f.facet === k)).length;
+    else if (omniboxMode === "values") itemCount = filteredFacetOptions.length;
+    else if (omniboxMode === "results") itemCount = userSearchResults.length;
+
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setOmniboxHighlightIndex(prev => (prev < itemCount - 1 ? prev + 1 : 0));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setOmniboxHighlightIndex(prev => (prev > 0 ? prev - 1 : Math.max(itemCount - 1, 0)));
+    }
+  };
+
+  const handleSelectUserFromResults = (user: UserSearchResult) => {
+    setSelectedUser({
+      userID: user.userID,
+      email: user.email,
+      name: user.name,
+      departmentName: user.departmentName,
+    });
+    setOmniboxDropdownOpen(false);
+    setOmniboxFilters([]);
+    setOmniboxInput("");
+    setOmniboxMode("facets");
+    setOmniboxActiveFacet(null);
+    setUserSearchResults([]);
+    setAssignmentToDate("");
+  };
+
+  // Fecha de asignacion (hoy, solo lectura)
+  const todayISO = new Date().toISOString().split("T")[0];
 
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
@@ -278,6 +453,10 @@ export const CreateAssetModal = ({
 
       if (selectedUser) {
         assetData.userID = selectedUser.userID;
+        assetData.assignmentFromDate = todayISO;
+        if (assignmentToDate) {
+          assetData.assignmentToDate = assignmentToDate;
+        }
       }
 
       await api.asset.create(assetData as Parameters<typeof api.asset.create>[0]);
@@ -344,9 +523,12 @@ export const CreateAssetModal = ({
     setShowDates(false);
     setShowUserAssignment(true);
     setSelectedUser(null);
-    setUserSearchQuery("");
-    setUserSearchDepartmentID(0);
-    setUserSearchSiteID(0);
+    setAssignmentToDate("");
+    setOmniboxInput("");
+    setOmniboxMode("facets");
+    setOmniboxActiveFacet(null);
+    setOmniboxDropdownOpen(false);
+    setOmniboxFilters([]);
     setUserSearchResults([]);
   };
 
@@ -1005,144 +1187,284 @@ export const CreateAssetModal = ({
                 <div className="space-y-4">
                   {/* Usuario seleccionado */}
                   {selectedUser && (
-                    <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                      <div>
-                        <p className="text-sm font-medium text-blue-900">{selectedUser.name}</p>
-                        <p className="text-xs text-blue-700">{selectedUser.email}</p>
-                        {selectedUser.departmentName && (
-                          <p className="text-xs text-blue-600">{selectedUser.departmentName}</p>
-                        )}
+                    <div className="space-y-4">
+                      <div className="flex items-center justify-between p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-blue-900">{selectedUser.name}</p>
+                          <p className="text-xs text-blue-700">{selectedUser.email}</p>
+                          {selectedUser.departmentName && (
+                            <p className="text-xs text-blue-600">{selectedUser.departmentName}</p>
+                          )}
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setSelectedUser(null)}
+                          className="h-7 w-7 text-blue-600 hover:text-red-600 hover:bg-red-50"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setSelectedUser(null)}
-                        className="h-7 w-7 text-blue-600 hover:text-red-600 hover:bg-red-50"
-                      >
-                        <X className="h-4 w-4" />
-                      </Button>
+
+                      {/* Fechas de asignacion */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Fecha de Asignacion
+                          </Label>
+                          <Input
+                            type="date"
+                            value={todayISO}
+                            disabled
+                            className="bg-gray-50 text-gray-600 cursor-not-allowed"
+                          />
+                          <p className="text-xs text-gray-400 mt-1">Fecha actual (no modificable)</p>
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium flex items-center gap-1.5">
+                            <Calendar className="h-3.5 w-3.5" />
+                            Fecha de Devolucion
+                          </Label>
+                          <Input
+                            type="date"
+                            value={assignmentToDate}
+                            onChange={(e) => setAssignmentToDate(e.target.value)}
+                            min={todayISO}
+                            disabled={isLoading}
+                          />
+                        </div>
+                      </div>
                     </div>
                   )}
 
-                  {/* Filtros de busqueda */}
+                  {/* Omnibox buscador estilo bloque */}
                   {!selectedUser && (
-                    <>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-                        {/* Busqueda por texto */}
-                        <div>
-                          <Label className="text-xs text-gray-500">Buscar por nombre o correo</Label>
-                          <div className="relative">
-                            <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                            <Input
-                              value={userSearchQuery}
-                              onChange={(e) => setUserSearchQuery(e.target.value)}
-                              placeholder="Nombre o correo..."
-                              className="pl-9"
-                              disabled={isLoading}
-                            />
-                          </div>
-                        </div>
+                    <div ref={omniboxContainerRef} className="relative">
+                      {/* Input area con chips */}
+                      <div
+                        className={cn(
+                          "flex items-center flex-wrap gap-1.5 min-h-[40px] pl-3 pr-2 py-1.5 border rounded-lg bg-white transition-all cursor-text",
+                          omniboxDropdownOpen
+                            ? "border-blue-400 ring-2 ring-blue-50 shadow-sm"
+                            : "border-gray-200 hover:border-gray-300"
+                        )}
+                        onClick={() => omniboxInputRef.current?.focus()}
+                      >
+                        <Search className="h-4 w-4 text-gray-400 shrink-0" />
 
-                        {/* Filtro por departamento */}
-                        <div>
-                          <Label className="text-xs text-gray-500">Departamento</Label>
-                          <Select
-                            value={userSearchDepartmentID ? userSearchDepartmentID.toString() : "all"}
-                            onValueChange={(value) => setUserSearchDepartmentID(value === "all" ? 0 : Number(value))}
-                            disabled={isLoading}
-                          >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Todos" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todos los departamentos</SelectItem>
-                              {departments.map((dept) => (
-                                <SelectItem key={dept.departID} value={dept.departID.toString()}>
-                                  {dept.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                        {/* Chips de filtros activos */}
+                        {omniboxFilters.map((filter) => {
+                          const config = FACET_CONFIG[filter.facet];
+                          return (
+                            <span
+                              key={filter.facet}
+                              className={cn(
+                                "inline-flex items-center gap-1 pl-1.5 pr-1 py-0.5 rounded-md text-xs font-medium border shrink-0",
+                                config.color
+                              )}
+                            >
+                              <span className="opacity-70 font-semibold">{config.label}:</span>
+                              <span>{filter.label}</span>
+                              <button
+                                type="button"
+                                onClick={(e) => { e.stopPropagation(); handleOmniboxRemoveFilter(filter.facet); }}
+                                className="ml-0.5 p-0.5 rounded hover:bg-black/10"
+                              >
+                                <X className="h-3 w-3" />
+                              </button>
+                            </span>
+                          );
+                        })}
 
-                        {/* Filtro por site */}
-                        <div>
-                          <Label className="text-xs text-gray-500">Site</Label>
-                          <Select
-                            value={userSearchSiteID ? userSearchSiteID.toString() : "all"}
-                            onValueChange={(value) => setUserSearchSiteID(value === "all" ? 0 : Number(value))}
-                            disabled={isLoading}
+                        {/* Label del facet activo */}
+                        {omniboxActiveFacet && (
+                          <span className={cn(
+                            "inline-flex items-center px-1.5 py-0.5 rounded-md text-xs font-semibold shrink-0",
+                            FACET_CONFIG[omniboxActiveFacet].badgeColor
+                          )}>
+                            {FACET_CONFIG[omniboxActiveFacet].label}:
+                          </span>
+                        )}
+
+                        {/* Input de texto */}
+                        <input
+                          ref={omniboxInputRef}
+                          type="text"
+                          className="flex-1 min-w-[140px] outline-none text-sm bg-transparent placeholder:text-gray-400"
+                          value={omniboxInput}
+                          onChange={(e) => {
+                            setOmniboxInput(e.target.value);
+                            if (!omniboxDropdownOpen) setOmniboxDropdownOpen(true);
+                          }}
+                          onFocus={() => setOmniboxDropdownOpen(true)}
+                          onKeyDown={handleOmniboxKeyDown}
+                          placeholder={omniboxFilters.length > 0 || omniboxActiveFacet ? "Escribir valor..." : "Buscar usuario por filtros..."}
+                          disabled={isLoading}
+                        />
+
+                        {/* Boton limpiar */}
+                        {(omniboxFilters.length > 0 || omniboxInput) && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOmniboxFilters([]);
+                              setOmniboxInput("");
+                              setOmniboxActiveFacet(null);
+                              setOmniboxMode("facets");
+                              setUserSearchResults([]);
+                              setOmniboxDropdownOpen(false);
+                            }}
+                            className="shrink-0 p-1 rounded-md text-gray-400 hover:text-gray-600 hover:bg-gray-100"
                           >
-                            <SelectTrigger>
-                              <SelectValue placeholder="Todos" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="all">Todos los sites</SelectItem>
-                              {sites.map((site) => (
-                                <SelectItem key={site.siteID} value={site.siteID.toString()}>
-                                  {site.name}
-                                </SelectItem>
-                              ))}
-                            </SelectContent>
-                          </Select>
-                        </div>
+                            <X className="h-3.5 w-3.5" />
+                          </button>
+                        )}
                       </div>
 
-                      {/* Resultados de busqueda */}
-                      {isSearchingUsers && (
-                        <p className="text-sm text-gray-500 text-center py-2">Buscando usuarios...</p>
-                      )}
+                      {/* Dropdown */}
+                      {omniboxDropdownOpen && (
+                        <div
+                          ref={omniboxDropdownRef}
+                          className="absolute top-full left-0 right-0 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg z-50 max-h-72 overflow-y-auto"
+                        >
+                          {/* Modo seleccion de facets */}
+                          {omniboxMode === "facets" && (
+                            <div className="p-1">
+                              <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                Filtrar por
+                              </div>
+                              {facetKeys
+                                .filter(k => !omniboxFilters.find(f => f.facet === k))
+                                .map((facetKey, index) => {
+                                  const config = FACET_CONFIG[facetKey];
+                                  const optCount = facetKey === "correo" ? null : facetKey === "departamento" ? departments.length : sites.length;
+                                  return (
+                                    <button
+                                      key={facetKey}
+                                      type="button"
+                                      data-index={index}
+                                      className={cn(
+                                        "flex items-center justify-between w-full px-3 py-2 text-sm rounded-md text-left transition-colors",
+                                        index === omniboxHighlightIndex ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                                      )}
+                                      onMouseEnter={() => setOmniboxHighlightIndex(index)}
+                                      onClick={() => handleOmniboxFacetSelect(facetKey)}
+                                    >
+                                      <div className="flex items-center gap-2">
+                                        <span className={cn("px-2 py-0.5 rounded text-xs font-semibold", config.badgeColor)}>
+                                          {config.label}
+                                        </span>
+                                        {optCount !== null && (
+                                          <span className="text-gray-400 text-xs">{optCount} opciones</span>
+                                        )}
+                                        {facetKey === "correo" && (
+                                          <span className="text-gray-400 text-xs">texto libre</span>
+                                        )}
+                                      </div>
+                                      <ChevronRight className="h-3.5 w-3.5 text-gray-400" />
+                                    </button>
+                                  );
+                                })}
+                              {facetKeys.filter(k => !omniboxFilters.find(f => f.facet === k)).length === 0 && (
+                                <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                                  Todos los filtros aplicados
+                                </div>
+                              )}
+                            </div>
+                          )}
 
-                      {!isSearchingUsers && userSearchResults.length > 0 && (
-                        <div className="border rounded-lg max-h-48 overflow-y-auto">
-                          {userSearchResults.map((user) => (
-                            <button
-                              key={user.userID}
-                              type="button"
-                              onClick={() => {
-                                setSelectedUser({
-                                  userID: user.userID,
-                                  email: user.email,
-                                  name: user.name,
-                                  departmentName: user.departmentName,
-                                });
-                                setUserSearchQuery("");
-                                setUserSearchDepartmentID(0);
-                                setUserSearchSiteID(0);
-                                setUserSearchResults([]);
-                              }}
-                              className="w-full flex items-center justify-between px-3 py-2 hover:bg-gray-50 border-b last:border-b-0 text-left"
-                            >
-                              <div>
-                                <p className="text-sm font-medium">{user.name}</p>
-                                <p className="text-xs text-gray-500">{user.email}</p>
+                          {/* Modo seleccion de valores */}
+                          {omniboxMode === "values" && omniboxActiveFacet && (
+                            <div className="p-1">
+                              <button
+                                type="button"
+                                className="flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider hover:text-gray-600 w-full text-left"
+                                onClick={() => {
+                                  setOmniboxActiveFacet(null);
+                                  setOmniboxMode("facets");
+                                  setOmniboxInput("");
+                                }}
+                              >
+                                <ChevronRight className="h-3 w-3 rotate-180" />
+                                {FACET_CONFIG[omniboxActiveFacet].label} — {omniboxActiveFacet === "correo" ? "Escribe y presiona Enter" : "Selecciona un valor"}
+                              </button>
+
+                              {omniboxActiveFacet === "correo" ? (
+                                <div className="px-3 py-3 text-sm text-gray-500 text-center">
+                                  {omniboxInput.trim()
+                                    ? <span>Presiona <kbd className="px-1.5 py-0.5 bg-gray-100 rounded text-xs font-mono">Enter</kbd> para buscar por &ldquo;{omniboxInput}&rdquo;</span>
+                                    : "Escribe un correo o nombre para buscar"
+                                  }
+                                </div>
+                              ) : (
+                                <>
+                                  {filteredFacetOptions.length > 0 ? (
+                                    filteredFacetOptions.map((option, index) => (
+                                      <button
+                                        key={option.value}
+                                        type="button"
+                                        data-index={index}
+                                        className={cn(
+                                          "flex items-center w-full px-3 py-2 text-sm rounded-md text-left transition-colors",
+                                          index === omniboxHighlightIndex ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                                        )}
+                                        onMouseEnter={() => setOmniboxHighlightIndex(index)}
+                                        onClick={() => handleOmniboxValueSelect(option.value, option.label)}
+                                      >
+                                        {option.label}
+                                      </button>
+                                    ))
+                                  ) : (
+                                    <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                                      No se encontraron opciones
+                                    </div>
+                                  )}
+                                </>
+                              )}
+                            </div>
+                          )}
+
+                          {/* Modo resultados */}
+                          {omniboxMode === "results" && (
+                            <div className="p-1">
+                              <div className="px-3 py-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">
+                                {isSearchingUsers ? "Buscando..." : `${userSearchResults.length} usuario${userSearchResults.length !== 1 ? "s" : ""} encontrado${userSearchResults.length !== 1 ? "s" : ""}`}
                               </div>
-                              <div className="text-right">
-                                {user.departmentName && (
-                                  <p className="text-xs text-gray-400">{user.departmentName}</p>
-                                )}
-                                {user.rolName && (
-                                  <p className="text-xs text-gray-400">{user.rolName}</p>
-                                )}
-                              </div>
-                            </button>
-                          ))}
+                              {userSearchResults.map((user, index) => (
+                                <button
+                                  key={user.userID}
+                                  type="button"
+                                  data-index={index}
+                                  className={cn(
+                                    "flex items-center justify-between w-full px-3 py-2.5 text-sm rounded-md text-left transition-colors",
+                                    index === omniboxHighlightIndex ? "bg-blue-50 text-blue-700" : "text-gray-700 hover:bg-gray-50"
+                                  )}
+                                  onMouseEnter={() => setOmniboxHighlightIndex(index)}
+                                  onClick={() => handleSelectUserFromResults(user)}
+                                >
+                                  <div>
+                                    <p className="font-medium">{user.name}</p>
+                                    <p className="text-xs text-gray-500">{user.email}</p>
+                                  </div>
+                                  <div className="text-right">
+                                    {user.departmentName && <p className="text-xs text-gray-400">{user.departmentName}</p>}
+                                    {user.rolName && <p className="text-xs text-gray-400">{user.rolName}</p>}
+                                  </div>
+                                </button>
+                              ))}
+                              {!isSearchingUsers && userSearchResults.length === 0 && (
+                                <div className="px-3 py-4 text-sm text-gray-500 text-center">
+                                  No se encontraron usuarios con los filtros aplicados
+                                </div>
+                              )}
+                            </div>
+                          )}
                         </div>
                       )}
-
-                      {!isSearchingUsers && !userSearchQuery && !userSearchDepartmentID && !userSearchSiteID && (
-                        <p className="text-xs text-gray-400 italic text-center">
-                          Usa los filtros para buscar un usuario a quien asignar el activo
-                        </p>
-                      )}
-
-                      {!isSearchingUsers && (userSearchQuery || userSearchDepartmentID || userSearchSiteID) && userSearchResults.length === 0 && (
-                        <p className="text-xs text-gray-500 italic text-center py-2">
-                          No se encontraron usuarios con los filtros seleccionados
-                        </p>
-                      )}
-                    </>
+                    </div>
                   )}
                 </div>
               )}

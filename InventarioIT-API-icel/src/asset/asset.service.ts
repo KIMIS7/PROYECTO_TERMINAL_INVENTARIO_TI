@@ -12,7 +12,7 @@ export class AssetService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createAssetDto: CreateAssetDto, userEmail?: string) {
-    const { name, vendorID, productTypeID, assetState, companyID, siteID, userID, detail } =
+    const { name, vendorID, productTypeID, assetState, companyID, siteID, userID, assignmentFromDate, assignmentToDate, detail } =
       createAssetDto;
 
     try {
@@ -93,6 +93,18 @@ export class AssetService {
           CreatedTime: new Date(),
         },
       });
+
+      // Registrar asignacion de usuario si se especifico
+      if (userID && assignmentFromDate) {
+        await this.prismaShopic.assetOwnershipHistory.create({
+          data: {
+            AssetID: newAsset.AssetID,
+            UserID: userID,
+            FromDate: new Date(assignmentFromDate),
+            ToDate: assignmentToDate ? new Date(assignmentToDate) : new Date('9999-12-31'),
+          },
+        });
+      }
 
       return {
         success: true,

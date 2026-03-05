@@ -160,5 +160,13 @@ export class CreateAssetDto {
   userID?: number;
 
   @IsOptional()
+  @IsString()
+  assignmentFromDate?: string;
+
+  @IsOptional()
+  @IsString()
+  assignmentToDate?: string;
+
+  @IsOptional()
   detail?: CreateAssetDetailDto;
 }
