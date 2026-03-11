@@ -43,7 +43,6 @@ export class UserService {
           FirstName,
           LastName,
           DepartmentID,
-          SiteID,
           rolD,
           isActive: true,
           token: '',
@@ -378,7 +377,6 @@ export class UserService {
         lastName: user.LastName,
         departmentID: user.DepartmentID,
         departmentName: user.Depart?.Name || '',
-        siteID: user.SiteID,
         rolName: user.rol?.name || '',
       }));
     } catch (error) {
