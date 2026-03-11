@@ -480,26 +480,29 @@ export default function Altas() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : (
-              <Table>
+              <Table className = "table-fixed w-full">
                 <TableHeader className="bg-gray-50 sticky top-0">
                   <TableRow>
-                    <TableHead className="w-10">
+                    <TableHead className="w-5">
                       <Checkbox
                         checked={isAllSelected}
                         onCheckedChange={handleSelectAll}
                       />
                     </TableHead>
-                    <TableHead className="w-16"></TableHead>
-                    <TableHead className="font-semibold text-gray-700">NOMBRE</TableHead>
-                    <TableHead className="font-semibold text-gray-700">COMPAÑIA</TableHead>
-                    <TableHead className="font-semibold text-gray-700">SITE</TableHead>
-                    <TableHead className="font-semibold text-gray-700">USUARIO</TableHead>
-                    <TableHead className="font-semibold text-gray-700">SERIAL</TableHead>
-                    <TableHead className="font-semibold text-gray-700">MODELO</TableHead>
-                    <TableHead className="font-semibold text-gray-700">ESTADO</TableHead>
-                    <TableHead className="font-semibold text-gray-700">GRUPO</TableHead>
+                    <TableHead className="w-5"></TableHead>
+                    <TableHead className="w-18 font-semibold text-gray-700">NOMBRE</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">COMPAÑIA</TableHead>
+                    <TableHead className="w-27 font-semibold text-gray-700">SITE</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">USUARIO</TableHead>
+                    <TableHead className="w-18 font-semibold text-gray-700">TIPO</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">MARCA</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">MODELO</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">SERIE</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">ESTADO</TableHead>
                   </TableRow>
+                  
                 </TableHeader>
+
                 <TableBody>
                   {paginatedAssets.length === 0 ? (
                     <TableRow>
@@ -538,9 +541,9 @@ export default function Altas() {
                             </button>
                           </div>
                         </TableCell>
-                        <TableCell className="max-w-[250px]">
+                        <TableCell>
                           <button
-                            className="font-medium text-blue-600 hover:text-blue-800 hover:underline truncate block text-left max-w-full"
+                            className="font-medium text-blue-600 hover:underline truncate block text-left max-w-full"
                             title="Ver ficha tecnica"
                             onClick={(e) => {
                               e.stopPropagation();
@@ -550,26 +553,29 @@ export default function Altas() {
                             {asset.name}
                           </button>
                         </TableCell>
-                        <TableCell className="text-gray-600">
+                        <TableCell>
                           {asset.company?.description || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600">
+                        <TableCell>
                           {asset.site?.name || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600">
+                        <TableCell>
                           {asset.user?.name || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600">
-                          {asset.assetDetail?.serialNum || "-"}
+                        <TableCell>
+                          {asset.productType?.category || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600">
+                        <TableCell>
+                          {asset.assetDetail?.productManuf || "-"}
+                        </TableCell>
+                        <TableCell>
                           {asset.assetDetail?.model || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600">
-                          {asset.assetStateInfo?.name || "-"}
+                        <TableCell>
+                          {asset.assetDetail?.serialNum || "-"}
                         </TableCell>
-                        <TableCell className="text-gray-600">
-                          {asset.productType?.group || "-"}
+                        <TableCell>
+                          {asset.assetStateInfo?.name || "-"}
                         </TableCell>
                       </TableRow>
                     ))
