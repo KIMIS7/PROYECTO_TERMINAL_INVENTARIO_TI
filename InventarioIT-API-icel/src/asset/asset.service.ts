@@ -36,9 +36,30 @@ export class AssetService {
         resolvedAssetState = stockState?.AssetStateID || 1;
       }
 
-      // Resolve default company and site if not provided
+      // Resolve company and site from creator's department chain:
+      // User → DepartmentID → Site_Depart → Site → Company
       let resolvedCompanyID = companyID;
       let resolvedSiteID = siteID;
+      if (!resolvedCompanyID || !resolvedSiteID) {
+        const creatorUser = await this.prismaShopic.user.findFirst({
+          where: { Email: userEmail },
+        });
+        if (creatorUser) {
+          const siteDepart = await this.prismaShopic.site_Depart.findFirst({
+            where: { ID_depart: creatorUser.DepartmentID },
+            include: {
+              Site: {
+                include: { Company: true },
+              },
+            },
+          });
+          if (siteDepart) {
+            if (!resolvedSiteID) resolvedSiteID = siteDepart.ID_site;
+            if (!resolvedCompanyID) resolvedCompanyID = siteDepart.Site.CompanyID;
+          }
+        }
+      }
+      // Fallback if still not resolved
       if (!resolvedCompanyID) {
         const defaultCompany = await this.prismaShopic.company.findFirst();
         resolvedCompanyID = defaultCompany?.CompanyID || 1;
