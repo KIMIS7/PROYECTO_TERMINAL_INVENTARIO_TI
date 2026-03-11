@@ -590,7 +590,7 @@ export default function Altas() {
                           {asset.user?.name || "-"}
                         </TableCell>
                         <TableCell>
-                          {asset.productType?.group || "-"}
+                          {asset.productType?.name || "-"}
                         </TableCell>
                         <TableCell>
                           {asset.assetDetail?.productManuf || "-"}

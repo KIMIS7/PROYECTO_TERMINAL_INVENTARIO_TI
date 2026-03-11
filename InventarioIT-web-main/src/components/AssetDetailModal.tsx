@@ -250,11 +250,7 @@ export const AssetDetailModal = ({
                 <DetailRow label="Nombre" value={data.name} />
                 <DetailRow
                   label="Tipo"
-                  value={
-                    data.productType
-                      ? `${data.productType.name} (${data.productType.category})`
-                      : undefined
-                  }
+                  value={data.productType?.name}
                 />
                 <DetailRow
                   label="Grupo"
