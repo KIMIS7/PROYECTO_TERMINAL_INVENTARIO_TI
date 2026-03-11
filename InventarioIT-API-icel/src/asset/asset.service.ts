@@ -36,6 +36,20 @@ export class AssetService {
         resolvedAssetState = stockState?.AssetStateID || 1;
       }
 
+      // Resolve default company and site if not provided
+      let resolvedCompanyID = companyID;
+      let resolvedSiteID = siteID;
+      if (!resolvedCompanyID) {
+        const defaultCompany = await this.prismaShopic.company.findFirst();
+        resolvedCompanyID = defaultCompany?.CompanyID || 1;
+      }
+      if (!resolvedSiteID) {
+        const defaultSite = await this.prismaShopic.site.findFirst({
+          where: { CompanyID: resolvedCompanyID },
+        });
+        resolvedSiteID = defaultSite?.SiteID || 1;
+      }
+
       // Crear el activo
       const newAsset = await this.prismaShopic.asset.create({
         data: {
@@ -43,8 +57,8 @@ export class AssetService {
           VendorID: vendorID,
           ProductTypeID: productTypeID,
           AssetState: resolvedAssetState,
-          CompanyID: companyID || null,
-          SiteID: siteID || null,
+          CompanyID: resolvedCompanyID,
+          SiteID: resolvedSiteID,
           UserID: userID || lastUpdateBy,
         },
       });
