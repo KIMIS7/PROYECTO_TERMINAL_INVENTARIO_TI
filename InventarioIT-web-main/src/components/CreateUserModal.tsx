@@ -103,6 +103,7 @@ export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess
         name: "",
         email: "",
         rolID: 0,
+        DepartmentID: 0,
       });
       setErrors({});
       
@@ -149,6 +150,7 @@ export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess
         name: "",
         email: "",
         rolID: 0,
+        DepartmentID: 0,
       });
       setErrors({});
       onClose();

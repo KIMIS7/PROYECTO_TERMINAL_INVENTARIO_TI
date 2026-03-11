@@ -156,7 +156,20 @@ const api = {
         },
         create: async (data: { rolID: number, name: string, email: string, DepartmentID?: number }) => {
             try {
-                const response = await apiClient.post<{ success: boolean, message: string, data: {userID: number, name: string, email: string, isActive: boolean, pin: string, role: string, rolID: number} }>("/user", data);
+                // Map frontend field names to backend DTO field names
+                const nameParts = data.name.trim().split(/\s+/);
+                const FirstName = nameParts[0] || '';
+                const LastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || '';
+
+                const payload = {
+                    Email: data.email,
+                    FirstName,
+                    LastName,
+                    rolD: data.rolID,
+                    DepartmentID: data.DepartmentID,
+                };
+
+                const response = await apiClient.post<{ success: boolean, message: string, data: {userID: number, name: string, email: string, isActive: boolean, pin: string, role: string, rolID: number} }>("/user", payload);
                 return response.data;
             } catch (error: unknown) {
                 // Re-lanzar el error para que sea manejado por el componente
