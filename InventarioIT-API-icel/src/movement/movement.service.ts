@@ -98,7 +98,7 @@ export class MovementService {
 
     try {
       const results = await this.prismaShopic.$transaction(async (tx) => {
-        const movementResults = [];
+        const movementResults: { movementID: number; assetID: number; assetName: string }[] = [];
 
         for (const asset of assets) {
           // Construir descripción
