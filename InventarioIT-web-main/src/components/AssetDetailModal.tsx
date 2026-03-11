@@ -257,8 +257,8 @@ export const AssetDetailModal = ({
                   }
                 />
                 <DetailRow
-                  label="Subcategoria"
-                  value={data.productType?.subCategory}
+                  label="Grupo"
+                  value={data.productType?.group}
                 />
                 <DetailRow label="Proveedor" value={data.vendor?.name} />
                 <DetailRow
