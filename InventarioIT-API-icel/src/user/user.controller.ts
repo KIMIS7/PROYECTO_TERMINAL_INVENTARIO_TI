@@ -30,10 +30,12 @@ export class UserController {
   searchUsers(
     @Query('q') query?: string,
     @Query('departmentID') departmentID?: string,
+    @Query('siteID') siteID?: string,
   ) {
     return this.userService.searchUsers(
       query,
       departmentID ? +departmentID : undefined,
+      siteID ? +siteID : undefined,
     );
   }
 

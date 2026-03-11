@@ -131,17 +131,27 @@ export const CreateMovementModal = ({
     }
   };
 
-  // User search with debounce
-  const searchUsers = useCallback(async (query: string, departmentID?: number | null) => {
-    if (!query.trim() && !departmentID) {
+  // Clear selected user when site changes
+  useEffect(() => {
+    setSelectedUser(null);
+    setUserSearchQuery("");
+    setUserSearchResults([]);
+    setSelectedDepartmentID(null);
+    setActiveFilter(null);
+  }, [siteID]);
+
+  // User search with debounce — filters by siteID when selected
+  const searchUsers = useCallback(async (query: string, departmentID?: number | null, currentSiteID?: number) => {
+    if (!query.trim() && !departmentID && !currentSiteID) {
       setUserSearchResults([]);
       return;
     }
     setIsSearchingUsers(true);
     try {
-      const params: { q?: string; departmentID?: number } = {};
+      const params: { q?: string; departmentID?: number; siteID?: number } = {};
       if (query.trim()) params.q = query;
       if (departmentID) params.departmentID = departmentID;
+      if (currentSiteID) params.siteID = currentSiteID;
       const results = await api.user.search(params);
       setUserSearchResults(results);
     } catch (error) {
@@ -154,17 +164,17 @@ export const CreateMovementModal = ({
 
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
-    if (!userSearchQuery.trim() && !selectedDepartmentID) {
+    if (!userSearchQuery.trim() && !selectedDepartmentID && !siteID) {
       setUserSearchResults([]);
       return;
     }
     searchTimeoutRef.current = setTimeout(() => {
-      searchUsers(userSearchQuery, selectedDepartmentID);
+      searchUsers(userSearchQuery, selectedDepartmentID, siteID || undefined);
     }, 300);
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [userSearchQuery, selectedDepartmentID, searchUsers]);
+  }, [userSearchQuery, selectedDepartmentID, siteID, searchUsers]);
 
   const isAsignacion = formData.movementType === "ASIGNACION";
 

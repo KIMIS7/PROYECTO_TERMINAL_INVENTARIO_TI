@@ -334,6 +334,7 @@ export class UserService {
   async searchUsers(
     query?: string,
     departmentID?: number,
+    siteID?: number,
   ) {
     try {
       const where: Record<string, unknown> = {
@@ -351,6 +352,21 @@ export class UserService {
 
       if (departmentID) {
         where.DepartmentID = departmentID;
+      }
+
+      // Filter by siteID: find departments linked to this site via Site_Depart
+      if (siteID) {
+        const siteDepts = await this.prismaShopic.site_Depart.findMany({
+          where: { ID_site: siteID },
+          select: { ID_depart: true },
+        });
+        const deptIDs = siteDepts.map((sd) => sd.ID_depart);
+        if (deptIDs.length > 0) {
+          where.DepartmentID = { in: deptIDs };
+        } else {
+          // No departments linked to this site, return empty
+          return [];
+        }
       }
 
       const users = await this.prismaShopic.user.findMany({

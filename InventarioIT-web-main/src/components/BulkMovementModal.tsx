@@ -126,15 +126,25 @@ export const BulkMovementModal = ({
     if (userName) setResponsible(userName);
   }, [userName]);
 
-  // User search with debounce
-  const searchUsers = useCallback(async (query: string) => {
-    if (!query.trim() || query.length < 2) {
+  // Clear selected user when site changes
+  useEffect(() => {
+    setSelectedUser(null);
+    setUserSearchQuery("");
+    setUserSearchResults([]);
+  }, [siteID]);
+
+  // User search with debounce — filters by siteID when selected
+  const searchUsers = useCallback(async (query: string, currentSiteID?: number) => {
+    if (!query.trim() && !currentSiteID) {
       setUserSearchResults([]);
       return;
     }
     setIsSearchingUsers(true);
     try {
-      const results = await api.user.search({ q: query });
+      const params: { q?: string; siteID?: number } = {};
+      if (query.trim()) params.q = query;
+      if (currentSiteID) params.siteID = currentSiteID;
+      const results = await api.user.search(params);
       setUserSearchResults(results);
     } catch (error) {
       console.error("Error searching users:", error);
@@ -147,12 +157,12 @@ export const BulkMovementModal = ({
   useEffect(() => {
     if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     searchTimeoutRef.current = setTimeout(() => {
-      searchUsers(userSearchQuery);
+      searchUsers(userSearchQuery, siteID || undefined);
     }, 300);
     return () => {
       if (searchTimeoutRef.current) clearTimeout(searchTimeoutRef.current);
     };
-  }, [userSearchQuery, searchUsers]);
+  }, [userSearchQuery, siteID, searchUsers]);
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
