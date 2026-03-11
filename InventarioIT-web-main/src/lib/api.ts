@@ -339,6 +339,24 @@ const api = {
       const response = await apiClient.get<Movement[]>(`/movement/asset/${assetID}`);
       return response.data;
     },
+    createBulk: async (data: {
+      assetIDs: number[];
+      movementType: 'REASIGNACION' | 'PRESTAMO';
+      companyID: number;
+      siteID: number;
+      userID?: number;
+      fromDate?: string;
+      toDate?: string;
+      description?: string;
+      responsible?: string;
+    }) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+        data: { movementID: number; assetID: number; assetName: string }[];
+      }>("/movement/bulk", data);
+      return response.data;
+    },
   },
   // Catálogos para activos
   productType: {

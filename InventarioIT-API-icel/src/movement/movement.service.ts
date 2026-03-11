@@ -5,6 +5,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { CreateMovementDto, MovementType } from './dto/create-movement.dto';
+import { CreateBulkMovementDto } from './dto/create-bulk-movement.dto';
 import { PrismaShopic } from 'src/database/database.service';
 
 @Injectable()
@@ -70,6 +71,112 @@ export class MovementService {
       }
       throw new InternalServerErrorException({
         message: error.message || 'Error al registrar el movimiento',
+      });
+    }
+  }
+
+  async createBulk(dto: CreateBulkMovementDto, userEmail?: string) {
+    const { assetIDs, movementType, companyID, siteID, userID, fromDate, toDate, description, responsible } = dto;
+
+    // Validar que todos los activos existen
+    const assets = await this.prismaShopic.asset.findMany({
+      where: { AssetID: { in: assetIDs } },
+    });
+
+    if (assets.length !== assetIDs.length) {
+      const foundIDs = assets.map((a) => a.AssetID);
+      const missingIDs = assetIDs.filter((id) => !foundIDs.includes(id));
+      throw new NotFoundException(`Activos no encontrados: ${missingIDs.join(', ')}`);
+    }
+
+    // Validar que la empresa y el sitio existen
+    const company = await this.prismaShopic.company.findUnique({ where: { CompanyID: companyID } });
+    if (!company) throw new NotFoundException('Empresa no encontrada');
+
+    const site = await this.prismaShopic.site.findUnique({ where: { SiteID: siteID } });
+    if (!site) throw new NotFoundException('Sitio no encontrado');
+
+    try {
+      const results = await this.prismaShopic.$transaction(async (tx) => {
+        const movementResults = [];
+
+        for (const asset of assets) {
+          // Construir descripción
+          const descParts: string[] = [];
+          descParts.push(
+            description ||
+              `${movementType === 'REASIGNACION' ? 'Reasignación' : 'Préstamo'} del activo "${asset.Name}" → ${company.Description} / ${site.Name}`,
+          );
+          if (responsible) descParts.push(`Responsable: ${responsible}`);
+          if (userEmail) descParts.push(`Registrado por: ${userEmail}`);
+          const fullDescription = descParts.join(' | ');
+
+          // Actualizar empresa, sitio y opcionalmente usuario del activo
+          const updateData: Record<string, unknown> = {
+            CompanyID: companyID,
+            SiteID: siteID,
+          };
+          if (userID) {
+            updateData.UserID = userID;
+          }
+
+          await tx.asset.update({
+            where: { AssetID: asset.AssetID },
+            data: updateData,
+          });
+
+          // Crear historial del movimiento
+          const assetHistory = await tx.assetHistory.create({
+            data: {
+              AssetID: asset.AssetID,
+              Operation: movementType,
+              Description: fullDescription,
+              CreatedTime: new Date(),
+            },
+          });
+
+          // Crear historial de asignación si se asigna un usuario
+          if (userID && fromDate) {
+            await tx.assetOwnershipHistory.create({
+              data: {
+                AssetID: asset.AssetID,
+                UserID: userID,
+                FromDate: new Date(fromDate),
+                ToDate: toDate ? new Date(toDate) : new Date('9999-12-31'),
+              },
+            });
+          }
+
+          // Cambiar estado si aplica
+          const newStateID = await this.resolveNewState(movementType as MovementType);
+          if (newStateID !== null) {
+            await tx.asset.update({
+              where: { AssetID: asset.AssetID },
+              data: { AssetState: newStateID },
+            });
+          }
+
+          movementResults.push({
+            movementID: assetHistory.AssetHistoryID,
+            assetID: asset.AssetID,
+            assetName: asset.Name,
+          });
+        }
+
+        return movementResults;
+      });
+
+      return {
+        success: true,
+        message: `Movimiento masivo registrado para ${results.length} activo(s)`,
+        data: results,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al registrar el movimiento masivo',
       });
     }
   }

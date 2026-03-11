@@ -8,6 +8,7 @@ import {
 } from '@nestjs/common';
 import { MovementService } from './movement.service';
 import { CreateMovementDto } from './dto/create-movement.dto';
+import { CreateBulkMovementDto } from './dto/create-bulk-movement.dto';
 
 @Controller('movement')
 export class MovementController {
@@ -19,6 +20,14 @@ export class MovementController {
     @Headers('user-email') userEmail: string,
   ) {
     return this.movementService.create(createMovementDto, userEmail);
+  }
+
+  @Post('bulk')
+  createBulk(
+    @Body() createBulkMovementDto: CreateBulkMovementDto,
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.movementService.createBulk(createBulkMovementDto, userEmail);
   }
 
   @Get()
