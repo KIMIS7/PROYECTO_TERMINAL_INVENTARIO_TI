@@ -112,11 +112,12 @@ model ProductType {
 }
 
 model Site {
-  SiteID    Int     @id(map: "PK_Site") @default(autoincrement())
-  Name      String  @db.NVarChar(150)
-  CompanyID Int
-  Asset     Asset[]
-  Company   Company @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Site_Company")
+  SiteID      Int           @id(map: "PK_Site") @default(autoincrement())
+  Name        String        @db.NVarChar(150)
+  CompanyID   Int
+  Asset       Asset[]
+  Company     Company       @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Site_Company")
+  Site_Depart Site_Depart[]
 }
 
 model sysdiagrams {
@@ -135,7 +136,6 @@ model User {
   FirstName             String                  @db.NVarChar(100)
   LastName              String                  @db.NVarChar(100)
   Name                  String                  @db.NVarChar(200)
-  SiteID                Int
   rolD                  Int
   isActive              Boolean
   token                 String?                 @db.NVarChar(Max)
@@ -179,7 +179,17 @@ model rol_dashboard_path {
 }
 
 model Depart {
-  DepartID Int    @id(map: "PK_Depart") @default(autoincrement())
-  Name     String @db.NVarChar(255)
-  User     User[]
+  DepartID     Int            @id(map: "PK_Depart") @default(autoincrement())
+  Name         String         @db.NVarChar(255)
+  User         User[]
+  Site_Depart  Site_Depart[]
+}
+
+model Site_Depart {
+  ID_site   Int
+  ID_depart Int
+  Site      Site   @relation(fields: [ID_site], references: [SiteID], onUpdate: NoAction, map: "FK_Site_Depart_Site")
+  Depart    Depart @relation(fields: [ID_depart], references: [DepartID], onUpdate: NoAction, map: "FK_Site_Depart_Depart")
+
+  @@id([ID_site, ID_depart], map: "PK_Site_Depart")
 }

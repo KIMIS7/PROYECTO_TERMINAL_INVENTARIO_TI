@@ -15,7 +15,7 @@ export class UserService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createUserDto: CreateUserDto) {
-    const { Email, FirstName, LastName, DepartmentID, SiteID, rolD } =
+    const { Email, FirstName, LastName, DepartmentID, rolD } =
       createUserDto;
 
     if (!Email) throw new NotFoundException('El email es requerido');
@@ -120,7 +120,7 @@ export class UserService {
   }
 
   async update(userID: number, updateUserDto: UpdateUserDto) {
-    const { Email, FirstName, LastName, DepartmentID, SiteID, rolD } =
+    const { Email, FirstName, LastName, DepartmentID, rolD } =
       updateUserDto;
 
     const userExists = await this.prismaShopic.user.findUnique({
@@ -158,7 +158,6 @@ export class UserService {
           ...(FirstName && { FirstName }),
           ...(LastName && { LastName }),
           ...(DepartmentID && { DepartmentID }),
-          ...(SiteID && { SiteID }),
           ...(rolD && { rolD }),
         },
         include: {
@@ -335,7 +334,6 @@ export class UserService {
   async searchUsers(
     query?: string,
     departmentID?: number,
-    siteID?: number,
   ) {
     try {
       const where: Record<string, unknown> = {
@@ -353,10 +351,6 @@ export class UserService {
 
       if (departmentID) {
         where.DepartmentID = departmentID;
-      }
-
-      if (siteID) {
-        where.SiteID = siteID;
       }
 
       const users = await this.prismaShopic.user.findMany({

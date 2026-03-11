@@ -19,9 +19,5 @@ export class CreateUserDto {
 
   @IsNumber()
   @IsNotEmpty()
-  SiteID: number;
-
-  @IsNumber()
-  @IsNotEmpty()
   rolD: number;
 }
