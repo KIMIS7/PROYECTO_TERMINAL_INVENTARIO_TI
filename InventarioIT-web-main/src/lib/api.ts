@@ -283,9 +283,9 @@ const api = {
       name: string;
       vendorID: number;
       productTypeID: number;
-      assetState: number;
-      companyID: number;
-      siteID: number;
+      assetState?: number;
+      companyID?: number;
+      siteID?: number;
       userID?: number;
       detail?: Record<string, unknown>;
     }) => {

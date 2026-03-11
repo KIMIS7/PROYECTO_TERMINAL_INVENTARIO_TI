@@ -20,6 +20,14 @@ export class CreateMovementDto {
   userID?: number;
 
   @IsOptional()
+  @IsNumber()
+  companyID?: number;
+
+  @IsOptional()
+  @IsNumber()
+  siteID?: number;
+
+  @IsOptional()
   @IsString()
   description?: string;
 

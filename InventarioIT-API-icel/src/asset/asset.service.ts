@@ -27,15 +27,24 @@ export class AssetService {
         }
       }
 
+      // Auto-resolve "Stock" state if not provided
+      let resolvedAssetState = assetState;
+      if (!resolvedAssetState) {
+        const stockState = await this.prismaShopic.assetState.findFirst({
+          where: { Name: { contains: 'Stock' } },
+        });
+        resolvedAssetState = stockState?.AssetStateID || 1;
+      }
+
       // Crear el activo
       const newAsset = await this.prismaShopic.asset.create({
         data: {
           Name: name,
           VendorID: vendorID,
           ProductTypeID: productTypeID,
-          AssetState: assetState,
-          CompanyID: companyID,
-          SiteID: siteID,
+          AssetState: resolvedAssetState,
+          CompanyID: companyID || null,
+          SiteID: siteID || null,
           UserID: userID || lastUpdateBy,
         },
       });

@@ -143,17 +143,17 @@ export class CreateAssetDto {
   @IsNumber()
   productTypeID: number;
 
-  @IsNotEmpty({ message: 'El estado es requerido' })
+  @IsOptional()
   @IsNumber()
-  assetState: number;
+  assetState?: number;
 
-  @IsNotEmpty({ message: 'La empresa es requerida' })
+  @IsOptional()
   @IsNumber()
-  companyID: number;
+  companyID?: number;
 
-  @IsNotEmpty({ message: 'El sitio es requerido' })
+  @IsOptional()
   @IsNumber()
-  siteID: number;
+  siteID?: number;
 
   @IsOptional()
   @IsNumber()

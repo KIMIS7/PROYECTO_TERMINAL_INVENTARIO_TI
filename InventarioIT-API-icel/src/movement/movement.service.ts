@@ -14,7 +14,7 @@ export class MovementService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createMovementDto: CreateMovementDto, userEmail?: string) {
-    const { assetID, movementType, description, responsible, userID } = createMovementDto;
+    const { assetID, movementType, description, responsible, userID, companyID, siteID } = createMovementDto;
 
     const asset = await this.prismaShopic.asset.findUnique({
       where: { AssetID: assetID },
@@ -55,11 +55,16 @@ export class MovementService {
           });
         }
 
-        // Assign user to asset if provided (for ASIGNACION)
-        if (userID) {
+        // Update asset assignment data (user, company, site)
+        const assetUpdateData: Record<string, unknown> = {};
+        if (userID) assetUpdateData.UserID = userID;
+        if (companyID) assetUpdateData.CompanyID = companyID;
+        if (siteID) assetUpdateData.SiteID = siteID;
+
+        if (Object.keys(assetUpdateData).length > 0) {
           await tx.asset.update({
             where: { AssetID: assetID },
-            data: { UserID: userID },
+            data: assetUpdateData,
           });
         }
 

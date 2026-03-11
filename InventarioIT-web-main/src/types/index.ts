@@ -166,6 +166,8 @@ export interface CreateMovementDto {
   assetID: number;
   movementType: MovementType;
   userID?: number;
+  companyID?: number;
+  siteID?: number;
   description?: string;
   responsible?: string;
 }
@@ -174,9 +176,9 @@ export interface CreateAssetDto {
   name: string;
   vendorID: number;
   productTypeID: number;
-  assetState: number;
-  companyID: number;
-  siteID: number;
+  assetState?: number;
+  companyID?: number;
+  siteID?: number;
   userID?: number;
   // Detalles opcionales
   detail?: Partial<Omit<AssetDetail, 'assetDetailID' | 'assetID' | 'lastUpdateBy'>>;

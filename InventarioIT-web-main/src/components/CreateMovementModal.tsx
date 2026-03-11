@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Asset, Department, MOVEMENT_TYPES, MOVEMENT_TYPE_LABELS, MovementType } from "@/types";
+import { Asset, Company, Site, Department, MOVEMENT_TYPES, MOVEMENT_TYPE_LABELS, MovementType } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
@@ -22,6 +22,7 @@ import {
   User,
   Mail,
   Building2,
+  MapPin,
   X,
 } from "lucide-react";
 
@@ -64,6 +65,13 @@ export const CreateMovementModal = ({
     responsible: userName,
   });
 
+  // Company/Site state (for ASIGNACION)
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [sites, setSites] = useState<Site[]>([]);
+  const [filteredSites, setFilteredSites] = useState<Site[]>([]);
+  const [companyID, setCompanyID] = useState<number>(0);
+  const [siteID, setSiteID] = useState<number>(0);
+
   // User assignment state
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
   const [userSectionOpen, setUserSectionOpen] = useState(false);
@@ -81,11 +89,30 @@ export const CreateMovementModal = ({
     }
   }, [userName]);
 
-  // Load departments when modal opens
+  // Load catalogs when modal opens
   useEffect(() => {
     if (!isOpen) return;
-    api.user.getDepartments().then(setDepartments).catch(() => setDepartments([]));
+    Promise.all([
+      api.user.getDepartments().catch(() => []),
+      api.company.getAll().catch(() => []),
+      api.site.getAll().catch(() => []),
+    ]).then(([depts, comps, sts]) => {
+      setDepartments(depts);
+      setCompanies(comps);
+      setSites(sts);
+    });
   }, [isOpen]);
+
+  // Filter sites by company
+  useEffect(() => {
+    if (companyID) {
+      setFilteredSites(sites.filter((s) => s.companyID === companyID));
+      setSiteID(0);
+    } else {
+      setFilteredSites([]);
+      setSiteID(0);
+    }
+  }, [companyID, sites]);
 
   // Auto-open user section when ASIGNACION is selected
   useEffect(() => {
@@ -139,6 +166,8 @@ export const CreateMovementModal = ({
     };
   }, [userSearchQuery, selectedDepartmentID, searchUsers]);
 
+  const isAsignacion = formData.movementType === "ASIGNACION";
+
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
@@ -150,8 +179,16 @@ export const CreateMovementModal = ({
       newErrors.movementType = "El tipo de movimiento es requerido";
     }
 
-    if (formData.movementType === "ASIGNACION" && !selectedUser) {
-      newErrors.user = "Debe asignar un usuario para el movimiento de asignación";
+    if (isAsignacion) {
+      if (!selectedUser) {
+        newErrors.user = "Debe asignar un usuario para el movimiento de asignación";
+      }
+      if (!companyID) {
+        newErrors.companyID = "La empresa es requerida para asignación";
+      }
+      if (!siteID) {
+        newErrors.siteID = "El sitio es requerido para asignación";
+      }
     }
 
     setErrors(newErrors);
@@ -173,6 +210,8 @@ export const CreateMovementModal = ({
         assetID: formData.assetID,
         movementType: formData.movementType as MovementType,
         userID: selectedUser?.userID,
+        companyID: companyID || undefined,
+        siteID: siteID || undefined,
         description: formData.description || undefined,
         responsible: formData.responsible || undefined,
       });
@@ -212,6 +251,8 @@ export const CreateMovementModal = ({
     setUserSearchResults([]);
     setSelectedDepartmentID(null);
     setActiveFilter(null);
+    setCompanyID(0);
+    setSiteID(0);
     setErrors({});
   };
 
@@ -226,7 +267,7 @@ export const CreateMovementModal = ({
     const descriptions: Record<MovementType, string> = {
       ALTA: "Registra el activo como activo en el sistema",
       BAJA: "Marca el activo como inactivo/dado de baja",
-      ASIGNACION: "Asigna el activo a un usuario (status: Asignado)",
+      ASIGNACION: "Asigna el activo a un usuario, empresa y sitio (status: Asignado)",
       RESGUARDO: "Registra un resguardo del activo (status: Stock)",
     };
     return descriptions[type];
@@ -250,7 +291,7 @@ export const CreateMovementModal = ({
             disabled={isLoading}
             className="h-8 w-8"
           >
-            X
+            <X className="h-4 w-4" />
           </Button>
         </div>
 
@@ -340,6 +381,67 @@ export const CreateMovementModal = ({
               )}
             </div>
 
+            {/* Empresa y Site (visible para ASIGNACION) */}
+            {isAsignacion && (
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Empresa *
+                  </Label>
+                  <Select
+                    value={companyID ? companyID.toString() : "none"}
+                    onValueChange={(value) => {
+                      setCompanyID(value === "none" ? 0 : Number(value));
+                      if (errors.companyID) setErrors((prev) => ({ ...prev, companyID: "" }));
+                    }}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className={errors.companyID ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Seleccionar empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar empresa</SelectItem>
+                      {companies.map((c) => (
+                        <SelectItem key={c.companyID} value={c.companyID.toString()}>
+                          {c.description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.companyID && <p className="text-red-500 text-xs mt-1">{errors.companyID}</p>}
+                </div>
+
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Site *
+                  </Label>
+                  <Select
+                    value={siteID ? siteID.toString() : "none"}
+                    onValueChange={(value) => {
+                      setSiteID(value === "none" ? 0 : Number(value));
+                      if (errors.siteID) setErrors((prev) => ({ ...prev, siteID: "" }));
+                    }}
+                    disabled={isLoading || !companyID}
+                  >
+                    <SelectTrigger className={errors.siteID ? "border-red-500" : ""}>
+                      <SelectValue placeholder={companyID ? "Seleccionar sitio" : "Primero selecciona empresa"} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar sitio</SelectItem>
+                      {filteredSites.map((s) => (
+                        <SelectItem key={s.siteID} value={s.siteID.toString()}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
+                </div>
+              </div>
+            )}
+
             {/* Asignar Usuario (collapsible) */}
             <div className="border rounded-lg">
               <button
@@ -350,7 +452,7 @@ export const CreateMovementModal = ({
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                   <User className="h-4 w-4" />
                   Asignar Usuario
-                  {formData.movementType === "ASIGNACION" && (
+                  {isAsignacion && (
                     <span className="text-red-500 text-xs">*</span>
                   )}
                   {selectedUser && (

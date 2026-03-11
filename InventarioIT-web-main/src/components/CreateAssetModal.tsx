@@ -377,18 +377,6 @@ export const CreateAssetModal = ({
       newErrors.vendorID = "El proveedor es requerido";
     }
 
-    if (!formData.assetState) {
-      newErrors.assetState = "El estado es requerido";
-    }
-
-    if (!formData.companyID) {
-      newErrors.companyID = "La empresa es requerida";
-    }
-
-    if (!formData.siteID) {
-      newErrors.siteID = "El sitio es requerido";
-    }
-
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -445,19 +433,8 @@ export const CreateAssetModal = ({
         name: formData.name,
         vendorID: formData.vendorID,
         productTypeID: formData.productTypeID,
-        assetState: formData.assetState,
-        companyID: formData.companyID,
-        siteID: formData.siteID,
         detail,
       };
-
-      if (selectedUser) {
-        assetData.userID = selectedUser.userID;
-        assetData.assignmentFromDate = todayISO;
-        if (assignmentToDate) {
-          assetData.assignmentToDate = assignmentToDate;
-        }
-      }
 
       await api.asset.create(assetData as Parameters<typeof api.asset.create>[0]);
 
@@ -1087,85 +1064,13 @@ export const CreateAssetModal = ({
                   {errors.vendorID && <p className="text-red-500 text-xs mt-1">{errors.vendorID}</p>}
                 </div>
 
-                {/* Estado */}
-                <div>
-                  <Label htmlFor="assetState" className="text-sm font-medium">
-                    Estado *
-                  </Label>
-                  <Select
-                    value={formData.assetState ? formData.assetState.toString() : "none"}
-                    onValueChange={(value) => handleInputChange("assetState", value === "none" ? 0 : Number(value))}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger className={errors.assetState ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Seleccionar estado" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Seleccionar estado</SelectItem>
-                      {assetStates.map((state) => (
-                        <SelectItem key={state.assetStateID} value={state.assetStateID.toString()}>
-                          {state.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.assetState && <p className="text-red-500 text-xs mt-1">{errors.assetState}</p>}
-                </div>
-
-                {/* Empresa */}
-                <div>
-                  <Label htmlFor="companyID" className="text-sm font-medium">
-                    Empresa *
-                  </Label>
-                  <Select
-                    value={formData.companyID ? formData.companyID.toString() : "none"}
-                    onValueChange={(value) => handleInputChange("companyID", value === "none" ? 0 : Number(value))}
-                    disabled={isLoading}
-                  >
-                    <SelectTrigger className={errors.companyID ? "border-red-500" : ""}>
-                      <SelectValue placeholder="Seleccionar empresa" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Seleccionar empresa</SelectItem>
-                      {companies.map((company) => (
-                        <SelectItem key={company.companyID} value={company.companyID.toString()}>
-                          {company.description}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.companyID && <p className="text-red-500 text-xs mt-1">{errors.companyID}</p>}
-                </div>
-
-                {/* Sitio */}
-                <div>
-                  <Label htmlFor="siteID" className="text-sm font-medium">
-                    Site *
-                  </Label>
-                  <Select
-                    value={formData.siteID ? formData.siteID.toString() : "none"}
-                    onValueChange={(value) => handleInputChange("siteID", value === "none" ? 0 : Number(value))}
-                    disabled={isLoading || !formData.companyID}
-                  >
-                    <SelectTrigger className={errors.siteID ? "border-red-500" : ""}>
-                      <SelectValue placeholder={formData.companyID ? "Seleccionar sitio" : "Primero selecciona empresa"} />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">Seleccionar sitio</SelectItem>
-                      {filteredSites.map((site) => (
-                        <SelectItem key={site.siteID} value={site.siteID.toString()}>
-                          {site.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
-                </div>
               </div>
             </div>
 
-            {/* Asignar Usuario (Colapsable) */}
-            <div className="mb-6">
+            {/* Asignar Usuario section removed - handled via Movimientos */}
+
+            {/* HIDDEN_BLOCK_START - remove when cleanup */}
+            <div className="hidden">
               <button
                 type="button"
                 onClick={() => setShowUserAssignment(!showUserAssignment)}
