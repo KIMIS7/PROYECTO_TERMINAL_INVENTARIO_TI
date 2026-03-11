@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreateMovementDto, MovementType } from './dto/create-movement.dto';
 import { CreateBulkMovementDto } from './dto/create-bulk-movement.dto';
+import { UpdateMovementDto } from './dto/update-movement.dto';
 import { PrismaShopic } from 'src/database/database.service';
 
 @Injectable()
@@ -177,6 +178,46 @@ export class MovementService {
       }
       throw new InternalServerErrorException({
         message: error.message || 'Error al registrar el movimiento masivo',
+      });
+    }
+  }
+
+  async update(movementID: number, dto: UpdateMovementDto, userEmail?: string) {
+    const movement = await this.prismaShopic.assetHistory.findUnique({
+      where: { AssetHistoryID: movementID },
+    });
+
+    if (!movement) {
+      throw new NotFoundException('Movimiento no encontrado');
+    }
+
+    const descriptionParts: string[] = [];
+    const { description: currentDesc, responsible: currentResp, createdBy: currentCreatedBy } = this.parseDescription(movement.Description);
+
+    descriptionParts.push(dto.description !== undefined ? dto.description : currentDesc);
+    const responsible = dto.responsible !== undefined ? dto.responsible : currentResp;
+    if (responsible) {
+      descriptionParts.push(`Responsable: ${responsible}`);
+    }
+    const createdBy = userEmail || currentCreatedBy;
+    if (createdBy) {
+      descriptionParts.push(`Registrado por: ${createdBy}`);
+    }
+    const fullDescription = descriptionParts.join(' | ');
+
+    try {
+      await this.prismaShopic.assetHistory.update({
+        where: { AssetHistoryID: movementID },
+        data: { Description: fullDescription },
+      });
+
+      return {
+        success: true,
+        message: 'Movimiento actualizado exitosamente',
+      };
+    } catch (error) {
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al actualizar el movimiento',
       });
     }
   }

@@ -339,6 +339,10 @@ const api = {
       const response = await apiClient.get<Movement[]>(`/movement/asset/${assetID}`);
       return response.data;
     },
+    update: async (movementID: number, data: { description?: string; responsible?: string }) => {
+      const response = await apiClient.patch<{ success: boolean; message: string }>(`/movement/${movementID}`, data);
+      return response.data;
+    },
     createBulk: async (data: {
       assetIDs: number[];
       movementType: 'REASIGNACION' | 'PRESTAMO';

@@ -429,6 +429,7 @@ export default function Movimientos() {
                 <MovementHistoryTable
                   assetID={selectedAssetID}
                   refreshTrigger={refreshTrigger}
+                  onMovementUpdated={() => loadData()}
                 />
               </div>
             )}
