@@ -8,7 +8,7 @@ import {
   ArrayMinSize,
 } from 'class-validator';
 
-export const BULK_MOVEMENT_TYPES = ['REASIGNACION', 'PRESTAMO'] as const;
+export const BULK_MOVEMENT_TYPES = ['ASIGNACION', 'RESGUARDO'] as const;
 export type BulkMovementType = (typeof BULK_MOVEMENT_TYPES)[number];
 
 export class CreateBulkMovementDto {
@@ -20,7 +20,7 @@ export class CreateBulkMovementDto {
   @IsNotEmpty({ message: 'El tipo de movimiento es requerido' })
   @IsString()
   @IsIn(BULK_MOVEMENT_TYPES, {
-    message: 'El tipo de movimiento debe ser: REASIGNACION o PRESTAMO',
+    message: 'El tipo de movimiento debe ser: ASIGNACION o RESGUARDO',
   })
   movementType: BulkMovementType;
 

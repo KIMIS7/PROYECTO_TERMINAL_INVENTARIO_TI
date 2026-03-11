@@ -6,8 +6,8 @@ import { Input } from "@/components/ui/input";
 import {
   ArrowUpCircle,
   ArrowDownCircle,
-  RefreshCw,
-  HandCoins,
+  UserCheck,
+  Shield,
   Pencil,
   Check,
   X,
@@ -40,17 +40,17 @@ const movementTypeConfig: Record<
     borderColor: "border-red-200",
     icon: <ArrowDownCircle className="h-4 w-4" />,
   },
-  REASIGNACION: {
+  ASIGNACION: {
     color: "text-blue-700",
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",
-    icon: <RefreshCw className="h-4 w-4" />,
+    icon: <UserCheck className="h-4 w-4" />,
   },
-  PRESTAMO: {
+  RESGUARDO: {
     color: "text-amber-700",
     bgColor: "bg-amber-50",
     borderColor: "border-amber-200",
-    icon: <HandCoins className="h-4 w-4" />,
+    icon: <Shield className="h-4 w-4" />,
   },
 };
 

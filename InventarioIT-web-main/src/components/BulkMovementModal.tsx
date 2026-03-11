@@ -48,8 +48,8 @@ interface BulkMovementModalProps {
 }
 
 const BULK_MOVEMENT_TYPES = [
-  { value: "REASIGNACION", label: "Reasignacion", description: "Reasignar los activos a otra empresa, sitio o usuario" },
-  { value: "PRESTAMO", label: "Prestamo", description: "Registrar un prestamo temporal de los activos" },
+  { value: "ASIGNACION", label: "Asignación", description: "Asignar los activos a otra empresa, sitio o usuario" },
+  { value: "RESGUARDO", label: "Resguardo", description: "Registrar un resguardo de los activos (status: Stock)" },
 ] as const;
 
 export const BulkMovementModal = ({
@@ -64,7 +64,7 @@ export const BulkMovementModal = ({
   const userName = session?.user?.name || "";
 
   // Form state
-  const [movementType, setMovementType] = useState<"REASIGNACION" | "PRESTAMO" | "">("");
+  const [movementType, setMovementType] = useState<"ASIGNACION" | "RESGUARDO" | "">("");
   const [companyID, setCompanyID] = useState<number>(0);
   const [siteID, setSiteID] = useState<number>(0);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
@@ -175,7 +175,7 @@ export const BulkMovementModal = ({
       setIsLoading(true);
       await api.movement.createBulk({
         assetIDs: selectedAssetIDs,
-        movementType: movementType as "REASIGNACION" | "PRESTAMO",
+        movementType: movementType as "ASIGNACION" | "RESGUARDO",
         companyID,
         siteID,
         userID: selectedUser?.userID,

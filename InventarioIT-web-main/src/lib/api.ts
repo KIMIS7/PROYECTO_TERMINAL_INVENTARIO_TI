@@ -345,7 +345,7 @@ const api = {
     },
     createBulk: async (data: {
       assetIDs: number[];
-      movementType: 'REASIGNACION' | 'PRESTAMO';
+      movementType: 'ASIGNACION' | 'RESGUARDO';
       companyID: number;
       siteID: number;
       userID?: number;

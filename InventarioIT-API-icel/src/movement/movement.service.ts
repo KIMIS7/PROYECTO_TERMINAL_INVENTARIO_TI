@@ -14,7 +14,7 @@ export class MovementService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createMovementDto: CreateMovementDto, userEmail?: string) {
-    const { assetID, movementType, description, responsible } = createMovementDto;
+    const { assetID, movementType, description, responsible, userID } = createMovementDto;
 
     const asset = await this.prismaShopic.asset.findUnique({
       where: { AssetID: assetID },
@@ -47,10 +47,19 @@ export class MovementService {
           },
         });
 
+        // Update asset state if applicable
         if (newStateID !== null) {
           await tx.asset.update({
             where: { AssetID: assetID },
             data: { AssetState: newStateID },
+          });
+        }
+
+        // Assign user to asset if provided (for ASIGNACION)
+        if (userID) {
+          await tx.asset.update({
+            where: { AssetID: assetID },
+            data: { UserID: userID },
           });
         }
 
@@ -106,7 +115,7 @@ export class MovementService {
           const descParts: string[] = [];
           descParts.push(
             description ||
-              `${movementType === 'REASIGNACION' ? 'Reasignación' : 'Préstamo'} del activo "${asset.Name}" → ${company.Description} / ${site.Name}`,
+              `${movementType === 'ASIGNACION' ? 'Asignación' : 'Resguardo'} del activo "${asset.Name}" → ${company.Description} / ${site.Name}`,
           );
           if (responsible) descParts.push(`Responsable: ${responsible}`);
           if (userEmail) descParts.push(`Registrado por: ${userEmail}`);
@@ -235,7 +244,7 @@ export class MovementService {
       const movements = await this.prismaShopic.assetHistory.findMany({
         where: {
           AssetID: assetID,
-          Operation: { in: ['ALTA', 'BAJA', 'REASIGNACION', 'PRESTAMO'] },
+          Operation: { in: ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO', 'REASIGNACION', 'PRESTAMO'] },
         },
         orderBy: { CreatedTime: 'desc' },
         include: {
@@ -260,7 +269,7 @@ export class MovementService {
     try {
       const movements = await this.prismaShopic.assetHistory.findMany({
         where: {
-          Operation: { in: ['ALTA', 'BAJA', 'REASIGNACION', 'PRESTAMO'] },
+          Operation: { in: ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO', 'REASIGNACION', 'PRESTAMO'] },
         },
         orderBy: { CreatedTime: 'desc' },
         include: {
@@ -328,8 +337,8 @@ export class MovementService {
     const stateMapping: Record<MovementType, string | null> = {
       ALTA: 'Activo',
       BAJA: 'Inactivo',
-      REASIGNACION: null,
-      PRESTAMO: null,
+      ASIGNACION: 'Asignado',
+      RESGUARDO: 'Stock',
     };
 
     const targetStateName = stateMapping[movementType];
@@ -356,8 +365,8 @@ export class MovementService {
     const descriptions: Record<MovementType, string> = {
       ALTA: `Alta del activo "${assetName}"`,
       BAJA: `Baja del activo "${assetName}"`,
-      REASIGNACION: `Reasignacion del activo "${assetName}"`,
-      PRESTAMO: `Prestamo del activo "${assetName}"`,
+      ASIGNACION: `Asignación del activo "${assetName}"`,
+      RESGUARDO: `Resguardo del activo "${assetName}"`,
     };
     return descriptions[movementType];
   }
