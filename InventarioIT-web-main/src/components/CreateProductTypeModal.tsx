@@ -92,9 +92,7 @@ export const CreateProductTypeModal = ({
 
       const response = await api.productType.create({
         name: formData.name,
-        category: formData.group,
         group: formData.group,
-        subCategory: "-",
       });
 
       showSuccess("Tipo de activo creado exitosamente");

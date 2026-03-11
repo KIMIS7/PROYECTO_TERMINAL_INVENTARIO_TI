@@ -369,7 +369,7 @@ const api = {
       }>("/product-type/available-groups");
       return response.data;
     },
-    create: async (data: { name: string; category: string; group: string; subCategory: string }) => {
+    create: async (data: { name: string; group: string }) => {
       const response = await apiClient.post<{
         success: boolean;
         message: string;
