@@ -44,6 +44,11 @@ export class UserController {
     return this.userService.getDepartments();
   }
 
+  @Get('departments/site/:siteID')
+  getDepartmentsBySite(@Param('siteID') siteID: string) {
+    return this.userService.getDepartmentsBySite(+siteID);
+  }
+
   @Get('verify/:email')
   async verifyUser(@Param('email') email: string) {
     return this.userService.verifyUser(email);

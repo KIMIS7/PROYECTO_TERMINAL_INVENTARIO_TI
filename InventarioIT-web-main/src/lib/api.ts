@@ -154,7 +154,11 @@ const api = {
             const response = await apiClient.get<Department[]>("/user/departments");
             return response.data;
         },
-        create: async (data: { rolID: number, name: string, email: string, DepartmentID?: number }) => {
+        getDepartmentsBySite: async (siteID: number) => {
+            const response = await apiClient.get<Department[]>(`/user/departments/site/${siteID}`);
+            return response.data;
+        },
+        create: async (data: { rolID: number, name: string, email: string, DepartmentID?: number, SiteID?: number }) => {
             try {
                 // Map frontend field names to backend DTO field names
                 const nameParts = data.name.trim().split(/\s+/);
@@ -167,6 +171,7 @@ const api = {
                     LastName,
                     rolD: data.rolID,
                     DepartmentID: data.DepartmentID,
+                    SiteID: data.SiteID,
                 };
 
                 const response = await apiClient.post<{ success: boolean, message: string, data: {userID: number, name: string, email: string, isActive: boolean, pin: string, role: string, rolID: number} }>("/user", payload);

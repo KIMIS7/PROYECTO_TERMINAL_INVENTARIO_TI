@@ -118,6 +118,7 @@ model Site {
   Asset       Asset[]
   Company     Company       @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Site_Company")
   Site_Depart Site_Depart[]
+  User        User[]
 }
 
 model sysdiagrams {
@@ -141,11 +142,13 @@ model User {
   token                 String?                 @db.NVarChar(Max)
   createdAt             DateTime                @db.DateTime
   DepartmentID          Int
+  SiteID                Int?
   Asset                 Asset[]
   AssetDetail           AssetDetail[]
   AssetOwnershipHistory AssetOwnershipHistory[]
   Depart                Depart                  @relation(fields: [DepartmentID], references: [DepartID], onUpdate: NoAction, map: "FK_User_Depart")
   rol                   rol                     @relation(fields: [rolD], references: [rolID], onUpdate: NoAction, map: "FK_User_rol")
+  Site                  Site?                   @relation(fields: [SiteID], references: [SiteID], onUpdate: NoAction, map: "FK_User_Site")
 }
 
 model Vendor {

@@ -15,7 +15,7 @@ export class UserService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createUserDto: CreateUserDto) {
-    const { Email, FirstName, LastName, DepartmentID, rolD } =
+    const { Email, FirstName, LastName, DepartmentID, rolD, SiteID } =
       createUserDto;
 
     if (!Email) throw new NotFoundException('El email es requerido');
@@ -44,6 +44,7 @@ export class UserService {
           LastName,
           DepartmentID,
           rolD,
+          ...(SiteID && { SiteID }),
           isActive: true,
           token: '',
           createdAt: new Date(),
@@ -120,7 +121,7 @@ export class UserService {
   }
 
   async update(userID: number, updateUserDto: UpdateUserDto) {
-    const { Email, FirstName, LastName, DepartmentID, rolD } =
+    const { Email, FirstName, LastName, DepartmentID, rolD, SiteID } =
       updateUserDto;
 
     const userExists = await this.prismaShopic.user.findUnique({
@@ -159,6 +160,7 @@ export class UserService {
           ...(LastName && { LastName }),
           ...(DepartmentID && { DepartmentID }),
           ...(rolD && { rolD }),
+          ...(SiteID !== undefined && { SiteID: SiteID || null }),
         },
         include: {
           rol: true,
@@ -409,6 +411,27 @@ export class UserService {
       console.error('Error en getDepartments:', error);
       throw new InternalServerErrorException({
         message: error.message || 'Error al obtener los departamentos',
+      });
+    }
+  }
+
+  async getDepartmentsBySite(siteID: number) {
+    try {
+      const siteDepts = await this.prismaShopic.site_Depart.findMany({
+        where: { ID_site: siteID },
+        include: {
+          Depart: true,
+        },
+        orderBy: { Depart: { Name: 'asc' } },
+      });
+      return siteDepts.map((sd) => ({
+        departID: sd.ID_depart,
+        name: sd.Depart.Name,
+      }));
+    } catch (error) {
+      console.error('Error en getDepartmentsBySite:', error);
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al obtener los departamentos por sitio',
       });
     }
   }
