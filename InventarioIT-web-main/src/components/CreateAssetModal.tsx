@@ -1401,9 +1401,6 @@ export const CreateAssetModal = ({
               )}
             </div>
 
-              </div>
-            </div>
-
             {/* Detalles Tecnicos (Colapsable) */}
             <div className="mb-6">
               <button
