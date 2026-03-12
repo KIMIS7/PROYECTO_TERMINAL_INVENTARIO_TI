@@ -13,19 +13,19 @@ model Asset {
   VendorID                                Int
   ProductTypeID                           Int
   AssetState                              Int
-  CompanyID                               Int
-  SiteID                                  Int
-  UserID                                  Int
+  CompanyID                               Int?
+  SiteID                                  Int?
+  UserID                                  Int?
   ParentAssetID                           Int?
   DepartID                                Int?
   AssetState_Asset_AssetStateToAssetState AssetState              @relation("Asset_AssetStateToAssetState", fields: [AssetState], references: [AssetStateID], onUpdate: NoAction, map: "FK_Asset_AssetState")
-  Company                                 Company                 @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Asset_Company")
+  Company                                 Company?                @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Asset_Company")
   Depart                                  Depart?                 @relation(fields: [DepartID], references: [DepartID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Department")
   Asset                                   Asset?                  @relation("AssetToAsset", fields: [ParentAssetID], references: [AssetID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Parent")
   other_Asset                             Asset[]                 @relation("AssetToAsset")
   ProductType                             ProductType             @relation(fields: [ProductTypeID], references: [ProductTypeID], onUpdate: NoAction, map: "FK_Asset_ProductType")
-  Site                                    Site                    @relation(fields: [SiteID], references: [SiteID], onUpdate: NoAction, map: "FK_Asset_Site")
-  User                                    User                    @relation(fields: [UserID], references: [UserID], onUpdate: NoAction, map: "FK_Asset_User")
+  Site                                    Site?                   @relation(fields: [SiteID], references: [SiteID], onUpdate: NoAction, map: "FK_Asset_Site")
+  User                                    User?                   @relation(fields: [UserID], references: [UserID], onUpdate: NoAction, map: "FK_Asset_User")
   Vendor                                  Vendor                  @relation(fields: [VendorID], references: [VendorID], onUpdate: NoAction, map: "FK_Asset_Vendor")
   AssetDetail                             AssetDetail[]
   AssetHistory                            AssetHistory[]
