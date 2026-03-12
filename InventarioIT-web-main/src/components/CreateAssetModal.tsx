@@ -1026,7 +1026,7 @@ export const CreateAssetModal = ({
                       <SelectItem value="none">Seleccionar tipo</SelectItem>
                       {localProductTypes.map((pt) => (
                         <SelectItem key={pt.productTypeID} value={pt.productTypeID.toString()}>
-                          {pt.name} ({pt.group} - {pt.category})
+                          {pt.name} ({pt.group})
                         </SelectItem>
                       ))}
                     </SelectContent>
@@ -1062,6 +1062,31 @@ export const CreateAssetModal = ({
                     </SelectContent>
                   </Select>
                   {errors.vendorID && <p className="text-red-500 text-xs mt-1">{errors.vendorID}</p>}
+                </div>
+
+                {/* Estado */}
+                <div>
+                  <Label htmlFor="assetState" className="text-sm font-medium">
+                    Estado *
+                  </Label>
+                  <Select
+                    value={formData.assetState ? formData.assetState.toString() : "none"}
+                    onValueChange={(value) => handleInputChange("assetState", value === "none" ? 0 : Number(value))}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className={errors.assetState ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Seleccionar estado" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar estado</SelectItem>
+                      {assetStates.map((state) => (
+                        <SelectItem key={state.assetStateID} value={state.assetStateID.toString()}>
+                          {state.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.assetState && <p className="text-red-500 text-xs mt-1">{errors.assetState}</p>}
                 </div>
 
               </div>

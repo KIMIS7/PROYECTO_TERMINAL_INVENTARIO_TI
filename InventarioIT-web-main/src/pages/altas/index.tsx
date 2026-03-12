@@ -317,24 +317,7 @@ export default function Altas() {
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (selectedAssets.size === 0) return;
-
-    const confirmed = window.confirm(
-      `¿Está seguro de eliminar ${selectedAssets.size} activo(s)?`
-    );
-    if (!confirmed) return;
-
-    try {
-      await Promise.all(Array.from(selectedAssets).map((id) => api.asset.delete(id)));
-      toast.success(`${selectedAssets.size} activo(s) eliminado(s)`);
-      setSelectedAssets(new Set());
-      loadAssets();
-    } catch (error) {
-      console.error("Error deleting assets:", error);
-      toast.error("Error al eliminar activos");
-    }
-  };
+  
 
   const handleBulkMovement = () => {
     if (selectedAssets.size === 0) {
@@ -423,16 +406,6 @@ export default function Altas() {
                 Nuevo
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDelete}
-                disabled={selectedAssets.size === 0}
-                className="h-8 text-sm font-normal"
-              >
-                Eliminar
-              </Button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
@@ -519,7 +492,8 @@ export default function Altas() {
                     <TableHead className="w-5"></TableHead>
                     <TableHead className="w-18 font-semibold text-gray-700">NOMBRE</TableHead>
                     <TableHead className="w-20 font-semibold text-gray-700">COMPAÑIA</TableHead>
-                    <TableHead className="w-27 font-semibold text-gray-700">SITE</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">SITE</TableHead>
+                    <TableHead className="w-25 font-semibold text-gray-700">Departamento</TableHead>
                     <TableHead className="w-20 font-semibold text-gray-700">USUARIO</TableHead>
                     <TableHead className="w-18 font-semibold text-gray-700">TIPO</TableHead>
                     <TableHead className="w-20 font-semibold text-gray-700">MARCA</TableHead>
@@ -585,6 +559,9 @@ export default function Altas() {
                         </TableCell>
                         <TableCell>
                           {asset.site?.name || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {asset.depart?.Name || "Corregir"}
                         </TableCell>
                         <TableCell>
                           {asset.user?.name || "-"}
