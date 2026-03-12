@@ -70,7 +70,7 @@ const MOVEMENT_TYPE_CONFIG: {
   {
     value: "RESGUARDO",
     label: "Resguardo",
-    description: "Enviar activos a resguardo (estado: En Stock)",
+    description: "Enviar activos a resguardo (estado: Resguardo)",
     icon: <Shield className="h-5 w-5" />,
     color: "text-amber-700",
     bgColor: "border-amber-500 bg-amber-50",
@@ -78,7 +78,7 @@ const MOVEMENT_TYPE_CONFIG: {
   {
     value: "REPARACION",
     label: "Reparación",
-    description: "Enviar activos a reparación (estado: En Reparacion)",
+    description: "Enviar activos a reparación (estado: Mantenimiento)",
     icon: <Wrench className="h-5 w-5" />,
     color: "text-orange-700",
     bgColor: "border-orange-500 bg-orange-50",
@@ -134,6 +134,32 @@ export const BulkMovementModal = ({
   const selectedAssets = assets.filter((a) => selectedAssetIDs.includes(a.assetID));
 
   const isReasignacion = movementType === "REASIGNACION";
+  const isResguardo = movementType === "RESGUARDO";
+
+  // Auto-resolve user's site for RESGUARDO
+  useEffect(() => {
+    if (isResguardo && session?.user?.preferred_username) {
+      const resolveUserSite = async () => {
+        try {
+          const results = await api.user.search({ q: session.user.preferred_username });
+          if (results.length > 0) {
+            const currentUser = results[0];
+            if (currentUser.siteID) {
+              setSiteID(currentUser.siteID);
+              // Find the company for this site
+              const matchingSite = sites.find(s => s.siteID === currentUser.siteID);
+              if (matchingSite) {
+                setCompanyID(matchingSite.companyID);
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Error resolving user site:", error);
+        }
+      };
+      resolveUserSite();
+    }
+  }, [isResguardo, session?.user?.preferred_username, sites]);
 
   // Load catalogs
   useEffect(() => {

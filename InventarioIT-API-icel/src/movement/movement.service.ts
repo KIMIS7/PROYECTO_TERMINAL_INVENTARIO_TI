@@ -53,19 +53,24 @@ export class MovementService {
           },
         });
 
-        // Update asset state if applicable
+        // Build asset update data based on movement type
+        const assetUpdateData: Record<string, unknown> = {};
+
         if (newStateID !== null) {
-          await tx.asset.update({
-            where: { AssetID: assetID },
-            data: { AssetState: newStateID },
-          });
+          assetUpdateData.AssetState = newStateID;
         }
 
-        // Update asset assignment data (user, company, site)
-        const assetUpdateData: Record<string, unknown> = {};
-        if (userID) assetUpdateData.UserID = userID;
-        if (companyID) assetUpdateData.CompanyID = companyID;
-        if (siteID) assetUpdateData.SiteID = siteID;
+        if (movementType === 'BAJA') {
+          // On BAJA, clear all assignment info
+          assetUpdateData.UserID = null;
+          assetUpdateData.CompanyID = null;
+          assetUpdateData.SiteID = null;
+        } else {
+          // Update asset assignment data (user, company, site)
+          if (userID) assetUpdateData.UserID = userID;
+          if (companyID) assetUpdateData.CompanyID = companyID;
+          if (siteID) assetUpdateData.SiteID = siteID;
+        }
 
         if (Object.keys(assetUpdateData).length > 0) {
           await tx.asset.update({
@@ -75,7 +80,7 @@ export class MovementService {
         }
 
         // Close previous open AssetOwnershipHistory record and create new one
-        if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO') {
+        if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO' || movementType === 'BAJA') {
           // Close any open record (ToDate = 9999-12-31)
           const openRecords = await tx.assetOwnershipHistory.findMany({
             where: {
@@ -164,11 +169,25 @@ export class MovementService {
           if (userEmail) descParts.push(`Registrado por: ${userEmail}`);
           const fullDescription = descParts.join(' | ');
 
-          // Actualizar empresa, sitio y opcionalmente usuario del activo
+          // Build update data based on movement type
           const updateData: Record<string, unknown> = {};
-          if (companyID) updateData.CompanyID = companyID;
-          if (siteID) updateData.SiteID = siteID;
-          if (userID) updateData.UserID = userID;
+
+          // Cambiar estado si aplica
+          const newStateID = await this.resolveNewState(movementType as MovementType);
+          if (newStateID !== null) {
+            updateData.AssetState = newStateID;
+          }
+
+          if (movementType === 'BAJA') {
+            // On BAJA, clear all assignment info
+            updateData.UserID = null;
+            updateData.CompanyID = null;
+            updateData.SiteID = null;
+          } else {
+            if (companyID) updateData.CompanyID = companyID;
+            if (siteID) updateData.SiteID = siteID;
+            if (userID) updateData.UserID = userID;
+          }
 
           if (Object.keys(updateData).length > 0) {
             await tx.asset.update({
@@ -188,7 +207,7 @@ export class MovementService {
           });
 
           // Close previous open AssetOwnershipHistory records
-          if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO') {
+          if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO' || movementType === 'BAJA') {
             const openRecords = await tx.assetOwnershipHistory.findMany({
               where: {
                 AssetID: asset.AssetID,
@@ -213,15 +232,6 @@ export class MovementService {
                 },
               });
             }
-          }
-
-          // Cambiar estado si aplica
-          const newStateID = await this.resolveNewState(movementType as MovementType);
-          if (newStateID !== null) {
-            await tx.asset.update({
-              where: { AssetID: asset.AssetID },
-              data: { AssetState: newStateID },
-            });
           }
 
           movementResults.push({
@@ -428,9 +438,9 @@ export class MovementService {
   private async resolveNewState(movementType: MovementType): Promise<number | null> {
     const stateMapping: Record<MovementType, string | null> = {
       REASIGNACION: 'Asignado',
-      RESGUARDO: 'Stock',
-      REPARACION: 'En Reparacion',
-      BAJA: 'Inactivo',
+      RESGUARDO: 'Resguardo',
+      REPARACION: 'Mantenimiento',
+      BAJA: 'Baja',
     };
 
     const targetStateName = stateMapping[movementType];
@@ -438,21 +448,16 @@ export class MovementService {
       return null;
     }
 
-    let state = await this.prismaShopic.assetState.findFirst({
+    const state = await this.prismaShopic.assetState.findFirst({
       where: {
         Name: {
-          contains: targetStateName,
+          equals: targetStateName,
         },
       },
     });
 
-    // If state doesn't exist (e.g., "En Reparacion"), create it
     if (!state) {
-      state = await this.prismaShopic.assetState.create({
-        data: {
-          Name: targetStateName,
-        },
-      });
+      return null;
     }
 
     return state.AssetStateID;

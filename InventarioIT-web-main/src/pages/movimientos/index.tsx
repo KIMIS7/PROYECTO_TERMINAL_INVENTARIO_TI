@@ -413,6 +413,9 @@ export default function Movimientos() {
                       <TableHead className="w-20 font-semibold text-gray-700">
                         SITE
                       </TableHead>
+                      <TableHead className="w-25 font-semibold text-gray-700">
+                        DEPARTAMENTO
+                      </TableHead>
                       <TableHead className="w-20 font-semibold text-gray-700">
                         USUARIO
                       </TableHead>
@@ -438,7 +441,7 @@ export default function Movimientos() {
                     {paginatedAssets.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={10}
+                          colSpan={11}
                           className="h-24 text-center text-gray-500"
                         >
                           No se encontraron activos
@@ -471,6 +474,9 @@ export default function Movimientos() {
                             {asset.company?.description || "-"}
                           </TableCell>
                           <TableCell>{asset.site?.name || "-"}</TableCell>
+                          <TableCell>
+                            {asset.depart?.Name || "-"}
+                          </TableCell>
                           <TableCell>{asset.user?.name || "-"}</TableCell>
                           <TableCell>
                             {asset.productType?.name || "-"}
