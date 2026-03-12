@@ -1,12 +1,11 @@
-import NextAuth from "next-auth";
+import NextAuth, { type NextAuthOptions } from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
 
 const env = process.env.NODE_ENV;
 const nextBasePath = process.env.NEXT_BASE_PATH;
 const basePath = env === "production" ? nextBasePath || "/inventarioit" : nextBasePath || "";
 
-
-export default NextAuth({
+export const authOptions: NextAuthOptions = {
   providers: [
     AzureADProvider({
       clientId: process.env.AZURE_AD_CLIENT_ID as string,
@@ -108,4 +107,6 @@ export default NextAuth({
         }
     }, */
   events: {},
-});
+};
+
+export default NextAuth(authOptions);

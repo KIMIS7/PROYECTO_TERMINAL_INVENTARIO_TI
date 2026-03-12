@@ -1,13 +1,14 @@
 // lib/requireAuthGSSP.ts
-import { getSession } from "next-auth/react";
+import { getServerSession } from "next-auth/next";
 import type { GetServerSideProps, GetServerSidePropsContext } from "next";
+import { authOptions } from "@/pages/api/auth/[...nextauth]";
 
 export function requireAuthGSSP<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   P extends { [key: string]: any } = { [key: string]: any }
 >(gssp?: GetServerSideProps<P>): GetServerSideProps<P> {
   return async (ctx: GetServerSidePropsContext) => {
-    const session = await getSession(ctx);
+    const session = await getServerSession(ctx.req, ctx.res, authOptions);
 
     if (!session) {
       // vuelve al login y preserva la URL objetivo
