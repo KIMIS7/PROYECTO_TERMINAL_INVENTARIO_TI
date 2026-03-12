@@ -172,7 +172,11 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
-          User: true,
+          User: {
+            include: {
+              Depart: true,
+            },
+          },
         },
       });
 
@@ -219,6 +223,12 @@ export class AssetService {
               lastName: asset.User.LastName,
             }
           : null,
+        depart: asset.User?.Depart
+          ? {
+              departID: asset.User.Depart.DepartID,
+              Name: asset.User.Depart.Name,
+            }
+          : null,
         assetDetail: asset.AssetDetail[0]
           ? {
               assetDetailID: asset.AssetDetail[0].AssetDetailID,
@@ -258,7 +268,11 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
-          User: true,
+          User: {
+            include: {
+              Depart: true,
+            },
+          },
           AssetHistory: {
             orderBy: { CreatedTime: 'desc' },
             take: 10,
@@ -311,6 +325,12 @@ export class AssetService {
               departmentID: asset.User.DepartmentID,
               firstName: asset.User.FirstName,
               lastName: asset.User.LastName,
+            }
+          : null,
+        depart: asset.User?.Depart
+          ? {
+              departID: asset.User.Depart.DepartID,
+              Name: asset.User.Depart.Name,
             }
           : null,
         assetDetail: asset.AssetDetail[0]
