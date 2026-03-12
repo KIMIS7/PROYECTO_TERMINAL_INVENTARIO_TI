@@ -30,16 +30,23 @@ export class UserController {
   searchUsers(
     @Query('q') query?: string,
     @Query('departmentID') departmentID?: string,
+    @Query('siteID') siteID?: string,
   ) {
     return this.userService.searchUsers(
       query,
       departmentID ? +departmentID : undefined,
+      siteID ? +siteID : undefined,
     );
   }
 
   @Get('departments')
   getDepartments() {
     return this.userService.getDepartments();
+  }
+
+  @Get('departments/site/:siteID')
+  getDepartmentsBySite(@Param('siteID') siteID: string) {
+    return this.userService.getDepartmentsBySite(+siteID);
   }
 
   @Get('verify/:email')

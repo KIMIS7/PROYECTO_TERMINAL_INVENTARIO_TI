@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
 import { EditAssetModal } from "@/components/EditAssetModal";
 import { AssetDetailModal } from "@/components/AssetDetailModal";
+import { BulkMovementModal } from "@/components/BulkMovementModal";
 import {
   OmniboxFilter,
   type FilterChip,
@@ -35,6 +36,7 @@ import {
   FileText,
   Pencil,
   RefreshCw,
+  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -58,6 +60,7 @@ export default function Altas() {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailAssetID, setDetailAssetID] = useState<number | null>(null);
+  const [isBulkMovementModalOpen, setIsBulkMovementModalOpen] = useState(false);
 
   // Estados para filtros y selección
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -314,23 +317,19 @@ export default function Altas() {
     setIsEditModalOpen(true);
   };
 
-  const handleDelete = async () => {
-    if (selectedAssets.size === 0) return;
+  
 
-    const confirmed = window.confirm(
-      `¿Está seguro de eliminar ${selectedAssets.size} activo(s)?`
-    );
-    if (!confirmed) return;
-
-    try {
-      await Promise.all(Array.from(selectedAssets).map((id) => api.asset.delete(id)));
-      toast.success(`${selectedAssets.size} activo(s) eliminado(s)`);
-      setSelectedAssets(new Set());
-      loadAssets();
-    } catch (error) {
-      console.error("Error deleting assets:", error);
-      toast.error("Error al eliminar activos");
+  const handleBulkMovement = () => {
+    if (selectedAssets.size === 0) {
+      toast.warning("Selecciona al menos un activo");
+      return;
     }
+    setIsBulkMovementModalOpen(true);
+  };
+
+  const handleBulkMovementSuccess = () => {
+    loadAssets();
+    setSelectedAssets(new Set());
   };
 
   const handleExport = () => {
@@ -407,16 +406,6 @@ export default function Altas() {
                 Nuevo
               </Button>
 
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={handleDelete}
-                disabled={selectedAssets.size === 0}
-                className="h-8 text-sm font-normal"
-              >
-                Eliminar
-              </Button>
-
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button variant="outline" size="sm" className="h-8 text-sm font-normal">
@@ -437,6 +426,17 @@ export default function Altas() {
                   <DropdownMenuItem onClick={handleImportCSV}>
                     <FileText className="h-4 w-4 mr-2" />
                     Import from CSV
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onClick={handleBulkMovement}
+                    disabled={selectedAssets.size === 0}
+                  >
+                    <ArrowRightLeft className="h-4 w-4 mr-2" />
+                    Generar Movimiento
+                    {selectedAssets.size > 0 && (
+                      <span className="ml-1 text-xs text-gray-500">({selectedAssets.size})</span>
+                    )}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleRefresh}>
@@ -492,7 +492,8 @@ export default function Altas() {
                     <TableHead className="w-5"></TableHead>
                     <TableHead className="w-18 font-semibold text-gray-700">NOMBRE</TableHead>
                     <TableHead className="w-20 font-semibold text-gray-700">COMPAÑIA</TableHead>
-                    <TableHead className="w-27 font-semibold text-gray-700">SITE</TableHead>
+                    <TableHead className="w-20 font-semibold text-gray-700">SITE</TableHead>
+                    <TableHead className="w-25 font-semibold text-gray-700">Departamento</TableHead>
                     <TableHead className="w-20 font-semibold text-gray-700">USUARIO</TableHead>
                     <TableHead className="w-18 font-semibold text-gray-700">TIPO</TableHead>
                     <TableHead className="w-20 font-semibold text-gray-700">MARCA</TableHead>
@@ -560,10 +561,13 @@ export default function Altas() {
                           {asset.site?.name || "-"}
                         </TableCell>
                         <TableCell>
+                          {asset.depart?.Name || "Corregir"}
+                        </TableCell>
+                        <TableCell>
                           {asset.user?.name || "-"}
                         </TableCell>
                         <TableCell>
-                          {asset.productType?.category || "-"}
+                          {asset.productType?.name || "-"}
                         </TableCell>
                         <TableCell>
                           {asset.assetDetail?.productManuf || "-"}
@@ -628,6 +632,15 @@ export default function Altas() {
               onEdit={handleDetailToEdit}
             />
           )}
+
+          {/* Modal de Movimiento Masivo */}
+          <BulkMovementModal
+            assets={assets}
+            selectedAssetIDs={Array.from(selectedAssets)}
+            isOpen={isBulkMovementModalOpen}
+            onClose={() => setIsBulkMovementModalOpen(false)}
+            onSuccess={handleBulkMovementSuccess}
+          />
         </div>
       )}
     </MainLayout>

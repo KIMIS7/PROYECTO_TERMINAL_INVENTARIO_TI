@@ -27,15 +27,59 @@ export class AssetService {
         }
       }
 
+      // Auto-resolve "Stock" state if not provided
+      let resolvedAssetState = assetState;
+      if (!resolvedAssetState) {
+        const stockState = await this.prismaShopic.assetState.findFirst({
+          where: { Name: { contains: 'Stock' } },
+        });
+        resolvedAssetState = stockState?.AssetStateID || 1;
+      }
+
+      // Resolve company and site from creator's department chain:
+      // User → DepartmentID → Site_Depart → Site → Company
+      let resolvedCompanyID = companyID;
+      let resolvedSiteID = siteID;
+      if (!resolvedCompanyID || !resolvedSiteID) {
+        const creatorUser = await this.prismaShopic.user.findFirst({
+          where: { Email: userEmail },
+        });
+        if (creatorUser) {
+          const siteDepart = await this.prismaShopic.site_Depart.findFirst({
+            where: { ID_depart: creatorUser.DepartmentID },
+            include: {
+              Site: {
+                include: { Company: true },
+              },
+            },
+          });
+          if (siteDepart) {
+            if (!resolvedSiteID) resolvedSiteID = siteDepart.ID_site;
+            if (!resolvedCompanyID) resolvedCompanyID = siteDepart.Site.CompanyID;
+          }
+        }
+      }
+      // Fallback if still not resolved
+      if (!resolvedCompanyID) {
+        const defaultCompany = await this.prismaShopic.company.findFirst();
+        resolvedCompanyID = defaultCompany?.CompanyID || 1;
+      }
+      if (!resolvedSiteID) {
+        const defaultSite = await this.prismaShopic.site.findFirst({
+          where: { CompanyID: resolvedCompanyID },
+        });
+        resolvedSiteID = defaultSite?.SiteID || 1;
+      }
+
       // Crear el activo
       const newAsset = await this.prismaShopic.asset.create({
         data: {
           Name: name,
           VendorID: vendorID,
           ProductTypeID: productTypeID,
-          AssetState: assetState,
-          CompanyID: companyID,
-          SiteID: siteID,
+          AssetState: resolvedAssetState,
+          CompanyID: resolvedCompanyID,
+          SiteID: resolvedSiteID,
           UserID: userID || lastUpdateBy,
         },
       });
@@ -89,7 +133,7 @@ export class AssetService {
         data: {
           AssetID: newAsset.AssetID,
           Operation: 'CREATE',
-          Description: `Activo "${name}" creado`,
+          Description: `Activo "${name}" creado${userEmail ? ` | Registrado por: ${userEmail}` : ''}`,
           CreatedTime: new Date(),
         },
       });
@@ -428,7 +472,7 @@ export class AssetService {
         data: {
           AssetID: id,
           Operation: 'UPDATE',
-          Description: `Activo "${updatedAsset.Name}" actualizado`,
+          Description: `Activo "${updatedAsset.Name}" actualizado${userEmail ? ` | Registrado por: ${userEmail}` : ''}`,
           CreatedTime: new Date(),
         },
       });
@@ -445,7 +489,7 @@ export class AssetService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, userEmail?: string) {
     const asset = await this.prismaShopic.asset.findUnique({
       where: { AssetID: id },
     });
@@ -460,13 +504,14 @@ export class AssetService {
         where: { AssetID: id },
       });
 
-      // Eliminar historial
-      await this.prismaShopic.assetHistory.deleteMany({
+      // Eliminar historial de propiedad
+      await this.prismaShopic.assetOwnershipHistory.deleteMany({
         where: { AssetID: id },
       });
 
-      // Eliminar historial de propiedad
-      await this.prismaShopic.assetOwnershipHistory.deleteMany({
+      // Actualizar registros de historial con operación DELETE antes de eliminar
+      // Agregar un registro DELETE y luego eliminar todo el historial junto con el activo
+      await this.prismaShopic.assetHistory.deleteMany({
         where: { AssetID: id },
       });
 

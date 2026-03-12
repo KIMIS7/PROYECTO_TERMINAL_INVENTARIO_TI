@@ -24,9 +24,9 @@ const groupIcons: Record<ProductGroup, React.ReactNode> = {
 };
 
 const groupDescriptions: Record<ProductGroup, string> = {
-  "Equipo": "Computadoras, laptops, servidores, impresoras",
-  "Accesorio": "Teclados, mouse, monitores, audifonos",
-  "Componente": "RAM, discos duros, procesadores, tarjetas",
+  "Equipo": "Computadoras, laptops, servidores",
+  "Accesorio": "Teclados, mouse, monitores, audifonos, impresoras",
+  "Componente": "RAM, discos duros, procesadores",
   "Otros": "Cualquier otro tipo de activo",
 };
 

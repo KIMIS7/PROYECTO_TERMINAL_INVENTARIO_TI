@@ -44,7 +44,10 @@ export class AssetController {
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.assetService.remove(+id);
+  remove(
+    @Param('id') id: string,
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.assetService.remove(+id, userEmail);
   }
 }

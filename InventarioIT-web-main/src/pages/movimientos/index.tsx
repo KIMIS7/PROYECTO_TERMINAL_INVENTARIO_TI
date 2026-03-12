@@ -31,7 +31,8 @@ import {
   ArrowRightLeft,
   ArrowUpCircle,
   ArrowDownCircle,
-  HandCoins,
+  UserCheck,
+  Shield,
   Eye,
 } from "lucide-react";
 import { toast } from "sonner";
@@ -50,15 +51,15 @@ const movementTypeConfig: Record<
     bgColor: "bg-red-100",
     icon: <ArrowDownCircle className="h-4 w-4" />,
   },
-  REASIGNACION: {
+  ASIGNACION: {
     color: "text-blue-700",
     bgColor: "bg-blue-100",
-    icon: <RefreshCw className="h-4 w-4" />,
+    icon: <UserCheck className="h-4 w-4" />,
   },
-  PRESTAMO: {
+  RESGUARDO: {
     color: "text-amber-700",
     bgColor: "bg-amber-100",
-    icon: <HandCoins className="h-4 w-4" />,
+    icon: <Shield className="h-4 w-4" />,
   },
 };
 
@@ -429,6 +430,7 @@ export default function Movimientos() {
                 <MovementHistoryTable
                   assetID={selectedAssetID}
                   refreshTrigger={refreshTrigger}
+                  onMovementUpdated={() => loadData()}
                 />
               </div>
             )}

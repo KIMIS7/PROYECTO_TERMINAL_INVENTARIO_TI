@@ -5,6 +5,8 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { CreateMovementDto, MovementType } from './dto/create-movement.dto';
+import { CreateBulkMovementDto } from './dto/create-bulk-movement.dto';
+import { UpdateMovementDto } from './dto/update-movement.dto';
 import { PrismaShopic } from 'src/database/database.service';
 
 @Injectable()
@@ -12,7 +14,7 @@ export class MovementService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createMovementDto: CreateMovementDto, userEmail?: string) {
-    const { assetID, movementType, description, responsible } = createMovementDto;
+    const { assetID, movementType, description, responsible, userID, companyID, siteID } = createMovementDto;
 
     const asset = await this.prismaShopic.asset.findUnique({
       where: { AssetID: assetID },
@@ -45,11 +47,54 @@ export class MovementService {
           },
         });
 
+        // Update asset state if applicable
         if (newStateID !== null) {
           await tx.asset.update({
             where: { AssetID: assetID },
             data: { AssetState: newStateID },
           });
+        }
+
+        // Update asset assignment data (user, company, site)
+        const assetUpdateData: Record<string, unknown> = {};
+        if (userID) assetUpdateData.UserID = userID;
+        if (companyID) assetUpdateData.CompanyID = companyID;
+        if (siteID) assetUpdateData.SiteID = siteID;
+
+        if (Object.keys(assetUpdateData).length > 0) {
+          await tx.asset.update({
+            where: { AssetID: assetID },
+            data: assetUpdateData,
+          });
+        }
+
+        // Close previous open AssetOwnershipHistory record and create new one
+        if (movementType === 'ASIGNACION' || movementType === 'RESGUARDO') {
+          // Close any open record (ToDate = 9999-12-31)
+          const openRecords = await tx.assetOwnershipHistory.findMany({
+            where: {
+              AssetID: assetID,
+              ToDate: new Date('9999-12-31'),
+            },
+          });
+          for (const record of openRecords) {
+            await tx.assetOwnershipHistory.update({
+              where: { AssetOwnershipHistoryID: record.AssetOwnershipHistoryID },
+              data: { ToDate: new Date() },
+            });
+          }
+
+          // Create new ownership record for ASIGNACION
+          if (movementType === 'ASIGNACION' && userID) {
+            await tx.assetOwnershipHistory.create({
+              data: {
+                AssetID: assetID,
+                UserID: userID,
+                FromDate: new Date(),
+                ToDate: new Date('9999-12-31'),
+              },
+            });
+          }
         }
 
         return assetHistory;
@@ -74,6 +119,166 @@ export class MovementService {
     }
   }
 
+  async createBulk(dto: CreateBulkMovementDto, userEmail?: string) {
+    const { assetIDs, movementType, companyID, siteID, userID, fromDate, toDate, description, responsible } = dto;
+
+    // Validar que todos los activos existen
+    const assets = await this.prismaShopic.asset.findMany({
+      where: { AssetID: { in: assetIDs } },
+    });
+
+    if (assets.length !== assetIDs.length) {
+      const foundIDs = assets.map((a) => a.AssetID);
+      const missingIDs = assetIDs.filter((id) => !foundIDs.includes(id));
+      throw new NotFoundException(`Activos no encontrados: ${missingIDs.join(', ')}`);
+    }
+
+    // Validar que la empresa y el sitio existen
+    const company = await this.prismaShopic.company.findUnique({ where: { CompanyID: companyID } });
+    if (!company) throw new NotFoundException('Empresa no encontrada');
+
+    const site = await this.prismaShopic.site.findUnique({ where: { SiteID: siteID } });
+    if (!site) throw new NotFoundException('Sitio no encontrado');
+
+    try {
+      const results = await this.prismaShopic.$transaction(async (tx) => {
+        const movementResults: { movementID: number; assetID: number; assetName: string }[] = [];
+
+        for (const asset of assets) {
+          // Construir descripción
+          const descParts: string[] = [];
+          descParts.push(
+            description ||
+              `${movementType === 'ASIGNACION' ? 'Asignación' : 'Resguardo'} del activo "${asset.Name}" → ${company.Description} / ${site.Name}`,
+          );
+          if (responsible) descParts.push(`Responsable: ${responsible}`);
+          if (userEmail) descParts.push(`Registrado por: ${userEmail}`);
+          const fullDescription = descParts.join(' | ');
+
+          // Actualizar empresa, sitio y opcionalmente usuario del activo
+          const updateData: Record<string, unknown> = {
+            CompanyID: companyID,
+            SiteID: siteID,
+          };
+          if (userID) {
+            updateData.UserID = userID;
+          }
+
+          await tx.asset.update({
+            where: { AssetID: asset.AssetID },
+            data: updateData,
+          });
+
+          // Crear historial del movimiento
+          const assetHistory = await tx.assetHistory.create({
+            data: {
+              AssetID: asset.AssetID,
+              Operation: movementType,
+              Description: fullDescription,
+              CreatedTime: new Date(),
+            },
+          });
+
+          // Close previous open AssetOwnershipHistory records
+          const openRecords = await tx.assetOwnershipHistory.findMany({
+            where: {
+              AssetID: asset.AssetID,
+              ToDate: new Date('9999-12-31'),
+            },
+          });
+          for (const record of openRecords) {
+            await tx.assetOwnershipHistory.update({
+              where: { AssetOwnershipHistoryID: record.AssetOwnershipHistoryID },
+              data: { ToDate: new Date(fromDate || new Date()) },
+            });
+          }
+
+          // Create new ownership record if assigning a user
+          if (userID && fromDate) {
+            await tx.assetOwnershipHistory.create({
+              data: {
+                AssetID: asset.AssetID,
+                UserID: userID,
+                FromDate: new Date(fromDate),
+                ToDate: toDate ? new Date(toDate) : new Date('9999-12-31'),
+              },
+            });
+          }
+
+          // Cambiar estado si aplica
+          const newStateID = await this.resolveNewState(movementType as MovementType);
+          if (newStateID !== null) {
+            await tx.asset.update({
+              where: { AssetID: asset.AssetID },
+              data: { AssetState: newStateID },
+            });
+          }
+
+          movementResults.push({
+            movementID: assetHistory.AssetHistoryID,
+            assetID: asset.AssetID,
+            assetName: asset.Name,
+          });
+        }
+
+        return movementResults;
+      });
+
+      return {
+        success: true,
+        message: `Movimiento masivo registrado para ${results.length} activo(s)`,
+        data: results,
+      };
+    } catch (error) {
+      if (error instanceof NotFoundException || error instanceof BadRequestException) {
+        throw error;
+      }
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al registrar el movimiento masivo',
+      });
+    }
+  }
+
+  async update(movementID: number, dto: UpdateMovementDto, userEmail?: string) {
+    const movement = await this.prismaShopic.assetHistory.findUnique({
+      where: { AssetHistoryID: movementID },
+    });
+
+    if (!movement) {
+      throw new NotFoundException('Movimiento no encontrado');
+    }
+
+    const descriptionParts: string[] = [];
+    const { description: currentDesc, responsible: currentResp, createdBy: currentCreatedBy } = this.parseDescription(movement.Description);
+
+    descriptionParts.push(dto.description !== undefined ? dto.description : currentDesc);
+    const responsible = dto.responsible !== undefined ? dto.responsible : currentResp;
+    if (responsible) {
+      descriptionParts.push(`Responsable: ${responsible}`);
+    }
+    const createdBy = userEmail || currentCreatedBy;
+    if (createdBy) {
+      descriptionParts.push(`Registrado por: ${createdBy}`);
+    }
+    const fullDescription = descriptionParts.join(' | ');
+
+    try {
+      await this.prismaShopic.assetHistory.update({
+        where: { AssetHistoryID: movementID },
+        data: { Description: fullDescription },
+      });
+
+      return {
+        success: true,
+        message: 'Movimiento actualizado exitosamente',
+      };
+    } catch (error) {
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al actualizar el movimiento',
+      });
+    }
+  }
+
   async findByAssetId(assetID: number) {
     const asset = await this.prismaShopic.asset.findUnique({
       where: { AssetID: assetID },
@@ -87,7 +292,7 @@ export class MovementService {
       const movements = await this.prismaShopic.assetHistory.findMany({
         where: {
           AssetID: assetID,
-          Operation: { in: ['ALTA', 'BAJA', 'REASIGNACION', 'PRESTAMO'] },
+          Operation: { in: ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO', 'REASIGNACION', 'PRESTAMO'] },
         },
         orderBy: { CreatedTime: 'desc' },
         include: {
@@ -112,7 +317,7 @@ export class MovementService {
     try {
       const movements = await this.prismaShopic.assetHistory.findMany({
         where: {
-          Operation: { in: ['ALTA', 'BAJA', 'REASIGNACION', 'PRESTAMO'] },
+          Operation: { in: ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO', 'REASIGNACION', 'PRESTAMO'] },
         },
         orderBy: { CreatedTime: 'desc' },
         include: {
@@ -129,6 +334,40 @@ export class MovementService {
     } catch (error) {
       throw new InternalServerErrorException({
         message: error.message || 'Error al obtener los movimientos',
+      });
+    }
+  }
+
+  async findAllHistory() {
+    try {
+      const records = await this.prismaShopic.assetHistory.findMany({
+        orderBy: { CreatedTime: 'desc' },
+        include: {
+          Asset: {
+            select: {
+              AssetID: true,
+              Name: true,
+            },
+          },
+        },
+      });
+
+      return records.map((m) => {
+        const { description, responsible, createdBy } = this.parseDescription(m.Description);
+        return {
+          historyID: m.AssetHistoryID,
+          assetID: m.AssetID,
+          assetName: m.Asset?.Name || 'Activo eliminado',
+          operation: m.Operation,
+          description,
+          responsible,
+          createdBy,
+          createdTime: m.CreatedTime,
+        };
+      });
+    } catch (error) {
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al obtener el historial completo',
       });
     }
   }
@@ -180,8 +419,8 @@ export class MovementService {
     const stateMapping: Record<MovementType, string | null> = {
       ALTA: 'Activo',
       BAJA: 'Inactivo',
-      REASIGNACION: null,
-      PRESTAMO: null,
+      ASIGNACION: 'Asignado',
+      RESGUARDO: 'Stock',
     };
 
     const targetStateName = stateMapping[movementType];
@@ -208,8 +447,8 @@ export class MovementService {
     const descriptions: Record<MovementType, string> = {
       ALTA: `Alta del activo "${assetName}"`,
       BAJA: `Baja del activo "${assetName}"`,
-      REASIGNACION: `Reasignacion del activo "${assetName}"`,
-      PRESTAMO: `Prestamo del activo "${assetName}"`,
+      ASIGNACION: `Asignación del activo "${assetName}"`,
+      RESGUARDO: `Resguardo del activo "${assetName}"`,
     };
     return descriptions[movementType];
   }

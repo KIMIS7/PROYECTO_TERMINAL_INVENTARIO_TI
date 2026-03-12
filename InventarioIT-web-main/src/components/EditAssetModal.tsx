@@ -642,50 +642,6 @@ export const EditAssetModal = ({
                     </Select>
                     {errors.assetState && <p className="text-red-500 text-xs mt-1">{errors.assetState}</p>}
                   </div>
-
-                  <div>
-                    <Label htmlFor="companyID" className="text-sm font-medium">Empresa *</Label>
-                    <Select
-                      value={formData.companyID ? formData.companyID.toString() : "none"}
-                      onValueChange={(value) => handleInputChange("companyID", value === "none" ? 0 : Number(value))}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger className={errors.companyID ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Seleccionar empresa" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Seleccionar empresa</SelectItem>
-                        {companies.map((company) => (
-                          <SelectItem key={company.companyID} value={company.companyID.toString()}>
-                            {company.description}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.companyID && <p className="text-red-500 text-xs mt-1">{errors.companyID}</p>}
-                  </div>
-
-                  <div>
-                    <Label htmlFor="siteID" className="text-sm font-medium">Site *</Label>
-                    <Select
-                      value={formData.siteID ? formData.siteID.toString() : "none"}
-                      onValueChange={(value) => handleInputChange("siteID", value === "none" ? 0 : Number(value))}
-                      disabled={isLoading || !formData.companyID}
-                    >
-                      <SelectTrigger className={errors.siteID ? "border-red-500" : ""}>
-                        <SelectValue placeholder={formData.companyID ? "Seleccionar sitio" : "Primero selecciona empresa"} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Seleccionar sitio</SelectItem>
-                        {filteredSites.map((site) => (
-                          <SelectItem key={site.siteID} value={site.siteID.toString()}>
-                            {site.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
-                  </div>
                 </div>
               </div>
 

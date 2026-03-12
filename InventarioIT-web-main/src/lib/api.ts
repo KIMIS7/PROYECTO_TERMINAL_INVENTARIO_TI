@@ -154,9 +154,27 @@ const api = {
             const response = await apiClient.get<Department[]>("/user/departments");
             return response.data;
         },
-        create: async (data: { rolID: number, name: string, email: string, DepartmentID?: number }) => {
+        getDepartmentsBySite: async (siteID: number) => {
+            const response = await apiClient.get<Department[]>(`/user/departments/site/${siteID}`);
+            return response.data;
+        },
+        create: async (data: { rolID: number, name: string, email: string, DepartmentID?: number, SiteID?: number }) => {
             try {
-                const response = await apiClient.post<{ success: boolean, message: string, data: {userID: number, name: string, email: string, isActive: boolean, pin: string, role: string, rolID: number} }>("/user", data);
+                // Map frontend field names to backend DTO field names
+                const nameParts = data.name.trim().split(/\s+/);
+                const FirstName = nameParts[0] || '';
+                const LastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : nameParts[0] || '';
+
+                const payload = {
+                    Email: data.email,
+                    FirstName,
+                    LastName,
+                    rolD: data.rolID,
+                    DepartmentID: data.DepartmentID,
+                    SiteID: data.SiteID,
+                };
+
+                const response = await apiClient.post<{ success: boolean, message: string, data: {userID: number, name: string, email: string, isActive: boolean, pin: string, role: string, rolID: number} }>("/user", payload);
                 return response.data;
             } catch (error: unknown) {
                 // Re-lanzar el error para que sea manejado por el componente
@@ -283,9 +301,9 @@ const api = {
       name: string;
       vendorID: number;
       productTypeID: number;
-      assetState: number;
-      companyID: number;
-      siteID: number;
+      assetState?: number;
+      companyID?: number;
+      siteID?: number;
       userID?: number;
       detail?: Record<string, unknown>;
     }) => {
@@ -335,8 +353,43 @@ const api = {
       const response = await apiClient.get<Movement[]>("/movement");
       return response.data;
     },
+    getHistory: async () => {
+      const response = await apiClient.get<{
+        historyID: number;
+        assetID: number;
+        assetName: string;
+        operation: string;
+        description: string;
+        responsible: string | null;
+        createdBy: string | null;
+        createdTime: string;
+      }[]>("/movement/history");
+      return response.data;
+    },
     getByAssetId: async (assetID: number) => {
       const response = await apiClient.get<Movement[]>(`/movement/asset/${assetID}`);
+      return response.data;
+    },
+    update: async (movementID: number, data: { description?: string; responsible?: string }) => {
+      const response = await apiClient.patch<{ success: boolean; message: string }>(`/movement/${movementID}`, data);
+      return response.data;
+    },
+    createBulk: async (data: {
+      assetIDs: number[];
+      movementType: 'ASIGNACION' | 'RESGUARDO';
+      companyID: number;
+      siteID: number;
+      userID?: number;
+      fromDate?: string;
+      toDate?: string;
+      description?: string;
+      responsible?: string;
+    }) => {
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+        data: { movementID: number; assetID: number; assetName: string }[];
+      }>("/movement/bulk", data);
       return response.data;
     },
   },

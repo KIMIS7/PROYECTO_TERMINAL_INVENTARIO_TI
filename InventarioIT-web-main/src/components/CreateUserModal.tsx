@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Role, Department } from "@/types";
+import { Role, Department, Site } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -15,52 +15,68 @@ interface CreateUserModalProps {
   onSuccess: () => void;
 }
 
-export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess }: CreateUserModalProps) => {
+export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUserModalProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
   const [formData, setFormData] = useState({
     name: "",
     email: "",
     rolID: 0,
+    SiteID: 0,
     DepartmentID: 0,
   });
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Site and department catalogs
+  const [sites, setSites] = useState<Site[]>([]);
+  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
+  const [isLoadingDepts, setIsLoadingDepts] = useState(false);
+
+  // Load sites when modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    api.site.getAll().then(setSites).catch(() => setSites([]));
+  }, [isOpen]);
+
+  // When site changes, load departments for that site
+  useEffect(() => {
+    if (!formData.SiteID) {
+      setFilteredDepartments([]);
+      setFormData(prev => ({ ...prev, DepartmentID: 0 }));
+      return;
+    }
+    setIsLoadingDepts(true);
+    setFormData(prev => ({ ...prev, DepartmentID: 0 }));
+    api.user.getDepartmentsBySite(formData.SiteID)
+      .then((depts) => setFilteredDepartments(depts))
+      .catch(() => setFilteredDepartments([]))
+      .finally(() => setIsLoadingDepts(false));
+  }, [formData.SiteID]);
+
   const handleInputChange = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }));
-    // Clear error when user starts typing
     if (errors[field]) {
       setErrors(prev => ({ ...prev, [field]: "" }));
     }
   };
 
-  // Función mejorada para validar email
   const validateEmail = (email: string): string | null => {
     if (!email.trim()) {
       return "El email es requerido";
     }
-
-    // Expresión regular más robusta para validar email
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
-    
     if (!emailRegex.test(email)) {
       return "El formato del email no es válido";
     }
-
-    // Validaciones adicionales
     if (email.length > 254) {
       return "El email es demasiado largo";
     }
-
     if (email.includes("..") || email.includes("--")) {
       return "El email contiene caracteres inválidos";
     }
-
-    // Validar que no empiece o termine con punto
     if (email.startsWith(".") || email.endsWith(".")) {
       return "El email no puede empezar o terminar con punto";
     }
-
     return null;
   };
 
@@ -71,7 +87,6 @@ export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess
       newErrors.name = "El nombre es requerido";
     }
 
-    // Usar la nueva función de validación de email
     const emailError = validateEmail(formData.email);
     if (emailError) {
       newErrors.email = emailError;
@@ -79,6 +94,10 @@ export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess
 
     if (!formData.rolID) {
       newErrors.rolID = "El rol es requerido";
+    }
+
+    if (!formData.SiteID) {
+      newErrors.SiteID = "El sitio es requerido";
     }
 
     if (!formData.DepartmentID) {
@@ -97,45 +116,32 @@ export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess
     try {
       setIsLoading(true);
       await api.user.create(formData);
-      
-      // Reset form
-      setFormData({
-        name: "",
-        email: "",
-        rolID: 0,
-      });
-      setErrors({});
-      
+
+      resetForm();
       showSuccess("Usuario creado exitosamente");
       onSuccess();
       onClose();
     } catch (error: unknown) {
       console.error("Error al crear usuario:", error);
-      
-      // Manejo específico de errores
+
       if (error && typeof error === 'object' && 'response' in error) {
         const axiosError = error as { response: { status: number; data: { message?: string; error?: string } } };
         const status = axiosError.response.status;
         const message = axiosError.response.data?.message || axiosError.response.data?.error || 'Error desconocido';
-        
+
         if (status === 409) {
-          // Conflicto - email duplicado
           setErrors({ email: "Este email ya está registrado" });
           showWarning("Este email ya está registrado en el sistema");
         } else if (status === 400) {
-          // Bad request - datos inválidos
           showError(`Error de validación: ${message}`);
         } else if (status >= 500) {
-          // Error del servidor
           showError("Error interno del servidor. Por favor, intenta más tarde.");
         } else {
           showError(`Error: ${message}`);
         }
       } else if (error && typeof error === 'object' && 'request' in error) {
-        // Error de red
         showError("Error de conexión. Verifica tu internet y vuelve a intentar.");
       } else {
-        // Error desconocido
         showError("Error inesperado. Por favor, intenta más tarde.");
       }
     } finally {
@@ -143,14 +149,21 @@ export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess
     }
   };
 
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      email: "",
+      rolID: 0,
+      SiteID: 0,
+      DepartmentID: 0,
+    });
+    setErrors({});
+    setFilteredDepartments([]);
+  };
+
   const handleClose = () => {
     if (!isLoading) {
-      setFormData({
-        name: "",
-        email: "",
-        rolID: 0,
-      });
-      setErrors({});
+      resetForm();
       onClose();
     }
   };
@@ -239,18 +252,50 @@ export const CreateUserModal = ({ roles, departments, isOpen, onClose, onSuccess
           </div>
 
           <div>
+            <Label htmlFor="create-siteID" className="block text-left mb-2">Site</Label>
+            <Select
+              value={formData.SiteID ? formData.SiteID.toString() : "none"}
+              onValueChange={(value) => handleInputChange("SiteID", value === "none" ? 0 : Number(value))}
+              disabled={isLoading}
+            >
+              <SelectTrigger className={`w-full ${errors.SiteID ? "border-red-500" : ""}`}>
+                <SelectValue placeholder="Seleccionar sitio" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Seleccionar sitio</SelectItem>
+                {sites.map((site) => (
+                  <SelectItem key={site.siteID} value={site.siteID.toString()}>
+                    {site.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            {errors.SiteID && (
+              <p id="create-siteID-error" className="text-red-500 text-sm mt-1">
+                {errors.SiteID}
+              </p>
+            )}
+          </div>
+
+          <div>
             <Label htmlFor="create-departmentID" className="block text-left mb-2">Departamento</Label>
             <Select
               value={formData.DepartmentID ? formData.DepartmentID.toString() : "none"}
               onValueChange={(value) => handleInputChange("DepartmentID", value === "none" ? 0 : Number(value))}
-              disabled={isLoading}
+              disabled={isLoading || !formData.SiteID || isLoadingDepts}
             >
               <SelectTrigger className={`w-full ${errors.DepartmentID ? "border-red-500" : ""}`}>
-                <SelectValue placeholder="Seleccionar departamento" />
+                <SelectValue placeholder={
+                  !formData.SiteID
+                    ? "Primero selecciona un sitio"
+                    : isLoadingDepts
+                    ? "Cargando departamentos..."
+                    : "Seleccionar departamento"
+                } />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Seleccionar departamento</SelectItem>
-                {departments.map((dept) => (
+                {filteredDepartments.map((dept) => (
                   <SelectItem key={dept.departID} value={dept.departID.toString()}>
                     {dept.name}
                   </SelectItem>
