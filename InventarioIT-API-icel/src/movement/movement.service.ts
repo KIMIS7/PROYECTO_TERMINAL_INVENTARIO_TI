@@ -60,12 +60,7 @@ export class MovementService {
           assetUpdateData.AssetState = newStateID;
         }
 
-        if (movementType === 'BAJA') {
-          // On BAJA, clear all assignment info
-          assetUpdateData.UserID = null;
-          assetUpdateData.CompanyID = null;
-          assetUpdateData.SiteID = null;
-        } else {
+        if (movementType !== 'BAJA') {
           // Update asset assignment data (user, company, site)
           if (userID) assetUpdateData.UserID = userID;
           if (companyID) assetUpdateData.CompanyID = companyID;
@@ -178,12 +173,7 @@ export class MovementService {
             updateData.AssetState = newStateID;
           }
 
-          if (movementType === 'BAJA') {
-            // On BAJA, clear all assignment info
-            updateData.UserID = null;
-            updateData.CompanyID = null;
-            updateData.SiteID = null;
-          } else {
+          if (movementType !== 'BAJA') {
             if (companyID) updateData.CompanyID = companyID;
             if (siteID) updateData.SiteID = siteID;
             if (userID) updateData.UserID = userID;

@@ -86,7 +86,7 @@ const MOVEMENT_TYPE_CONFIG: {
   {
     value: "BAJA",
     label: "Baja",
-    description: "Dar de baja los activos (estado: Inactivo)",
+    description: "Dar de baja los activos (estado: Baja)",
     icon: <XCircle className="h-5 w-5" />,
     color: "text-red-700",
     bgColor: "border-red-500 bg-red-50",
