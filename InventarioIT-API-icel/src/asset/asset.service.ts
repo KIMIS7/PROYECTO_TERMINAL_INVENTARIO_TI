@@ -133,7 +133,7 @@ export class AssetService {
         data: {
           AssetID: newAsset.AssetID,
           Operation: 'CREATE',
-          Description: `Activo "${name}" creado`,
+          Description: `Activo "${name}" creado${userEmail ? ` | Registrado por: ${userEmail}` : ''}`,
           CreatedTime: new Date(),
         },
       });
@@ -472,7 +472,7 @@ export class AssetService {
         data: {
           AssetID: id,
           Operation: 'UPDATE',
-          Description: `Activo "${updatedAsset.Name}" actualizado`,
+          Description: `Activo "${updatedAsset.Name}" actualizado${userEmail ? ` | Registrado por: ${userEmail}` : ''}`,
           CreatedTime: new Date(),
         },
       });
@@ -489,7 +489,7 @@ export class AssetService {
     }
   }
 
-  async remove(id: number) {
+  async remove(id: number, userEmail?: string) {
     const asset = await this.prismaShopic.asset.findUnique({
       where: { AssetID: id },
     });
@@ -504,13 +504,14 @@ export class AssetService {
         where: { AssetID: id },
       });
 
-      // Eliminar historial
-      await this.prismaShopic.assetHistory.deleteMany({
+      // Eliminar historial de propiedad
+      await this.prismaShopic.assetOwnershipHistory.deleteMany({
         where: { AssetID: id },
       });
 
-      // Eliminar historial de propiedad
-      await this.prismaShopic.assetOwnershipHistory.deleteMany({
+      // Actualizar registros de historial con operación DELETE antes de eliminar
+      // Agregar un registro DELETE y luego eliminar todo el historial junto con el activo
+      await this.prismaShopic.assetHistory.deleteMany({
         where: { AssetID: id },
       });
 

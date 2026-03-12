@@ -338,6 +338,40 @@ export class MovementService {
     }
   }
 
+  async findAllHistory() {
+    try {
+      const records = await this.prismaShopic.assetHistory.findMany({
+        orderBy: { CreatedTime: 'desc' },
+        include: {
+          Asset: {
+            select: {
+              AssetID: true,
+              Name: true,
+            },
+          },
+        },
+      });
+
+      return records.map((m) => {
+        const { description, responsible, createdBy } = this.parseDescription(m.Description);
+        return {
+          historyID: m.AssetHistoryID,
+          assetID: m.AssetID,
+          assetName: m.Asset?.Name || 'Activo eliminado',
+          operation: m.Operation,
+          description,
+          responsible,
+          createdBy,
+          createdTime: m.CreatedTime,
+        };
+      });
+    } catch (error) {
+      throw new InternalServerErrorException({
+        message: error.message || 'Error al obtener el historial completo',
+      });
+    }
+  }
+
   private mapToMovementResponse(m: {
     AssetHistoryID: number;
     AssetID: number;

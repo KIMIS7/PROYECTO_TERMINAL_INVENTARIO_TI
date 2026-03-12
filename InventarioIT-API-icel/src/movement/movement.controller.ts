@@ -46,6 +46,11 @@ export class MovementController {
     return this.movementService.findAll();
   }
 
+  @Get('history')
+  findAllHistory() {
+    return this.movementService.findAllHistory();
+  }
+
   @Get('asset/:assetId')
   findByAssetId(@Param('assetId') assetId: string) {
     return this.movementService.findByAssetId(+assetId);

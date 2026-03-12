@@ -353,6 +353,19 @@ const api = {
       const response = await apiClient.get<Movement[]>("/movement");
       return response.data;
     },
+    getHistory: async () => {
+      const response = await apiClient.get<{
+        historyID: number;
+        assetID: number;
+        assetName: string;
+        operation: string;
+        description: string;
+        responsible: string | null;
+        createdBy: string | null;
+        createdTime: string;
+      }[]>("/movement/history");
+      return response.data;
+    },
     getByAssetId: async (assetID: number) => {
       const response = await apiClient.get<Movement[]>(`/movement/asset/${assetID}`);
       return response.data;
