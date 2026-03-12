@@ -16,8 +16,13 @@ model Asset {
   CompanyID                               Int
   SiteID                                  Int
   UserID                                  Int
+  ParentAssetID                           Int?
+  DepartID                                Int?
   AssetState_Asset_AssetStateToAssetState AssetState              @relation("Asset_AssetStateToAssetState", fields: [AssetState], references: [AssetStateID], onUpdate: NoAction, map: "FK_Asset_AssetState")
   Company                                 Company                 @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Asset_Company")
+  Depart                                  Depart?                 @relation(fields: [DepartID], references: [DepartID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Department")
+  Asset                                   Asset?                  @relation("AssetToAsset", fields: [ParentAssetID], references: [AssetID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Parent")
+  other_Asset                             Asset[]                 @relation("AssetToAsset")
   ProductType                             ProductType             @relation(fields: [ProductTypeID], references: [ProductTypeID], onUpdate: NoAction, map: "FK_Asset_ProductType")
   Site                                    Site                    @relation(fields: [SiteID], references: [SiteID], onUpdate: NoAction, map: "FK_Asset_Site")
   User                                    User                    @relation(fields: [UserID], references: [UserID], onUpdate: NoAction, map: "FK_Asset_User")
@@ -148,7 +153,7 @@ model User {
   AssetOwnershipHistory AssetOwnershipHistory[]
   Depart                Depart                  @relation(fields: [DepartmentID], references: [DepartID], onUpdate: NoAction, map: "FK_User_Depart")
   rol                   rol                     @relation(fields: [rolD], references: [rolID], onUpdate: NoAction, map: "FK_User_rol")
-  Site                  Site?                   @relation(fields: [SiteID], references: [SiteID], onUpdate: NoAction, map: "FK_User_Site")
+  Site                  Site?                   @relation(fields: [SiteID], references: [SiteID], onDelete: NoAction, onUpdate: NoAction, map: "FK_User_Site")
 }
 
 model Vendor {
@@ -182,17 +187,18 @@ model rol_dashboard_path {
 }
 
 model Depart {
-  DepartID     Int            @id(map: "PK_Depart") @default(autoincrement())
-  Name         String         @db.NVarChar(255)
-  User         User[]
-  Site_Depart  Site_Depart[]
+  DepartID    Int           @id(map: "PK_Depart") @default(autoincrement())
+  Name        String        @db.NVarChar(255)
+  Asset       Asset[]
+  Site_Depart Site_Depart[]
+  User        User[]
 }
 
 model Site_Depart {
   ID_site   Int
   ID_depart Int
-  Site      Site   @relation(fields: [ID_site], references: [SiteID], onUpdate: NoAction, map: "FK_Site_Depart_Site")
-  Depart    Depart @relation(fields: [ID_depart], references: [DepartID], onUpdate: NoAction, map: "FK_Site_Depart_Depart")
+  Depart    Depart @relation(fields: [ID_depart], references: [DepartID], onDelete: Cascade, onUpdate: NoAction, map: "FK_Site_Depart_Depart")
+  Site      Site   @relation(fields: [ID_site], references: [SiteID], onDelete: Cascade, onUpdate: NoAction, map: "FK_Site_Depart_Site")
 
-  @@id([ID_site, ID_depart], map: "PK_Site_Depart")
+  @@id([ID_site, ID_depart], map: "PK__Site_Dep__23DF53D8860EBB7C")
 }
