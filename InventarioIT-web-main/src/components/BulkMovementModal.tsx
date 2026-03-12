@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Asset, Company, Site } from "@/types";
+import { Asset, Company, Site, MovementType } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
@@ -25,6 +25,10 @@ import {
   MapPin,
   Calendar,
   Package,
+  UserCheck,
+  Shield,
+  Wrench,
+  XCircle,
 } from "lucide-react";
 
 interface UserSearchResult {
@@ -47,10 +51,47 @@ interface BulkMovementModalProps {
   onSuccess: () => void;
 }
 
-const BULK_MOVEMENT_TYPES = [
-  { value: "ASIGNACION", label: "Asignación", description: "Asignar los activos a otra empresa, sitio o usuario" },
-  { value: "RESGUARDO", label: "Resguardo", description: "Registrar un resguardo de los activos (status: Stock)" },
-] as const;
+const MOVEMENT_TYPE_CONFIG: {
+  value: MovementType;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+  color: string;
+  bgColor: string;
+}[] = [
+  {
+    value: "REASIGNACION",
+    label: "Reasignación",
+    description: "Reasignar activos a otra empresa, sitio o usuario",
+    icon: <UserCheck className="h-5 w-5" />,
+    color: "text-blue-700",
+    bgColor: "border-blue-500 bg-blue-50",
+  },
+  {
+    value: "RESGUARDO",
+    label: "Resguardo",
+    description: "Enviar activos a resguardo (estado: En Stock)",
+    icon: <Shield className="h-5 w-5" />,
+    color: "text-amber-700",
+    bgColor: "border-amber-500 bg-amber-50",
+  },
+  {
+    value: "REPARACION",
+    label: "Reparación",
+    description: "Enviar activos a reparación (estado: En Reparacion)",
+    icon: <Wrench className="h-5 w-5" />,
+    color: "text-orange-700",
+    bgColor: "border-orange-500 bg-orange-50",
+  },
+  {
+    value: "BAJA",
+    label: "Baja",
+    description: "Dar de baja los activos (estado: Inactivo)",
+    icon: <XCircle className="h-5 w-5" />,
+    color: "text-red-700",
+    bgColor: "border-red-500 bg-red-50",
+  },
+];
 
 export const BulkMovementModal = ({
   assets,
@@ -64,7 +105,7 @@ export const BulkMovementModal = ({
   const userName = session?.user?.name || "";
 
   // Form state
-  const [movementType, setMovementType] = useState<"ASIGNACION" | "RESGUARDO" | "">("");
+  const [movementType, setMovementType] = useState<MovementType | "">("");
   const [companyID, setCompanyID] = useState<number>(0);
   const [siteID, setSiteID] = useState<number>(0);
   const [selectedUser, setSelectedUser] = useState<UserSearchResult | null>(null);
@@ -91,6 +132,8 @@ export const BulkMovementModal = ({
 
   // Selected assets info
   const selectedAssets = assets.filter((a) => selectedAssetIDs.includes(a.assetID));
+
+  const isReasignacion = movementType === "REASIGNACION";
 
   // Load catalogs
   useEffect(() => {
@@ -133,7 +176,7 @@ export const BulkMovementModal = ({
     setUserSearchResults([]);
   }, [siteID]);
 
-  // User search with debounce — filters by siteID when selected
+  // User search with debounce
   const searchUsers = useCallback(async (query: string, currentSiteID?: number) => {
     if (!query.trim() && !currentSiteID) {
       setUserSearchResults([]);
@@ -167,9 +210,10 @@ export const BulkMovementModal = ({
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
     if (!movementType) newErrors.movementType = "El tipo de movimiento es requerido";
-    if (!companyID) newErrors.companyID = "La empresa es requerida";
-    if (!siteID) newErrors.siteID = "El sitio es requerido";
-    if (!fromDate) newErrors.fromDate = "La fecha es requerida";
+    if (isReasignacion) {
+      if (!companyID) newErrors.companyID = "La empresa es requerida";
+      if (!siteID) newErrors.siteID = "El sitio es requerido";
+    }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -185,12 +229,12 @@ export const BulkMovementModal = ({
       setIsLoading(true);
       await api.movement.createBulk({
         assetIDs: selectedAssetIDs,
-        movementType: movementType as "ASIGNACION" | "RESGUARDO",
-        companyID,
-        siteID,
+        movementType: movementType as MovementType,
+        companyID: companyID || undefined,
+        siteID: siteID || undefined,
         userID: selectedUser?.userID,
-        fromDate,
-        toDate: toDate || undefined,
+        fromDate: isReasignacion ? fromDate : undefined,
+        toDate: isReasignacion && toDate ? toDate : undefined,
         description: description || undefined,
         responsible: responsible || undefined,
       });
@@ -283,11 +327,11 @@ export const BulkMovementModal = ({
             </div>
           </div>
 
-          {/* Movement type */}
+          {/* Movement type - 4 options */}
           <div>
             <Label className="text-sm font-medium">Tipo de Movimiento *</Label>
             <div className="grid grid-cols-2 gap-2 mt-1">
-              {BULK_MOVEMENT_TYPES.map((type) => (
+              {MOVEMENT_TYPE_CONFIG.map((type) => (
                 <button
                   key={type.value}
                   type="button"
@@ -297,203 +341,203 @@ export const BulkMovementModal = ({
                   }}
                   className={`p-3 rounded-lg border-2 text-left transition-all ${
                     movementType === type.value
-                      ? "border-blue-500 bg-blue-50"
+                      ? type.bgColor
                       : "border-gray-200 hover:border-gray-300"
                   }`}
                   disabled={isLoading}
                 >
-                  <p className={`text-sm font-medium ${movementType === type.value ? "text-blue-700" : "text-gray-700"}`}>
-                    {type.label}
-                  </p>
-                  <p className="text-xs text-gray-500 mt-0.5">{type.description}</p>
+                  <div className="flex items-center gap-2">
+                    <span className={movementType === type.value ? type.color : "text-gray-400"}>
+                      {type.icon}
+                    </span>
+                    <p className={`text-sm font-medium ${movementType === type.value ? type.color : "text-gray-700"}`}>
+                      {type.label}
+                    </p>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5 ml-7">{type.description}</p>
                 </button>
               ))}
             </div>
             {errors.movementType && <p className="text-red-500 text-xs mt-1">{errors.movementType}</p>}
           </div>
 
-          {/* Company and Site */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-sm font-medium flex items-center gap-1">
-                <Building2 className="h-3.5 w-3.5" />
-                Empresa *
-              </Label>
-              <Select
-                value={companyID ? companyID.toString() : "none"}
-                onValueChange={(value) => {
-                  setCompanyID(value === "none" ? 0 : Number(value));
-                  if (errors.companyID) setErrors((prev) => ({ ...prev, companyID: "" }));
-                }}
-                disabled={isLoading}
-              >
-                <SelectTrigger className={errors.companyID ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Seleccionar empresa" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Seleccionar empresa</SelectItem>
-                  {companies.map((c) => (
-                    <SelectItem key={c.companyID} value={c.companyID.toString()}>
-                      {c.description}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.companyID && <p className="text-red-500 text-xs mt-1">{errors.companyID}</p>}
-            </div>
+          {/* Company and Site (only for REASIGNACION) */}
+          {isReasignacion && (
+            <>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <Building2 className="h-3.5 w-3.5" />
+                    Empresa *
+                  </Label>
+                  <Select
+                    value={companyID ? companyID.toString() : "none"}
+                    onValueChange={(value) => {
+                      setCompanyID(value === "none" ? 0 : Number(value));
+                      if (errors.companyID) setErrors((prev) => ({ ...prev, companyID: "" }));
+                    }}
+                    disabled={isLoading}
+                  >
+                    <SelectTrigger className={errors.companyID ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Seleccionar empresa" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar empresa</SelectItem>
+                      {companies.map((c) => (
+                        <SelectItem key={c.companyID} value={c.companyID.toString()}>
+                          {c.description}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.companyID && <p className="text-red-500 text-xs mt-1">{errors.companyID}</p>}
+                </div>
 
-            <div>
-              <Label className="text-sm font-medium flex items-center gap-1">
-                <MapPin className="h-3.5 w-3.5" />
-                Site *
-              </Label>
-              <Select
-                value={siteID ? siteID.toString() : "none"}
-                onValueChange={(value) => {
-                  setSiteID(value === "none" ? 0 : Number(value));
-                  if (errors.siteID) setErrors((prev) => ({ ...prev, siteID: "" }));
-                }}
-                disabled={isLoading || !companyID}
-              >
-                <SelectTrigger className={errors.siteID ? "border-red-500" : ""}>
-                  <SelectValue placeholder="Seleccionar sitio" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">Seleccionar sitio</SelectItem>
-                  {filteredSites.map((s) => (
-                    <SelectItem key={s.siteID} value={s.siteID.toString()}>
-                      {s.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
-            </div>
-          </div>
-
-          {/* User assignment (collapsible) */}
-          <div className="border rounded-lg">
-            <button
-              type="button"
-              onClick={() => setUserSearchOpen(!userSearchOpen)}
-              className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
-            >
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <User className="h-4 w-4" />
-                Asignar Usuario
-                {selectedUser && (
-                  <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
-                    {selectedUser.name}
-                  </span>
-                )}
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <MapPin className="h-3.5 w-3.5" />
+                    Site *
+                  </Label>
+                  <Select
+                    value={siteID ? siteID.toString() : "none"}
+                    onValueChange={(value) => {
+                      setSiteID(value === "none" ? 0 : Number(value));
+                      if (errors.siteID) setErrors((prev) => ({ ...prev, siteID: "" }));
+                    }}
+                    disabled={isLoading || !companyID}
+                  >
+                    <SelectTrigger className={errors.siteID ? "border-red-500" : ""}>
+                      <SelectValue placeholder="Seleccionar sitio" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar sitio</SelectItem>
+                      {filteredSites.map((s) => (
+                        <SelectItem key={s.siteID} value={s.siteID.toString()}>
+                          {s.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
+                </div>
               </div>
-              {userSearchOpen ? (
-                <ChevronUp className="h-4 w-4 text-gray-400" />
-              ) : (
-                <ChevronDown className="h-4 w-4 text-gray-400" />
-              )}
-            </button>
 
-            {userSearchOpen && (
-              <div className="px-3 pb-3 space-y-2">
-                {/* Selected user display */}
-                {selectedUser && (
-                  <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
-                    <div>
-                      <p className="text-sm font-medium text-gray-900">{selectedUser.name}</p>
-                      <p className="text-xs text-gray-500">{selectedUser.email} - {selectedUser.departmentName}</p>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      className="h-6 w-6"
-                      onClick={() => {
-                        setSelectedUser(null);
-                        setUserSearchQuery("");
-                        setUserSearchResults([]);
-                      }}
-                    >
-                      <X className="h-3 w-3" />
-                    </Button>
+              {/* User assignment (collapsible) */}
+              <div className="border rounded-lg">
+                <button
+                  type="button"
+                  onClick={() => setUserSearchOpen(!userSearchOpen)}
+                  className="w-full flex items-center justify-between p-3 hover:bg-gray-50 transition-colors"
+                >
+                  <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <User className="h-4 w-4" />
+                    Asignar Usuario
+                    {selectedUser && (
+                      <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
+                        {selectedUser.name}
+                      </span>
+                    )}
                   </div>
-                )}
+                  {userSearchOpen ? (
+                    <ChevronUp className="h-4 w-4 text-gray-400" />
+                  ) : (
+                    <ChevronDown className="h-4 w-4 text-gray-400" />
+                  )}
+                </button>
 
-                {/* Search input */}
-                {!selectedUser && (
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                    <Input
-                      value={userSearchQuery}
-                      onChange={(e) => setUserSearchQuery(e.target.value)}
-                      placeholder="Buscar usuario por filtros..."
-                      className="pl-8 h-9 text-sm"
-                      disabled={isLoading}
-                    />
+                {userSearchOpen && (
+                  <div className="px-3 pb-3 space-y-2">
+                    {selectedUser && (
+                      <div className="flex items-center justify-between p-2 bg-green-50 border border-green-200 rounded-lg">
+                        <div>
+                          <p className="text-sm font-medium text-gray-900">{selectedUser.name}</p>
+                          <p className="text-xs text-gray-500">{selectedUser.email} - {selectedUser.departmentName}</p>
+                        </div>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6"
+                          onClick={() => {
+                            setSelectedUser(null);
+                            setUserSearchQuery("");
+                            setUserSearchResults([]);
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    )}
 
-                    {/* Search results */}
-                    {(userSearchResults.length > 0 || isSearchingUsers) && (
-                      <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-40 overflow-y-auto">
-                        {isSearchingUsers ? (
-                          <div className="p-3 text-center text-sm text-gray-500">Buscando...</div>
-                        ) : (
-                          userSearchResults.map((user) => (
-                            <button
-                              key={user.userID}
-                              type="button"
-                              onClick={() => {
-                                setSelectedUser(user);
-                                setUserSearchQuery("");
-                                setUserSearchResults([]);
-                              }}
-                              className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b last:border-b-0"
-                            >
-                              <p className="text-sm font-medium text-gray-900">{user.name}</p>
-                              <p className="text-xs text-gray-500">{user.email} - {user.departmentName}</p>
-                            </button>
-                          ))
+                    {!selectedUser && (
+                      <div className="relative">
+                        <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                        <Input
+                          value={userSearchQuery}
+                          onChange={(e) => setUserSearchQuery(e.target.value)}
+                          placeholder="Buscar usuario por nombre o correo..."
+                          className="pl-8 h-9 text-sm"
+                          disabled={isLoading}
+                        />
+
+                        {(userSearchResults.length > 0 || isSearchingUsers) && (
+                          <div className="absolute z-10 w-full mt-1 bg-white border rounded-lg shadow-lg max-h-40 overflow-y-auto">
+                            {isSearchingUsers ? (
+                              <div className="p-3 text-center text-sm text-gray-500">Buscando...</div>
+                            ) : (
+                              userSearchResults.map((user) => (
+                                <button
+                                  key={user.userID}
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedUser(user);
+                                    setUserSearchQuery("");
+                                    setUserSearchResults([]);
+                                  }}
+                                  className="w-full px-3 py-2 text-left hover:bg-gray-50 border-b last:border-b-0"
+                                >
+                                  <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                                  <p className="text-xs text-gray-500">{user.email} - {user.departmentName}</p>
+                                </button>
+                              ))
+                            )}
+                          </div>
                         )}
                       </div>
                     )}
                   </div>
                 )}
               </div>
-            )}
-          </div>
 
-          {/* Dates */}
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <Label className="text-sm font-medium flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                Fecha inicio *
-              </Label>
-              <Input
-                type="date"
-                value={fromDate}
-                onChange={(e) => {
-                  setFromDate(e.target.value);
-                  if (errors.fromDate) setErrors((prev) => ({ ...prev, fromDate: "" }));
-                }}
-                className={errors.fromDate ? "border-red-500" : ""}
-                disabled={isLoading}
-              />
-              {errors.fromDate && <p className="text-red-500 text-xs mt-1">{errors.fromDate}</p>}
-            </div>
-
-            <div>
-              <Label className="text-sm font-medium flex items-center gap-1">
-                <Calendar className="h-3.5 w-3.5" />
-                Fecha fin
-              </Label>
-              <Input
-                type="date"
-                value={toDate}
-                onChange={(e) => setToDate(e.target.value)}
-                disabled={isLoading}
-              />
-            </div>
-          </div>
+              {/* Dates */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Fecha inicio
+                  </Label>
+                  <Input
+                    type="date"
+                    value={fromDate}
+                    onChange={(e) => setFromDate(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+                <div>
+                  <Label className="text-sm font-medium flex items-center gap-1">
+                    <Calendar className="h-3.5 w-3.5" />
+                    Fecha fin
+                  </Label>
+                  <Input
+                    type="date"
+                    value={toDate}
+                    onChange={(e) => setToDate(e.target.value)}
+                    disabled={isLoading}
+                  />
+                </div>
+              </div>
+            </>
+          )}
 
           {/* Description */}
           <div>
@@ -528,7 +572,7 @@ export const BulkMovementModal = ({
           <Button
             type="submit"
             onClick={handleSubmit}
-            disabled={isLoading}
+            disabled={isLoading || !movementType}
             className="flex-1 bg-blue-600 hover:bg-blue-700"
           >
             {isLoading

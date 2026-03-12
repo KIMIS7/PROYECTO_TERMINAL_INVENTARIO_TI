@@ -143,14 +143,14 @@ export interface AssetDetail {
 }
 
 // Tipos para Movimientos
-export const MOVEMENT_TYPES = ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO'] as const;
+export const MOVEMENT_TYPES = ['REASIGNACION', 'RESGUARDO', 'REPARACION', 'BAJA'] as const;
 export type MovementType = (typeof MOVEMENT_TYPES)[number];
 
 export const MOVEMENT_TYPE_LABELS: Record<MovementType, string> = {
-  ALTA: 'Alta',
-  BAJA: 'Baja',
-  ASIGNACION: 'Asignación',
+  REASIGNACION: 'Reasignación',
   RESGUARDO: 'Resguardo',
+  REPARACION: 'Reparación',
+  BAJA: 'Baja',
 };
 
 export interface Movement {

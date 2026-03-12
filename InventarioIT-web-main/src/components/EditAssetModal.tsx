@@ -158,9 +158,6 @@ export const EditAssetModal = ({
     if (!formData.vendorID) {
       newErrors.vendorID = "El proveedor es requerido";
     }
-    if (!formData.assetState) {
-      newErrors.assetState = "El estado es requerido";
-    }
     if (!formData.companyID) {
       newErrors.companyID = "La empresa es requerida";
     }
@@ -622,25 +619,11 @@ export const EditAssetModal = ({
                   </div>
 
                   <div>
-                    <Label htmlFor="assetState" className="text-sm font-medium">Estado *</Label>
-                    <Select
-                      value={formData.assetState ? formData.assetState.toString() : "none"}
-                      onValueChange={(value) => handleInputChange("assetState", value === "none" ? 0 : Number(value))}
-                      disabled={isLoading}
-                    >
-                      <SelectTrigger className={errors.assetState ? "border-red-500" : ""}>
-                        <SelectValue placeholder="Seleccionar estado" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="none">Seleccionar estado</SelectItem>
-                        {assetStates.map((state) => (
-                          <SelectItem key={state.assetStateID} value={state.assetStateID.toString()}>
-                            {state.name}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    {errors.assetState && <p className="text-red-500 text-xs mt-1">{errors.assetState}</p>}
+                    <Label htmlFor="assetState" className="text-sm font-medium">Estado</Label>
+                    <div className="flex items-center h-10 px-3 rounded-md border bg-gray-100 text-sm text-gray-600">
+                      {assetStates.find(s => s.assetStateID === formData.assetState)?.name || "Sin estado"}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">Se modifica mediante movimientos</p>
                   </div>
                 </div>
               </div>

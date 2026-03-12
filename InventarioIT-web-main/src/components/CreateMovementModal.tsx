@@ -65,7 +65,7 @@ export const CreateMovementModal = ({
     responsible: userName,
   });
 
-  // Company/Site state (for ASIGNACION)
+  // Company/Site state (for REASIGNACION)
   const [companies, setCompanies] = useState<Company[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [filteredSites, setFilteredSites] = useState<Site[]>([]);
@@ -114,9 +114,9 @@ export const CreateMovementModal = ({
     }
   }, [companyID, sites]);
 
-  // Auto-open user section when ASIGNACION is selected
+  // Auto-open user section when REASIGNACION is selected
   useEffect(() => {
-    if (formData.movementType === "ASIGNACION") {
+    if (formData.movementType === "REASIGNACION") {
       setUserSectionOpen(true);
     }
   }, [formData.movementType]);
@@ -176,7 +176,7 @@ export const CreateMovementModal = ({
     };
   }, [userSearchQuery, selectedDepartmentID, siteID, searchUsers]);
 
-  const isAsignacion = formData.movementType === "ASIGNACION";
+  const isAsignacion = formData.movementType === "REASIGNACION";
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
@@ -275,10 +275,10 @@ export const CreateMovementModal = ({
 
   const getMovementTypeDescription = (type: MovementType): string => {
     const descriptions: Record<MovementType, string> = {
-      ALTA: "Registra el activo como activo en el sistema",
-      BAJA: "Marca el activo como inactivo/dado de baja",
-      ASIGNACION: "Asigna el activo a un usuario, empresa y sitio (status: Asignado)",
+      REASIGNACION: "Reasigna el activo a un usuario, empresa y sitio (status: Asignado)",
       RESGUARDO: "Registra un resguardo del activo (status: Stock)",
+      REPARACION: "Envia el activo a reparacion (status: En Reparacion)",
+      BAJA: "Marca el activo como inactivo/dado de baja",
     };
     return descriptions[type];
   };
@@ -391,7 +391,7 @@ export const CreateMovementModal = ({
               )}
             </div>
 
-            {/* Empresa y Site (visible para ASIGNACION) */}
+            {/* Empresa y Site (visible para REASIGNACION) */}
             {isAsignacion && (
               <div className="grid grid-cols-2 gap-3">
                 <div>

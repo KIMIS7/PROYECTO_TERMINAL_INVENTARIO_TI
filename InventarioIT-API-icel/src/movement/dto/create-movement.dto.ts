@@ -1,6 +1,6 @@
 import { IsNotEmpty, IsNumber, IsOptional, IsString, IsIn } from 'class-validator';
 
-export const MOVEMENT_TYPES = ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO'] as const;
+export const MOVEMENT_TYPES = ['REASIGNACION', 'RESGUARDO', 'REPARACION', 'BAJA'] as const;
 export type MovementType = (typeof MOVEMENT_TYPES)[number];
 
 export class CreateMovementDto {
@@ -11,7 +11,7 @@ export class CreateMovementDto {
   @IsNotEmpty({ message: 'El tipo de movimiento es requerido' })
   @IsString()
   @IsIn(MOVEMENT_TYPES, {
-    message: 'El tipo de movimiento debe ser: ALTA, BAJA, ASIGNACION o RESGUARDO',
+    message: 'El tipo de movimiento debe ser: REASIGNACION, RESGUARDO, REPARACION o BAJA',
   })
   movementType: MovementType;
 

@@ -1,18 +1,16 @@
 import { MainLayout } from "@/components/MainLayout";
 import { useEffect, useState, useMemo } from "react";
-import { Asset, Movement, MOVEMENT_TYPES, MOVEMENT_TYPE_LABELS, MovementType } from "@/types";
+import { ProductType, AssetState, Company, Asset } from "@/types";
 import api from "@/lib/api";
-import { CreateMovementModal } from "@/components/CreateMovementModal";
+import { BulkMovementModal } from "@/components/BulkMovementModal";
 import { MovementHistoryTable } from "@/components/MovementHistoryTable";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
+  OmniboxFilter,
+  type FilterChip,
+  type Facet,
+} from "@/components/OmniboxFilter";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Table,
   TableBody,
@@ -24,240 +22,328 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Plus,
-  Search,
   RefreshCw,
-  X,
   ArrowRightLeft,
-  ArrowUpCircle,
-  ArrowDownCircle,
-  UserCheck,
-  Shield,
-  Eye,
+  X,
 } from "lucide-react";
+import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
-const movementTypeConfig: Record<
-  MovementType,
-  { color: string; bgColor: string; icon: React.ReactNode }
-> = {
-  ALTA: {
-    color: "text-green-700",
-    bgColor: "bg-green-100",
-    icon: <ArrowUpCircle className="h-4 w-4" />,
-  },
-  BAJA: {
-    color: "text-red-700",
-    bgColor: "bg-red-100",
-    icon: <ArrowDownCircle className="h-4 w-4" />,
-  },
-  ASIGNACION: {
-    color: "text-blue-700",
-    bgColor: "bg-blue-100",
-    icon: <UserCheck className="h-4 w-4" />,
-  },
-  RESGUARDO: {
-    color: "text-amber-700",
-    bgColor: "bg-amber-100",
-    icon: <Shield className="h-4 w-4" />,
-  },
-};
-
-function formatDate(dateStr: string): string {
-  const date = new Date(dateStr);
-  return date.toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "short",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
+const ASSET_GROUPS = ["Equipo", "Accesorio", "Componente", "Otro"] as const;
 
 export default function Movimientos() {
-  const [assets, setAssets] = useState<Asset[]>([]);
-  const [movements, setMovements] = useState<Movement[]>([]);
-  const [filteredMovements, setFilteredMovements] = useState<Movement[]>([]);
-  const [isLoading, setIsLoading] = useState(false);
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  // Catalogos
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
+  const [assetStates, setAssetStates] = useState<AssetState[]>([]);
+  const [companies, setCompanies] = useState<Company[]>([]);
 
-  // Filtros
+  // Activos
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [filteredAssets, setFilteredAssets] = useState<Asset[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isBulkMovementModalOpen, setIsBulkMovementModalOpen] = useState(false);
+
+  // Filtros y seleccion
+  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
+  const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedType, setSelectedType] = useState<string | null>(null);
+  const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
+  const [isSearchPinned, setIsSearchPinned] = useState(false);
 
   // Paginacion
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize] = useState(10);
 
-  // Detalle de activo
+  // Panel lateral de historial
   const [selectedAssetID, setSelectedAssetID] = useState<number | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
 
+  // Cargar catalogos
   useEffect(() => {
-    loadData();
+    const loadCatalogs = async () => {
+      try {
+        const [productTypesRes, assetStatesRes, companiesRes] =
+          await Promise.all([
+            api.productType.getAll().catch(() => []),
+            api.assetState.getAll().catch(() => []),
+            api.company.getAll().catch(() => []),
+          ]);
+        setProductTypes(productTypesRes);
+        setAssetStates(assetStatesRes);
+        setCompanies(companiesRes);
+      } catch (error) {
+        console.error("Error loading catalogs:", error);
+      }
+    };
+    loadCatalogs();
   }, []);
 
-  const loadData = async () => {
+  // Cargar activos
+  useEffect(() => {
+    loadAssets();
+  }, []);
+
+  const loadAssets = async () => {
     try {
       setIsLoading(true);
-      const [assetsRes, movementsRes] = await Promise.all([
-        api.asset.getAll().catch(() => []),
-        api.movement.getAll().catch(() => []),
-      ]);
-      setAssets(assetsRes as Asset[]);
-      setMovements(movementsRes);
-      setFilteredMovements(movementsRes);
+      const response = await api.asset.getAll().catch(() => []);
+      setAssets(response as Asset[]);
+      setFilteredAssets(response as Asset[]);
     } catch (error) {
-      console.error("Error loading data:", error);
+      console.error("Error fetching assets:", error);
     } finally {
       setIsLoading(false);
     }
   };
 
-  // Filtros
-  useEffect(() => {
-    let result = [...movements];
+  // Usuarios unicos
+  const uniqueUsers = useMemo(() => {
+    const userMap = new Map<number, { userID: number; name: string }>();
+    assets.forEach((asset) => {
+      if (asset.user && asset.user.userID && asset.user.name) {
+        userMap.set(asset.user.userID, {
+          userID: asset.user.userID,
+          name: asset.user.name,
+        });
+      }
+    });
+    return Array.from(userMap.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }, [assets]);
 
-    if (selectedType) {
-      result = result.filter((m) => m.movementType === selectedType);
+  // Tipos filtrados por grupo
+  const filteredProductTypes = useMemo(() => {
+    if (selectedGroup) {
+      return productTypes.filter((pt) => pt.group === selectedGroup);
+    }
+    return productTypes;
+  }, [productTypes, selectedGroup]);
+
+  // Facetas para omnibox
+  const facets: Facet[] = useMemo(
+    () => [
+      {
+        key: "empresa",
+        label: "Empresa",
+        color: "blue",
+        options: companies.map((c) => ({
+          value: String(c.companyID),
+          label: c.description,
+        })),
+      },
+      {
+        key: "usuario",
+        label: "Usuario",
+        color: "emerald",
+        options: uniqueUsers.map((u) => ({
+          value: String(u.userID),
+          label: u.name,
+        })),
+      },
+      {
+        key: "estado",
+        label: "Estado",
+        color: "amber",
+        options: assetStates.map((s) => ({
+          value: String(s.assetStateID),
+          label: s.name,
+        })),
+      },
+      {
+        key: "tipo",
+        label: "Tipo",
+        color: "purple",
+        options: filteredProductTypes.map((pt) => ({
+          value: String(pt.productTypeID),
+          label: pt.name,
+        })),
+      },
+    ],
+    [companies, uniqueUsers, assetStates, filteredProductTypes]
+  );
+
+  // Aplicar filtros
+  useEffect(() => {
+    let result = [...assets];
+
+    if (selectedGroup) {
+      result = result.filter(
+        (asset) => asset.productType?.group === selectedGroup
+      );
+    }
+
+    const chipsByFacet = new Map<string, Set<string>>();
+    filterChips.forEach((chip) => {
+      if (!chipsByFacet.has(chip.facet)) {
+        chipsByFacet.set(chip.facet, new Set());
+      }
+      chipsByFacet.get(chip.facet)!.add(chip.value);
+    });
+
+    if (chipsByFacet.has("empresa")) {
+      const values = chipsByFacet.get("empresa")!;
+      result = result.filter((a) => values.has(String(a.companyID)));
+    }
+    if (chipsByFacet.has("usuario")) {
+      const values = chipsByFacet.get("usuario")!;
+      result = result.filter((a) => values.has(String(a.userID)));
+    }
+    if (chipsByFacet.has("estado")) {
+      const values = chipsByFacet.get("estado")!;
+      result = result.filter((a) => values.has(String(a.assetState)));
+    }
+    if (chipsByFacet.has("tipo")) {
+      const values = chipsByFacet.get("tipo")!;
+      result = result.filter((a) => values.has(String(a.productTypeID)));
     }
 
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
-        (m) =>
-          m.assetName?.toLowerCase().includes(query) ||
-          m.description?.toLowerCase().includes(query) ||
-          m.responsible?.toLowerCase().includes(query) ||
-          m.createdBy?.toLowerCase().includes(query)
+        (asset) =>
+          asset.name.toLowerCase().includes(query) ||
+          asset.assetDetail?.serialNum?.toLowerCase().includes(query) ||
+          asset.assetDetail?.assetTAG?.toLowerCase().includes(query) ||
+          asset.user?.name?.toLowerCase().includes(query) ||
+          asset.depart?.Name?.toLowerCase().includes(query) ||
+          asset.vendor?.name?.toLowerCase().includes(query) ||
+          asset.productType?.name?.toLowerCase().includes(query)
       );
     }
 
-    setFilteredMovements(result);
+    setFilteredAssets(result);
     setCurrentPage(1);
-  }, [movements, selectedType, searchQuery]);
+  }, [assets, selectedGroup, filterChips, searchQuery]);
 
   // Paginacion
-  const paginatedMovements = useMemo(() => {
+  const paginatedAssets = useMemo(() => {
     const start = (currentPage - 1) * pageSize;
-    return filteredMovements.slice(start, start + pageSize);
-  }, [filteredMovements, currentPage, pageSize]);
+    return filteredAssets.slice(start, start + pageSize);
+  }, [filteredAssets, currentPage, pageSize]);
 
-  const totalPages = Math.ceil(filteredMovements.length / pageSize);
+  const totalPages = Math.ceil(filteredAssets.length / pageSize);
   const startItem =
-    filteredMovements.length > 0 ? (currentPage - 1) * pageSize + 1 : 0;
-  const endItem = Math.min(
-    currentPage * pageSize,
-    filteredMovements.length
-  );
+    filteredAssets.length > 0 ? (currentPage - 1) * pageSize + 1 : 0;
+  const endItem = Math.min(currentPage * pageSize, filteredAssets.length);
 
+  // Handlers
   const handleRefresh = () => {
-    loadData();
+    loadAssets();
     setRefreshTrigger((prev) => prev + 1);
     toast.success("Lista actualizada");
   };
 
-  const handleCreateSuccess = () => {
-    loadData();
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedAssets(new Set(paginatedAssets.map((a) => a.assetID)));
+    } else {
+      setSelectedAssets(new Set());
+    }
+  };
+
+  const handleSelectAsset = (assetID: number, checked: boolean) => {
+    const newSelected = new Set(selectedAssets);
+    if (checked) {
+      newSelected.add(assetID);
+    } else {
+      newSelected.delete(assetID);
+    }
+    setSelectedAssets(newSelected);
+  };
+
+  const handleBulkMovement = () => {
+    if (selectedAssets.size === 0) {
+      toast.warning("Selecciona al menos un activo");
+      return;
+    }
+    setIsBulkMovementModalOpen(true);
+  };
+
+  const handleBulkMovementSuccess = () => {
+    loadAssets();
+    setSelectedAssets(new Set());
     setRefreshTrigger((prev) => prev + 1);
   };
+
+  const handleViewHistory = (assetID: number) => {
+    setSelectedAssetID(selectedAssetID === assetID ? null : assetID);
+  };
+
+  const isAllSelected =
+    paginatedAssets.length > 0 &&
+    paginatedAssets.every((a) => selectedAssets.has(a.assetID));
 
   return (
     <MainLayout
       breadcrumb={{
         title: "Movimientos",
-        subtitle: "Control de movimientos de activos TI",
+        subtitle: "Gestión de movimientos de activos TI",
       }}
     >
       {() => (
         <div className="flex flex-col h-full bg-white">
-          {/* Header */}
+          {/* Header - Botones de grupo */}
           <div className="px-4 py-3 border-b">
-            <div className="text-xs text-gray-500 mb-1">
-              Inventario / Movimientos
-            </div>
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <ArrowRightLeft className="h-5 w-5 text-blue-600" />
-                <h1 className="text-xl font-semibold text-gray-900">
-                  Control de Movimientos
-                </h1>
-                <span className="ml-2 px-2 py-0.5 text-xs font-medium bg-gray-100 text-gray-600 rounded-full">
-                  {filteredMovements.length}
-                </span>
-              </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant={selectedGroup === null ? "default" : "outline"}
+                size="sm"
+                onClick={() => setSelectedGroup(null)}
+                className="h-9 text-sm font-medium"
+              >
+                Todos
+              </Button>
+              {ASSET_GROUPS.map((group) => (
+                <Button
+                  key={group}
+                  variant={selectedGroup === group ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => {
+                    setSelectedGroup(
+                      selectedGroup === group ? null : group
+                    );
+                    setFilterChips((prev) =>
+                      prev.filter((c) => c.facet !== "tipo")
+                    );
+                  }}
+                  className="h-9 text-sm font-medium"
+                >
+                  {group}
+                </Button>
+              ))}
             </div>
           </div>
 
           {/* Toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
-            <div className="flex items-center gap-2">
-              {/* Busqueda */}
-              {isSearchOpen ? (
-                <div className="flex items-center">
-                  <Input
-                    placeholder="Buscar por activo, responsable..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 w-64 text-sm"
-                    autoFocus
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      setIsSearchOpen(false);
-                      setSearchQuery("");
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsSearchOpen(true)}
-                >
-                  <Search className="h-4 w-4 text-gray-500" />
-                </Button>
-              )}
+          <div className="flex items-center gap-3 px-4 py-2 border-b bg-gray-50">
+            {/* Omnibox */}
+            <OmniboxFilter
+              facets={facets}
+              chips={filterChips}
+              onChipsChange={setFilterChips}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              pinned={isSearchPinned}
+              onPinnedChange={setIsSearchPinned}
+            />
 
-              <div className="h-6 w-px bg-gray-300 mx-1" />
-
-              {/* Filtro por tipo */}
-              <Select
-                value={selectedType || "all"}
-                onValueChange={(value) =>
-                  setSelectedType(value === "all" ? null : value)
-                }
-              >
-                <SelectTrigger className="h-8 w-44 text-sm">
-                  <SelectValue placeholder="Todos los tipos" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todos los tipos</SelectItem>
-                  {MOVEMENT_TYPES.map((type) => (
-                    <SelectItem key={type} value={type}>
-                      {MOVEMENT_TYPE_LABELS[type]}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="h-6 w-px bg-gray-300 mx-1" />
-
+            {/* Acciones */}
+            <div className="flex items-center gap-1 shrink-0">
               <Button
-                variant="outline"
+                variant="default"
                 size="sm"
-                onClick={() => setIsCreateModalOpen(true)}
-                className="h-8 text-sm font-normal"
+                onClick={handleBulkMovement}
+                disabled={selectedAssets.size === 0}
+                className="h-8 text-sm font-normal bg-blue-600 hover:bg-blue-700"
               >
-                <Plus className="h-4 w-4 mr-1" />
-                Nuevo Movimiento
+                <ArrowRightLeft className="h-4 w-4 mr-1" />
+                Generar Movimiento
+                {selectedAssets.size > 0 && (
+                  <span className="ml-1 px-1.5 py-0.5 text-xs bg-white/20 rounded-full">
+                    {selectedAssets.size}
+                  </span>
+                )}
               </Button>
 
               <Button
@@ -266,15 +352,14 @@ export default function Movimientos() {
                 onClick={handleRefresh}
                 className="h-8 text-sm font-normal"
               >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Actualizar
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
 
             {/* Paginacion */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
-                {startItem} - {endItem} de {filteredMovements.length}
+            <div className="flex items-center gap-1.5 text-sm text-gray-600 shrink-0">
+              <span className="whitespace-nowrap">
+                {startItem}-{endItem} de {filteredAssets.length}
               </span>
               <Button
                 variant="ghost"
@@ -301,7 +386,7 @@ export default function Movimientos() {
 
           {/* Contenido principal */}
           <div className="flex flex-1 overflow-hidden">
-            {/* Tabla de movimientos */}
+            {/* Tabla de activos */}
             <div
               className={`flex-1 overflow-auto ${selectedAssetID ? "border-r" : ""}`}
             >
@@ -310,101 +395,108 @@ export default function Movimientos() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <Table>
+                <Table className="table-fixed w-full">
                   <TableHeader className="bg-gray-50 sticky top-0">
                     <TableRow>
-                      <TableHead className="font-semibold text-gray-700 w-36">
-                        Tipo
+                      <TableHead className="w-5">
+                        <Checkbox
+                          checked={isAllSelected}
+                          onCheckedChange={handleSelectAll}
+                        />
                       </TableHead>
-                      <TableHead className="font-semibold text-gray-700">
-                        Activo
+                      <TableHead className="w-18 font-semibold text-gray-700">
+                        NOMBRE
                       </TableHead>
-                      <TableHead className="font-semibold text-gray-700">
-                        Descripcion
+                      <TableHead className="w-20 font-semibold text-gray-700">
+                        COMPAÑIA
                       </TableHead>
-                      <TableHead className="font-semibold text-gray-700 w-40">
-                        Responsable
+                      <TableHead className="w-20 font-semibold text-gray-700">
+                        SITE
                       </TableHead>
-                      <TableHead className="font-semibold text-gray-700 w-32">
-                        Registrado por
+                      <TableHead className="w-20 font-semibold text-gray-700">
+                        USUARIO
                       </TableHead>
-                      <TableHead className="font-semibold text-gray-700 w-44">
-                        Fecha
+                      <TableHead className="w-18 font-semibold text-gray-700">
+                        TIPO
                       </TableHead>
-                      <TableHead className="font-semibold text-gray-700 w-20">
-                        Detalle
+                      <TableHead className="w-20 font-semibold text-gray-700">
+                        MARCA
+                      </TableHead>
+                      <TableHead className="w-20 font-semibold text-gray-700">
+                        SERIE
+                      </TableHead>
+                      <TableHead className="w-20 font-semibold text-gray-700">
+                        ESTADO
+                      </TableHead>
+                      <TableHead className="w-12 font-semibold text-gray-700">
+                        HIST.
                       </TableHead>
                     </TableRow>
                   </TableHeader>
+
                   <TableBody>
-                    {paginatedMovements.length === 0 ? (
+                    {paginatedAssets.length === 0 ? (
                       <TableRow>
                         <TableCell
-                          colSpan={7}
+                          colSpan={10}
                           className="h-24 text-center text-gray-500"
                         >
-                          No se encontraron movimientos
+                          No se encontraron activos
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedMovements.map((movement) => {
-                        const config =
-                          movementTypeConfig[movement.movementType] ||
-                          movementTypeConfig.ALTA;
-                        return (
-                          <TableRow
-                            key={movement.movementID}
-                            className={`hover:bg-gray-50 ${
-                              selectedAssetID === movement.assetID
-                                ? "bg-blue-50"
-                                : ""
-                            }`}
-                          >
-                            <TableCell>
-                              <span
-                                className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${config.bgColor} ${config.color}`}
-                              >
-                                {config.icon}
-                                {MOVEMENT_TYPE_LABELS[
-                                  movement.movementType
-                                ] || movement.movementType}
-                              </span>
-                            </TableCell>
-                            <TableCell className="font-medium text-gray-900">
-                              {movement.assetName}
-                            </TableCell>
-                            <TableCell className="text-gray-600 text-sm max-w-[250px] truncate">
-                              {movement.description || "-"}
-                            </TableCell>
-                            <TableCell className="text-gray-600 text-sm">
-                              {movement.responsible || "-"}
-                            </TableCell>
-                            <TableCell className="text-gray-600 text-sm">
-                              {movement.createdBy || "-"}
-                            </TableCell>
-                            <TableCell className="text-gray-500 text-xs font-mono">
-                              {formatDate(movement.createdTime)}
-                            </TableCell>
-                            <TableCell>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-7 w-7"
-                                onClick={() =>
-                                  setSelectedAssetID(
-                                    selectedAssetID ===
-                                      movement.assetID
-                                      ? null
-                                      : movement.assetID
-                                  )
-                                }
-                              >
-                                <Eye className="h-4 w-4 text-gray-500" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })
+                      paginatedAssets.map((asset) => (
+                        <TableRow
+                          key={asset.assetID}
+                          className={cn(
+                            "hover:bg-gray-50",
+                            selectedAssets.has(asset.assetID) && "bg-blue-50",
+                            selectedAssetID === asset.assetID && "bg-amber-50"
+                          )}
+                        >
+                          <TableCell>
+                            <Checkbox
+                              checked={selectedAssets.has(asset.assetID)}
+                              onCheckedChange={(checked) =>
+                                handleSelectAsset(asset.assetID, !!checked)
+                              }
+                            />
+                          </TableCell>
+                          <TableCell>
+                            <span className="font-medium text-gray-900 truncate block">
+                              {asset.name}
+                            </span>
+                          </TableCell>
+                          <TableCell>
+                            {asset.company?.description || "-"}
+                          </TableCell>
+                          <TableCell>{asset.site?.name || "-"}</TableCell>
+                          <TableCell>{asset.user?.name || "-"}</TableCell>
+                          <TableCell>
+                            {asset.productType?.name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {asset.assetDetail?.productManuf || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {asset.assetDetail?.serialNum || "-"}
+                          </TableCell>
+                          <TableCell>
+                            {asset.assetStateInfo?.name || "-"}
+                          </TableCell>
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-7 w-7"
+                              title="Ver historial"
+                              onClick={() => handleViewHistory(asset.assetID)}
+                            >
+                              <ArrowRightLeft className="h-4 w-4 text-gray-500" />
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))
                     )}
                   </TableBody>
                 </Table>
@@ -430,18 +522,19 @@ export default function Movimientos() {
                 <MovementHistoryTable
                   assetID={selectedAssetID}
                   refreshTrigger={refreshTrigger}
-                  onMovementUpdated={() => loadData()}
+                  onMovementUpdated={() => loadAssets()}
                 />
               </div>
             )}
           </div>
 
-          {/* Modal de Crear Movimiento */}
-          <CreateMovementModal
+          {/* Modal de Movimiento Masivo */}
+          <BulkMovementModal
             assets={assets}
-            isOpen={isCreateModalOpen}
-            onClose={() => setIsCreateModalOpen(false)}
-            onSuccess={handleCreateSuccess}
+            selectedAssetIDs={Array.from(selectedAssets)}
+            isOpen={isBulkMovementModalOpen}
+            onClose={() => setIsBulkMovementModalOpen(false)}
+            onSuccess={handleBulkMovementSuccess}
           />
         </div>
       )}

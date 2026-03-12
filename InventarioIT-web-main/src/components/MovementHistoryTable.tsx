@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Movement, MOVEMENT_TYPE_LABELS, MovementType } from "@/types";
+import { Movement } from "@/types";
 import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,6 +8,8 @@ import {
   ArrowDownCircle,
   UserCheck,
   Shield,
+  Wrench,
+  XCircle,
   Pencil,
   Check,
   X,
@@ -25,33 +27,60 @@ interface MovementHistoryTableProps {
 }
 
 const movementTypeConfig: Record<
-  MovementType,
-  { color: string; bgColor: string; borderColor: string; icon: React.ReactNode }
+  string,
+  { color: string; bgColor: string; borderColor: string; icon: React.ReactNode; label: string }
 > = {
-  ALTA: {
-    color: "text-green-700",
-    bgColor: "bg-green-50",
-    borderColor: "border-green-200",
-    icon: <ArrowUpCircle className="h-4 w-4" />,
-  },
-  BAJA: {
-    color: "text-red-700",
-    bgColor: "bg-red-50",
-    borderColor: "border-red-200",
-    icon: <ArrowDownCircle className="h-4 w-4" />,
-  },
-  ASIGNACION: {
+  REASIGNACION: {
     color: "text-blue-700",
     bgColor: "bg-blue-50",
     borderColor: "border-blue-200",
     icon: <UserCheck className="h-4 w-4" />,
+    label: "Reasignación",
   },
   RESGUARDO: {
     color: "text-amber-700",
     bgColor: "bg-amber-50",
     borderColor: "border-amber-200",
     icon: <Shield className="h-4 w-4" />,
+    label: "Resguardo",
   },
+  REPARACION: {
+    color: "text-orange-700",
+    bgColor: "bg-orange-50",
+    borderColor: "border-orange-200",
+    icon: <Wrench className="h-4 w-4" />,
+    label: "Reparación",
+  },
+  BAJA: {
+    color: "text-red-700",
+    bgColor: "bg-red-50",
+    borderColor: "border-red-200",
+    icon: <XCircle className="h-4 w-4" />,
+    label: "Baja",
+  },
+  // Legacy types
+  ALTA: {
+    color: "text-green-700",
+    bgColor: "bg-green-50",
+    borderColor: "border-green-200",
+    icon: <ArrowUpCircle className="h-4 w-4" />,
+    label: "Alta",
+  },
+  ASIGNACION: {
+    color: "text-blue-700",
+    bgColor: "bg-blue-50",
+    borderColor: "border-blue-200",
+    icon: <UserCheck className="h-4 w-4" />,
+    label: "Asignación",
+  },
+};
+
+const defaultConfig = {
+  color: "text-gray-700",
+  bgColor: "bg-gray-50",
+  borderColor: "border-gray-200",
+  icon: <ArrowUpCircle className="h-4 w-4" />,
+  label: "Movimiento",
 };
 
 function formatDate(dateStr: string): string {
@@ -147,8 +176,7 @@ export const MovementHistoryTable = ({
     <div className="space-y-3">
       {movements.map((movement) => {
         const config =
-          movementTypeConfig[movement.movementType] ||
-          movementTypeConfig.ALTA;
+          movementTypeConfig[movement.movementType] || defaultConfig;
         const isEditing = editingID === movement.movementID;
 
         return (
@@ -164,8 +192,7 @@ export const MovementHistoryTable = ({
                 className={`inline-flex items-center gap-1.5 text-xs font-semibold ${config.color}`}
               >
                 {config.icon}
-                {MOVEMENT_TYPE_LABELS[movement.movementType] ||
-                  movement.movementType}
+                {config.label || movement.movementType}
               </span>
               <div className="flex items-center gap-1">
                 {isEditing ? (

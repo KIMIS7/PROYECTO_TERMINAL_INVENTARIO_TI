@@ -377,9 +377,9 @@ const api = {
     },
     createBulk: async (data: {
       assetIDs: number[];
-      movementType: 'ASIGNACION' | 'RESGUARDO';
-      companyID: number;
-      siteID: number;
+      movementType: 'REASIGNACION' | 'RESGUARDO' | 'REPARACION' | 'BAJA';
+      companyID?: number;
+      siteID?: number;
       userID?: number;
       fromDate?: string;
       toDate?: string;

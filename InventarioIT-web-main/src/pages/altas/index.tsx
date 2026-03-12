@@ -5,7 +5,6 @@ import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
 import { EditAssetModal } from "@/components/EditAssetModal";
 import { AssetDetailModal } from "@/components/AssetDetailModal";
-import { BulkMovementModal } from "@/components/BulkMovementModal";
 import {
   OmniboxFilter,
   type FilterChip,
@@ -36,7 +35,6 @@ import {
   FileText,
   Pencil,
   RefreshCw,
-  ArrowRightLeft,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
@@ -60,7 +58,6 @@ export default function Altas() {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailAssetID, setDetailAssetID] = useState<number | null>(null);
-  const [isBulkMovementModalOpen, setIsBulkMovementModalOpen] = useState(false);
 
   // Estados para filtros y selección
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -317,21 +314,6 @@ export default function Altas() {
     setIsEditModalOpen(true);
   };
 
-  
-
-  const handleBulkMovement = () => {
-    if (selectedAssets.size === 0) {
-      toast.warning("Selecciona al menos un activo");
-      return;
-    }
-    setIsBulkMovementModalOpen(true);
-  };
-
-  const handleBulkMovementSuccess = () => {
-    loadAssets();
-    setSelectedAssets(new Set());
-  };
-
   const handleExport = () => {
     toast.info("Funcionalidad de exportación en desarrollo");
   };
@@ -426,17 +408,6 @@ export default function Altas() {
                   <DropdownMenuItem onClick={handleImportCSV}>
                     <FileText className="h-4 w-4 mr-2" />
                     Import from CSV
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem
-                    onClick={handleBulkMovement}
-                    disabled={selectedAssets.size === 0}
-                  >
-                    <ArrowRightLeft className="h-4 w-4 mr-2" />
-                    Generar Movimiento
-                    {selectedAssets.size > 0 && (
-                      <span className="ml-1 text-xs text-gray-500">({selectedAssets.size})</span>
-                    )}
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleRefresh}>
@@ -633,14 +604,6 @@ export default function Altas() {
             />
           )}
 
-          {/* Modal de Movimiento Masivo */}
-          <BulkMovementModal
-            assets={assets}
-            selectedAssetIDs={Array.from(selectedAssets)}
-            isOpen={isBulkMovementModalOpen}
-            onClose={() => setIsBulkMovementModalOpen(false)}
-            onSuccess={handleBulkMovementSuccess}
-          />
         </div>
       )}
     </MainLayout>

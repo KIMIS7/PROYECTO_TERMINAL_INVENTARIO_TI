@@ -9,6 +9,12 @@ import { CreateBulkMovementDto } from './dto/create-bulk-movement.dto';
 import { UpdateMovementDto } from './dto/update-movement.dto';
 import { PrismaShopic } from 'src/database/database.service';
 
+// All movement operation types (current + legacy) for queries
+const ALL_MOVEMENT_OPERATIONS = [
+  'ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO',
+  'REASIGNACION', 'REPARACION', 'PRESTAMO',
+];
+
 @Injectable()
 export class MovementService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
@@ -69,7 +75,7 @@ export class MovementService {
         }
 
         // Close previous open AssetOwnershipHistory record and create new one
-        if (movementType === 'ASIGNACION' || movementType === 'RESGUARDO') {
+        if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO') {
           // Close any open record (ToDate = 9999-12-31)
           const openRecords = await tx.assetOwnershipHistory.findMany({
             where: {
@@ -84,8 +90,8 @@ export class MovementService {
             });
           }
 
-          // Create new ownership record for ASIGNACION
-          if (movementType === 'ASIGNACION' && userID) {
+          // Create new ownership record for REASIGNACION
+          if (movementType === 'REASIGNACION' && userID) {
             await tx.assetOwnershipHistory.create({
               data: {
                 AssetID: assetID,
@@ -133,12 +139,16 @@ export class MovementService {
       throw new NotFoundException(`Activos no encontrados: ${missingIDs.join(', ')}`);
     }
 
-    // Validar que la empresa y el sitio existen
-    const company = await this.prismaShopic.company.findUnique({ where: { CompanyID: companyID } });
-    if (!company) throw new NotFoundException('Empresa no encontrada');
+    // Validar empresa y sitio solo si se proporcionan (requeridos para REASIGNACION)
+    if (companyID) {
+      const company = await this.prismaShopic.company.findUnique({ where: { CompanyID: companyID } });
+      if (!company) throw new NotFoundException('Empresa no encontrada');
+    }
 
-    const site = await this.prismaShopic.site.findUnique({ where: { SiteID: siteID } });
-    if (!site) throw new NotFoundException('Sitio no encontrado');
+    if (siteID) {
+      const site = await this.prismaShopic.site.findUnique({ where: { SiteID: siteID } });
+      if (!site) throw new NotFoundException('Sitio no encontrado');
+    }
 
     try {
       const results = await this.prismaShopic.$transaction(async (tx) => {
@@ -148,26 +158,24 @@ export class MovementService {
           // Construir descripción
           const descParts: string[] = [];
           descParts.push(
-            description ||
-              `${movementType === 'ASIGNACION' ? 'Asignación' : 'Resguardo'} del activo "${asset.Name}" → ${company.Description} / ${site.Name}`,
+            description || this.getDefaultDescription(movementType as MovementType, asset.Name),
           );
           if (responsible) descParts.push(`Responsable: ${responsible}`);
           if (userEmail) descParts.push(`Registrado por: ${userEmail}`);
           const fullDescription = descParts.join(' | ');
 
           // Actualizar empresa, sitio y opcionalmente usuario del activo
-          const updateData: Record<string, unknown> = {
-            CompanyID: companyID,
-            SiteID: siteID,
-          };
-          if (userID) {
-            updateData.UserID = userID;
-          }
+          const updateData: Record<string, unknown> = {};
+          if (companyID) updateData.CompanyID = companyID;
+          if (siteID) updateData.SiteID = siteID;
+          if (userID) updateData.UserID = userID;
 
-          await tx.asset.update({
-            where: { AssetID: asset.AssetID },
-            data: updateData,
-          });
+          if (Object.keys(updateData).length > 0) {
+            await tx.asset.update({
+              where: { AssetID: asset.AssetID },
+              data: updateData,
+            });
+          }
 
           // Crear historial del movimiento
           const assetHistory = await tx.assetHistory.create({
@@ -180,29 +188,31 @@ export class MovementService {
           });
 
           // Close previous open AssetOwnershipHistory records
-          const openRecords = await tx.assetOwnershipHistory.findMany({
-            where: {
-              AssetID: asset.AssetID,
-              ToDate: new Date('9999-12-31'),
-            },
-          });
-          for (const record of openRecords) {
-            await tx.assetOwnershipHistory.update({
-              where: { AssetOwnershipHistoryID: record.AssetOwnershipHistoryID },
-              data: { ToDate: new Date(fromDate || new Date()) },
-            });
-          }
-
-          // Create new ownership record if assigning a user
-          if (userID && fromDate) {
-            await tx.assetOwnershipHistory.create({
-              data: {
+          if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO') {
+            const openRecords = await tx.assetOwnershipHistory.findMany({
+              where: {
                 AssetID: asset.AssetID,
-                UserID: userID,
-                FromDate: new Date(fromDate),
-                ToDate: toDate ? new Date(toDate) : new Date('9999-12-31'),
+                ToDate: new Date('9999-12-31'),
               },
             });
+            for (const record of openRecords) {
+              await tx.assetOwnershipHistory.update({
+                where: { AssetOwnershipHistoryID: record.AssetOwnershipHistoryID },
+                data: { ToDate: new Date(fromDate || new Date()) },
+              });
+            }
+
+            // Create new ownership record if assigning a user
+            if (movementType === 'REASIGNACION' && userID && fromDate) {
+              await tx.assetOwnershipHistory.create({
+                data: {
+                  AssetID: asset.AssetID,
+                  UserID: userID,
+                  FromDate: new Date(fromDate),
+                  ToDate: toDate ? new Date(toDate) : new Date('9999-12-31'),
+                },
+              });
+            }
           }
 
           // Cambiar estado si aplica
@@ -292,7 +302,7 @@ export class MovementService {
       const movements = await this.prismaShopic.assetHistory.findMany({
         where: {
           AssetID: assetID,
-          Operation: { in: ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO', 'REASIGNACION', 'PRESTAMO'] },
+          Operation: { in: ALL_MOVEMENT_OPERATIONS },
         },
         orderBy: { CreatedTime: 'desc' },
         include: {
@@ -317,7 +327,7 @@ export class MovementService {
     try {
       const movements = await this.prismaShopic.assetHistory.findMany({
         where: {
-          Operation: { in: ['ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO', 'REASIGNACION', 'PRESTAMO'] },
+          Operation: { in: ALL_MOVEMENT_OPERATIONS },
         },
         orderBy: { CreatedTime: 'desc' },
         include: {
@@ -417,10 +427,10 @@ export class MovementService {
 
   private async resolveNewState(movementType: MovementType): Promise<number | null> {
     const stateMapping: Record<MovementType, string | null> = {
-      ALTA: 'Activo',
-      BAJA: 'Inactivo',
-      ASIGNACION: 'Asignado',
+      REASIGNACION: 'Asignado',
       RESGUARDO: 'Stock',
+      REPARACION: 'En Reparacion',
+      BAJA: 'Inactivo',
     };
 
     const targetStateName = stateMapping[movementType];
@@ -428,7 +438,7 @@ export class MovementService {
       return null;
     }
 
-    const state = await this.prismaShopic.assetState.findFirst({
+    let state = await this.prismaShopic.assetState.findFirst({
       where: {
         Name: {
           contains: targetStateName,
@@ -436,8 +446,13 @@ export class MovementService {
       },
     });
 
+    // If state doesn't exist (e.g., "En Reparacion"), create it
     if (!state) {
-      return null;
+      state = await this.prismaShopic.assetState.create({
+        data: {
+          Name: targetStateName,
+        },
+      });
     }
 
     return state.AssetStateID;
@@ -445,10 +460,10 @@ export class MovementService {
 
   private getDefaultDescription(movementType: MovementType, assetName: string): string {
     const descriptions: Record<MovementType, string> = {
-      ALTA: `Alta del activo "${assetName}"`,
-      BAJA: `Baja del activo "${assetName}"`,
-      ASIGNACION: `Asignación del activo "${assetName}"`,
+      REASIGNACION: `Reasignacion del activo "${assetName}"`,
       RESGUARDO: `Resguardo del activo "${assetName}"`,
+      REPARACION: `Reparacion del activo "${assetName}"`,
+      BAJA: `Baja del activo "${assetName}"`,
     };
     return descriptions[movementType];
   }
