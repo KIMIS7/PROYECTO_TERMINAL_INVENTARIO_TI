@@ -975,6 +975,7 @@ export const CreateAssetModal = ({
 
           {/* Formulario */}
           <form onSubmit={handleSubmit} className="flex-1 overflow-y-auto p-4">
+          
             {/* Informacion Basica */}
             <div className="mb-6">
               <h3 className="text-sm font-semibold text-gray-700 mb-4 pb-2 border-b">
@@ -1398,6 +1399,9 @@ export const CreateAssetModal = ({
                   )}
                 </div>
               )}
+            </div>
+
+              </div>
             </div>
 
             {/* Detalles Tecnicos (Colapsable) */}
