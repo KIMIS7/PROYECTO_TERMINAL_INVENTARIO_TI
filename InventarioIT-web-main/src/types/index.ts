@@ -88,6 +88,7 @@ export interface Asset {
   companyID: number;
   siteID: number;
   userID: number;
+  departID?: number;
   // Relaciones
   vendor?: Vendor;
   productType?: ProductType;
@@ -95,6 +96,7 @@ export interface Asset {
   company?: Company;
   site?: Site;
   assetDetail?: AssetDetail;
+  depart?: { departID: number; Name: string };
   // Usuario asignado
   user?: AssetUser;
 }

@@ -235,7 +235,7 @@ export default function Altas() {
           asset.assetDetail?.serialNum?.toLowerCase().includes(query) ||
           asset.assetDetail?.assetTAG?.toLowerCase().includes(query) ||
           asset.user?.name?.toLowerCase().includes(query) ||
-          asset.user?.department?.toLowerCase().includes(query) ||
+          asset.depart?.Name?.toLowerCase().includes(query) ||
           asset.vendor?.name?.toLowerCase().includes(query) ||
           asset.productType?.name?.toLowerCase().includes(query)
       );
@@ -561,7 +561,7 @@ export default function Altas() {
                           {asset.site?.name || "-"}
                         </TableCell>
                         <TableCell>
-                          {asset.depart?.Name || "Corregir"}
+                          {asset.depart?.Name || "-"}
                         </TableCell>
                         <TableCell>
                           {asset.user?.name || "-"}

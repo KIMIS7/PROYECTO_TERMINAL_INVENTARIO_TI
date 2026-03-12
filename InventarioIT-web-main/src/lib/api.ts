@@ -326,6 +326,7 @@ const api = {
         company?: { companyID: number; description: string };
         site?: { siteID: number; name: string };
         user?: { userID: number; name: string; email: string; department: string; firstName?: string; lastName?: string };
+        depart?: { departID: number; Name: string };
         assetDetail?: { assetDetailID: number; serialNum?: string; assetTAG?: string; model?: string };
       }[]>("/asset");
       return response.data;
