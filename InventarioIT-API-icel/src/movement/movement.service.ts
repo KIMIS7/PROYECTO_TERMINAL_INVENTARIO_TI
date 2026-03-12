@@ -68,6 +68,35 @@ export class MovementService {
           });
         }
 
+        // Close previous open AssetOwnershipHistory record and create new one
+        if (movementType === 'ASIGNACION' || movementType === 'RESGUARDO') {
+          // Close any open record (ToDate = 9999-12-31)
+          const openRecords = await tx.assetOwnershipHistory.findMany({
+            where: {
+              AssetID: assetID,
+              ToDate: new Date('9999-12-31'),
+            },
+          });
+          for (const record of openRecords) {
+            await tx.assetOwnershipHistory.update({
+              where: { AssetOwnershipHistoryID: record.AssetOwnershipHistoryID },
+              data: { ToDate: new Date() },
+            });
+          }
+
+          // Create new ownership record for ASIGNACION
+          if (movementType === 'ASIGNACION' && userID) {
+            await tx.assetOwnershipHistory.create({
+              data: {
+                AssetID: assetID,
+                UserID: userID,
+                FromDate: new Date(),
+                ToDate: new Date('9999-12-31'),
+              },
+            });
+          }
+        }
+
         return assetHistory;
       });
 
@@ -150,7 +179,21 @@ export class MovementService {
             },
           });
 
-          // Crear historial de asignación si se asigna un usuario
+          // Close previous open AssetOwnershipHistory records
+          const openRecords = await tx.assetOwnershipHistory.findMany({
+            where: {
+              AssetID: asset.AssetID,
+              ToDate: new Date('9999-12-31'),
+            },
+          });
+          for (const record of openRecords) {
+            await tx.assetOwnershipHistory.update({
+              where: { AssetOwnershipHistoryID: record.AssetOwnershipHistoryID },
+              data: { ToDate: new Date(fromDate || new Date()) },
+            });
+          }
+
+          // Create new ownership record if assigning a user
           if (userID && fromDate) {
             await tx.assetOwnershipHistory.create({
               data: {
