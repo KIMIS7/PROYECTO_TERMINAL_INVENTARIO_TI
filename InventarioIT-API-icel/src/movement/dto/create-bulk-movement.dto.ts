@@ -37,6 +37,10 @@ export class CreateBulkMovementDto {
   userID?: number;
 
   @IsOptional()
+  @IsNumber()
+  departID?: number;
+
+  @IsOptional()
   @IsString()
   fromDate?: string;
 

@@ -305,11 +305,19 @@ export default function Altas() {
   };
 
   const handleDetailToEdit = (asset: Asset) => {
+    if (asset.assetStateInfo?.name === "Baja") {
+      toast.error("No se puede editar un activo dado de baja");
+      return;
+    }
     setEditingAsset(asset);
     setIsEditModalOpen(true);
   };
 
   const handleDirectEdit = (asset: Asset) => {
+    if (asset.assetStateInfo?.name === "Baja") {
+      toast.error("No se puede editar un activo dado de baja");
+      return;
+    }
     setEditingAsset(asset);
     setIsEditModalOpen(true);
   };
@@ -483,12 +491,15 @@ export default function Altas() {
                       </TableCell>
                     </TableRow>
                   ) : (
-                    paginatedAssets.map((asset) => (
+                    paginatedAssets.map((asset) => {
+                      const isBaja = asset.assetStateInfo?.name === "Baja";
+                      return (
                       <TableRow
                         key={asset.assetID}
                         className={cn(
                           "hover:bg-gray-50",
-                          selectedAssets.has(asset.assetID) && "bg-blue-50"
+                          selectedAssets.has(asset.assetID) && "bg-blue-50",
+                          isBaja && "opacity-60 bg-red-50/50"
                         )}
                       >
                         <TableCell>
@@ -502,14 +513,18 @@ export default function Altas() {
                         <TableCell>
                           <div className="flex items-center gap-1">
                             <button
-                              className="p-1 hover:bg-amber-50 rounded transition-colors"
-                              title="Editar activo"
+                              className={cn(
+                                "p-1 rounded transition-colors",
+                                isBaja ? "cursor-not-allowed opacity-50" : "hover:bg-amber-50"
+                              )}
+                              title={isBaja ? "Activo dado de baja - no se permite editar" : "Editar activo"}
+                              disabled={isBaja}
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleDirectEdit(asset);
+                                if (!isBaja) handleDirectEdit(asset);
                               }}
                             >
-                              <Pencil className="h-4 w-4 text-gray-400 hover:text-amber-600" />
+                              <Pencil className={cn("h-4 w-4", isBaja ? "text-gray-300" : "text-gray-400 hover:text-amber-600")} />
                             </button>
                           </div>
                         </TableCell>
@@ -550,10 +565,13 @@ export default function Altas() {
                           {asset.assetDetail?.serialNum || "-"}
                         </TableCell>
                         <TableCell>
-                          {asset.assetStateInfo?.name || "-"}
+                          <span className={cn(isBaja && "text-red-600 font-semibold")}>
+                            {asset.assetStateInfo?.name || "-"}
+                          </span>
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
