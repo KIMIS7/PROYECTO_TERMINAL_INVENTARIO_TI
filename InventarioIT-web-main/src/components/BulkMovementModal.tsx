@@ -11,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Asset, Company, Site, MovementType } from "@/types";
+import { Asset, Company, Site, Department, MovementType } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import {
@@ -114,6 +114,10 @@ export const BulkMovementModal = ({
   const [description, setDescription] = useState("");
   const [responsible, setResponsible] = useState(userName);
 
+  // Department
+  const [departID, setDepartID] = useState<number>(0);
+  const [departments, setDepartments] = useState<Department[]>([]);
+
   // Catalogs
   const [companies, setCompanies] = useState<Company[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
@@ -195,11 +199,17 @@ export const BulkMovementModal = ({
     if (userName) setResponsible(userName);
   }, [userName]);
 
-  // Clear selected user when site changes
+  // Load departments when site changes + clear selected user
   useEffect(() => {
     setSelectedUser(null);
     setUserSearchQuery("");
     setUserSearchResults([]);
+    setDepartID(0);
+    if (siteID) {
+      api.user.getDepartmentsBySite(siteID).then(setDepartments).catch(() => setDepartments([]));
+    } else {
+      setDepartments([]);
+    }
   }, [siteID]);
 
   // User search with debounce
@@ -259,6 +269,7 @@ export const BulkMovementModal = ({
         companyID: companyID || undefined,
         siteID: siteID || undefined,
         userID: selectedUser?.userID,
+        departID: departID || undefined,
         fromDate: isReasignacion ? fromDate : undefined,
         toDate: isReasignacion && toDate ? toDate : undefined,
         description: description || undefined,
@@ -287,6 +298,8 @@ export const BulkMovementModal = ({
     setMovementType("");
     setCompanyID(0);
     setSiteID(0);
+    setDepartID(0);
+    setDepartments([]);
     setSelectedUser(null);
     setFromDate(new Date().toISOString().split("T")[0]);
     setToDate("");
@@ -446,6 +459,31 @@ export const BulkMovementModal = ({
                   </Select>
                   {errors.siteID && <p className="text-red-500 text-xs mt-1">{errors.siteID}</p>}
                 </div>
+              </div>
+
+              {/* Department */}
+              <div>
+                <Label className="text-sm font-medium flex items-center gap-1">
+                  <Building2 className="h-3.5 w-3.5" />
+                  Departamento
+                </Label>
+                <Select
+                  value={departID ? departID.toString() : "none"}
+                  onValueChange={(value) => setDepartID(value === "none" ? 0 : Number(value))}
+                  disabled={isLoading || !siteID}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Seleccionar departamento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">Seleccionar departamento</SelectItem>
+                    {departments.map((d) => (
+                      <SelectItem key={d.departID} value={d.departID.toString()}>
+                        {d.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* User assignment (collapsible) */}

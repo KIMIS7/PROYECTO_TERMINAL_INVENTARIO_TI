@@ -28,6 +28,10 @@ export class CreateMovementDto {
   siteID?: number;
 
   @IsOptional()
+  @IsNumber()
+  departID?: number;
+
+  @IsOptional()
   @IsString()
   description?: string;
 

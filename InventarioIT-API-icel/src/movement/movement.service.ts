@@ -20,14 +20,20 @@ export class MovementService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
   async create(createMovementDto: CreateMovementDto, userEmail?: string) {
-    const { assetID, movementType, description, responsible, userID, companyID, siteID } = createMovementDto;
+    const { assetID, movementType, description, responsible, userID, companyID, siteID, departID } = createMovementDto;
 
     const asset = await this.prismaShopic.asset.findUnique({
       where: { AssetID: assetID },
+      include: { AssetState_Asset_AssetStateToAssetState: true },
     });
 
     if (!asset) {
       throw new NotFoundException('Activo no encontrado');
+    }
+
+    // Block movements on assets already in Baja state
+    if (asset.AssetState_Asset_AssetStateToAssetState?.Name === 'Baja') {
+      throw new BadRequestException('No se pueden realizar movimientos en activos dados de baja');
     }
 
     try {
@@ -67,10 +73,11 @@ export class MovementService {
           assetUpdateData.SiteID = null;
           assetUpdateData.DepartID = null;
         } else {
-          // Update asset assignment data (user, company, site)
+          // Update asset assignment data (user, company, site, department)
           if (userID) assetUpdateData.UserID = userID;
           if (companyID) assetUpdateData.CompanyID = companyID;
           if (siteID) assetUpdateData.SiteID = siteID;
+          if (departID) assetUpdateData.DepartID = departID;
         }
 
         if (Object.keys(assetUpdateData).length > 0) {
@@ -132,17 +139,25 @@ export class MovementService {
   }
 
   async createBulk(dto: CreateBulkMovementDto, userEmail?: string) {
-    const { assetIDs, movementType, companyID, siteID, userID, fromDate, toDate, description, responsible } = dto;
+    const { assetIDs, movementType, companyID, siteID, userID, departID, fromDate, toDate, description, responsible } = dto;
 
     // Validar que todos los activos existen
     const assets = await this.prismaShopic.asset.findMany({
       where: { AssetID: { in: assetIDs } },
+      include: { AssetState_Asset_AssetStateToAssetState: true },
     });
 
     if (assets.length !== assetIDs.length) {
       const foundIDs = assets.map((a) => a.AssetID);
       const missingIDs = assetIDs.filter((id) => !foundIDs.includes(id));
       throw new NotFoundException(`Activos no encontrados: ${missingIDs.join(', ')}`);
+    }
+
+    // Block movements on assets already in Baja state
+    const bajaAssets = assets.filter(a => a.AssetState_Asset_AssetStateToAssetState?.Name === 'Baja');
+    if (bajaAssets.length > 0) {
+      const bajaNames = bajaAssets.map(a => a.Name).join(', ');
+      throw new BadRequestException(`No se pueden realizar movimientos en activos dados de baja: ${bajaNames}`);
     }
 
     // Validar empresa y sitio solo si se proporcionan (requeridos para REASIGNACION)
@@ -189,6 +204,7 @@ export class MovementService {
             if (companyID) updateData.CompanyID = companyID;
             if (siteID) updateData.SiteID = siteID;
             if (userID) updateData.UserID = userID;
+            if (departID) updateData.DepartID = departID;
           }
 
           if (Object.keys(updateData).length > 0) {

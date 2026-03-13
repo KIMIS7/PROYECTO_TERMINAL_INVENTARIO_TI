@@ -381,6 +381,7 @@ const api = {
       companyID?: number;
       siteID?: number;
       userID?: number;
+      departID?: number;
       fromDate?: string;
       toDate?: string;
       description?: string;

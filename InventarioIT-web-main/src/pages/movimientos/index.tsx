@@ -234,9 +234,11 @@ export default function Movimientos() {
     toast.success("Lista actualizada");
   };
 
+  const isAssetBaja = (asset: Asset) => asset.assetStateInfo?.name === "Baja";
+
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
-      setSelectedAssets(new Set(paginatedAssets.map((a) => a.assetID)));
+      setSelectedAssets(new Set(paginatedAssets.filter((a) => !isAssetBaja(a)).map((a) => a.assetID)));
     } else {
       setSelectedAssets(new Set());
     }
@@ -448,13 +450,16 @@ export default function Movimientos() {
                         </TableCell>
                       </TableRow>
                     ) : (
-                      paginatedAssets.map((asset) => (
+                      paginatedAssets.map((asset) => {
+                        const isBaja = isAssetBaja(asset);
+                        return (
                         <TableRow
                           key={asset.assetID}
                           className={cn(
                             "hover:bg-gray-50",
                             selectedAssets.has(asset.assetID) && "bg-blue-50",
-                            selectedAssetID === asset.assetID && "bg-amber-50"
+                            selectedAssetID === asset.assetID && "bg-amber-50",
+                            isBaja && "opacity-60 bg-red-50/50"
                           )}
                         >
                           <TableCell>
@@ -463,6 +468,8 @@ export default function Movimientos() {
                               onCheckedChange={(checked) =>
                                 handleSelectAsset(asset.assetID, !!checked)
                               }
+                              disabled={isBaja}
+                              title={isBaja ? "Activo dado de baja - no se permiten movimientos" : undefined}
                             />
                           </TableCell>
                           <TableCell>
@@ -488,7 +495,11 @@ export default function Movimientos() {
                             {asset.assetDetail?.serialNum || "-"}
                           </TableCell>
                           <TableCell>
-                            {asset.assetStateInfo?.name || "-"}
+                            <span className={cn(
+                              isBaja && "text-red-600 font-semibold"
+                            )}>
+                              {asset.assetStateInfo?.name || "-"}
+                            </span>
                           </TableCell>
                           <TableCell>
                             <Button
@@ -502,7 +513,8 @@ export default function Movimientos() {
                             </Button>
                           </TableCell>
                         </TableRow>
-                      ))
+                        );
+                      })
                     )}
                   </TableBody>
                 </Table>
