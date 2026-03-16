@@ -81,6 +81,9 @@ export const CreateAssetModal = ({
     // Fechas
     purchaseDate: "",
     warrantyExpiryDate: "",
+    // Documentos
+    factura: "",
+    ticket: "",
   });
 
   const [filteredSites, setFilteredSites] = useState<Site[]>([]);
@@ -400,6 +403,8 @@ export const CreateAssetModal = ({
         productManuf: formData.productManuf || undefined,
         purchaseDate: formData.purchaseDate || undefined,
         warrantyExpiryDate: formData.warrantyExpiryDate || undefined,
+        factura: formData.factura || undefined,
+        ticket: formData.ticket || undefined,
       };
 
       // Agregar campos segun la categoria
@@ -494,6 +499,8 @@ export const CreateAssetModal = ({
       osVersion: "",
       purchaseDate: "",
       warrantyExpiryDate: "",
+      factura: "",
+      ticket: "",
     });
     setErrors({});
     setShowTechnical(true);
@@ -590,6 +597,30 @@ export const CreateAssetModal = ({
                 value={formData.assetTAG}
                 onChange={(e) => handleInputChange("assetTAG", e.target.value)}
                 placeholder="Ej: TAG-001"
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <Label htmlFor="factura" className="text-sm font-medium">
+                Factura
+              </Label>
+              <Input
+                id="factura"
+                value={formData.factura}
+                onChange={(e) => handleInputChange("factura", e.target.value)}
+                placeholder="Ej: FAC-2024-001"
+                disabled={isLoading}
+              />
+            </div>
+            <div>
+              <Label htmlFor="ticket" className="text-sm font-medium">
+                Ticket
+              </Label>
+              <Input
+                id="ticket"
+                value={formData.ticket}
+                onChange={(e) => handleInputChange("ticket", e.target.value)}
+                placeholder="Ej: TKT-2024-001"
                 disabled={isLoading}
               />
             </div>

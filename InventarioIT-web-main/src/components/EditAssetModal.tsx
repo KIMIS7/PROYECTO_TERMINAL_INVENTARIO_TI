@@ -62,6 +62,8 @@ export const EditAssetModal = ({
     osVersion: "",
     purchaseDate: "",
     warrantyExpiryDate: "",
+    factura: "",
+    ticket: "",
   });
 
   const [filteredSites, setFilteredSites] = useState<Site[]>([]);
@@ -113,6 +115,8 @@ export const EditAssetModal = ({
         osVersion: detail.osVersion || "",
         purchaseDate: detail.purchaseDate ? detail.purchaseDate.split("T")[0] : "",
         warrantyExpiryDate: detail.warrantyExpiryDate ? detail.warrantyExpiryDate.split("T")[0] : "",
+        factura: detail.factura || "",
+        ticket: detail.ticket || "",
       });
 
       if (detail.purchaseDate || detail.warrantyExpiryDate) {
@@ -187,6 +191,8 @@ export const EditAssetModal = ({
         productManuf: formData.productManuf || undefined,
         purchaseDate: formData.purchaseDate || undefined,
         warrantyExpiryDate: formData.warrantyExpiryDate || undefined,
+        factura: formData.factura || undefined,
+        ticket: formData.ticket || undefined,
       };
 
       if (productTypeGroup === "Equipo" || productTypeGroup === "Otros") {
@@ -294,6 +300,14 @@ export const EditAssetModal = ({
             <div>
               <Label htmlFor="assetTAG" className="text-sm font-medium">Asset TAG</Label>
               <Input id="assetTAG" value={formData.assetTAG} onChange={(e) => handleInputChange("assetTAG", e.target.value)} placeholder="Ej: TAG-001" disabled={isLoading} />
+            </div>
+            <div>
+              <Label htmlFor="factura" className="text-sm font-medium">Factura</Label>
+              <Input id="factura" value={formData.factura} onChange={(e) => handleInputChange("factura", e.target.value)} placeholder="Ej: FAC-2024-001" disabled={isLoading} />
+            </div>
+            <div>
+              <Label htmlFor="ticket" className="text-sm font-medium">Ticket</Label>
+              <Input id="ticket" value={formData.ticket} onChange={(e) => handleInputChange("ticket", e.target.value)} placeholder="Ej: TKT-2024-001" disabled={isLoading} />
             </div>
           </div>
         </div>

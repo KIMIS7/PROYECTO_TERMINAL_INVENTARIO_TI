@@ -21,6 +21,7 @@ import {
   ShieldCheck,
   MemoryStick,
   AppWindow,
+  FileText,
 } from "lucide-react";
 
 interface AssetDetailModalProps {
@@ -202,6 +203,8 @@ export const AssetDetailModal = ({
   const purchaseDate = getDetail(detail, "purchaseDate", "PurchaseDate");
   const warrantyExpiryDate = getDetail(detail, "warrantyExpiryDate", "WarrantyExpiryDate");
   const barcode = getDetail(detail, "barcode", "Barcode");
+  const factura = getDetail(detail, "factura", "Factura");
+  const ticket = getDetail(detail, "ticket", "Ticket");
 
   const hasTechnicalInfo = serialNum || assetTAG || model || productManuf;
   const hasNetworkInfo = ipAddress || macAddress || domain;
@@ -304,6 +307,20 @@ export const AssetDetailModal = ({
                     <DetailRow label="Numero de Serie" value={serialNum} />
                     <DetailRow label="Asset TAG" value={assetTAG} />
                     {barcode && <DetailRow label="Codigo de Barras" value={barcode} />}
+                  </div>
+                </>
+              )}
+
+              {/* Documentos (Factura y Ticket) */}
+              {(factura || ticket) && (
+                <>
+                  <SectionHeader
+                    icon={<FileText className="h-4 w-4" />}
+                    title="Documentos"
+                  />
+                  <div className="bg-gray-50 rounded-lg px-4 py-1">
+                    <DetailRow label="Factura" value={factura} />
+                    <DetailRow label="Ticket" value={ticket} />
                   </div>
                 </>
               )}

@@ -190,9 +190,6 @@ export const CreateMovementModal = ({
     }
 
     if (isAsignacion) {
-      if (!selectedUser) {
-        newErrors.user = "Debe asignar un usuario para el movimiento de asignación";
-      }
       if (!companyID) {
         newErrors.companyID = "La empresa es requerida para asignación";
       }
@@ -461,10 +458,7 @@ export const CreateMovementModal = ({
               >
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
                   <User className="h-4 w-4" />
-                  Asignar Usuario
-                  {isAsignacion && (
-                    <span className="text-red-500 text-xs">*</span>
-                  )}
+                  Asignar Usuario (Opcional)
                   {selectedUser && (
                     <span className="px-2 py-0.5 rounded-full text-xs bg-green-100 text-green-700">
                       {selectedUser.name}

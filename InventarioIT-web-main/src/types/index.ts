@@ -139,6 +139,8 @@ export interface AssetDetail {
   warrantyExpiry?: string;
   assignedTime?: string;
   barcode?: string;
+  factura?: string;
+  ticket?: string;
   lastUpdateBy: number;
 }
 

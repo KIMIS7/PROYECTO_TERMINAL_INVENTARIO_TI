@@ -128,6 +128,14 @@ export class CreateAssetDetailDto {
   @IsOptional()
   @IsString()
   barcode?: string;
+
+  @IsOptional()
+  @IsString()
+  factura?: string;
+
+  @IsOptional()
+  @IsString()
+  ticket?: string;
 }
 
 export class CreateAssetDto {
