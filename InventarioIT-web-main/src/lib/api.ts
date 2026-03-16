@@ -343,6 +343,50 @@ const api = {
       const response = await apiClient.delete<{ success: boolean; message: string }>(`/asset/${assetID}`);
       return response.data;
     },
+    getRelationships: async (assetID: number) => {
+      const response = await apiClient.get<{
+        asset: {
+          assetID: number;
+          name: string;
+          parentAssetID: number | null;
+          productType: { productTypeID: number; name: string; group: string } | null;
+          model: string | null;
+          serialNum: string | null;
+          user: { userID: number; name: string } | null;
+        };
+        parentAsset: {
+          assetID: number;
+          name: string;
+          productType: { productTypeID: number; name: string; group: string } | null;
+          model: string | null;
+          serialNum: string | null;
+        } | null;
+        childAssets: {
+          assetID: number;
+          name: string;
+          productType: { productTypeID: number; name: string; group: string } | null;
+          model: string | null;
+          serialNum: string | null;
+        }[];
+      }>(`/asset/${assetID}/relationships`);
+      return response.data;
+    },
+    assignChild: async (parentAssetID: number, childAssetID: number) => {
+      const response = await apiClient.patch<{ success: boolean; message: string }>(`/asset/${parentAssetID}/assign`, { childAssetID });
+      return response.data;
+    },
+    unassignChild: async (parentAssetID: number, childAssetID: number) => {
+      const response = await apiClient.patch<{ success: boolean; message: string }>(`/asset/${parentAssetID}/unassign`, { childAssetID });
+      return response.data;
+    },
+    assignParent: async (childAssetID: number, parentAssetID: number) => {
+      const response = await apiClient.patch<{ success: boolean; message: string }>(`/asset/${childAssetID}/assign-parent`, { parentAssetID });
+      return response.data;
+    },
+    unassignParent: async (childAssetID: number) => {
+      const response = await apiClient.patch<{ success: boolean; message: string }>(`/asset/${childAssetID}/unassign-parent`, {});
+      return response.data;
+    },
   },
   // Movimientos de activos
   movement: {

@@ -7,7 +7,7 @@ import { Asset, ProductType, Vendor, AssetState, Company, Site } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 import { ProductGroup } from "./CreateProductTypeModal";
-import { Pencil, ChevronDown, ChevronUp } from "lucide-react";
+import { Pencil, ChevronDown, ChevronUp, Link2 } from "lucide-react";
 
 interface EditAssetModalProps {
   asset: Asset;
@@ -19,6 +19,7 @@ interface EditAssetModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess: () => void;
+  onOpenAssignment?: (assetID: number) => void;
 }
 
 export const EditAssetModal = ({
@@ -31,6 +32,7 @@ export const EditAssetModal = ({
   isOpen,
   onClose,
   onSuccess,
+  onOpenAssignment,
 }: EditAssetModalProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
 
@@ -698,6 +700,18 @@ export const EditAssetModal = ({
               >
                 Cancelar
               </Button>
+              {onOpenAssignment && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => onOpenAssignment(asset.assetID)}
+                  disabled={isLoading}
+                  className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+                >
+                  <Link2 className="h-4 w-4" />
+                  Asignacion
+                </Button>
+              )}
               <Button
                 type="submit"
                 onClick={handleSubmit}

@@ -22,6 +22,7 @@ import {
   MemoryStick,
   AppWindow,
   FileText,
+  Link2,
 } from "lucide-react";
 
 interface AssetDetailModalProps {
@@ -29,6 +30,7 @@ interface AssetDetailModalProps {
   isOpen: boolean;
   onClose: () => void;
   onEdit: (asset: Asset) => void;
+  onOpenAssignment?: (assetID: number) => void;
 }
 
 interface AssetFullData {
@@ -143,6 +145,7 @@ export const AssetDetailModal = ({
   isOpen,
   onClose,
   onEdit,
+  onOpenAssignment,
 }: AssetDetailModalProps) => {
   const [data, setData] = useState<AssetFullData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -483,6 +486,17 @@ export const AssetDetailModal = ({
           >
             Cerrar
           </Button>
+          {onOpenAssignment && (
+            <Button
+              variant="outline"
+              onClick={() => onOpenAssignment(assetID)}
+              disabled={isLoading || !data}
+              className="flex items-center gap-2 border-blue-200 text-blue-600 hover:bg-blue-50"
+            >
+              <Link2 className="h-4 w-4" />
+              Asignacion
+            </Button>
+          )}
           <Button
             onClick={handleEdit}
             disabled={isLoading || !data}
