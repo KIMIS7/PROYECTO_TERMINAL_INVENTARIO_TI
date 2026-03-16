@@ -620,7 +620,7 @@ export const EditAssetModal = ({
 
                   <div>
                     <Label htmlFor="assetState" className="text-sm font-medium">Estado</Label>
-                    <div className="flex items-center h-10 px-3 rounded-md border bg-gray-100 text-sm text-gray-600">
+                    <div className="flex items-center h-10 px-3 rounded-md border w-fit bg-gray-100 text-sm text-gray-600">
                       {assetStates.find(s => s.assetStateID === formData.assetState)?.name || "Sin estado"}
                     </div>
                     <p className="text-xs text-gray-400 mt-1">Se modifica mediante movimientos</p>

@@ -462,12 +462,7 @@ export default function Altas() {
               <Table className = "table-fixed w-full">
                 <TableHeader className="bg-gray-50 sticky top-0">
                   <TableRow>
-                    <TableHead className="w-5">
-                      <Checkbox
-                        checked={isAllSelected}
-                        onCheckedChange={handleSelectAll}
-                      />
-                    </TableHead>
+                    <TableHead className="w-5"></TableHead>
                     <TableHead className="w-5"></TableHead>
                     <TableHead className="w-18 font-semibold text-gray-700">NOMBRE</TableHead>
                     <TableHead className="w-20 font-semibold text-gray-700">COMPAÑIA</TableHead>
@@ -503,12 +498,7 @@ export default function Altas() {
                         )}
                       >
                         <TableCell>
-                          <Checkbox
-                            checked={selectedAssets.has(asset.assetID)}
-                            onCheckedChange={(checked) =>
-                              handleSelectAsset(asset.assetID, !!checked)
-                            }
-                          />
+    
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center gap-1">

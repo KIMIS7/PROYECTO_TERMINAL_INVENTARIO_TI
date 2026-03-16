@@ -1070,7 +1070,7 @@ export const CreateAssetModal = ({
                   <Label htmlFor="assetState" className="text-sm font-medium">
                     Estado
                   </Label>
-                  <div className="flex items-center h-10 px-3 rounded-md border bg-gray-100 text-sm text-gray-600">
+                  <div className="flex items-center h-10 px-3 w-fit rounded-md border bg-gray-100 text-sm text-gray-600">
                     Stock
                   </div>
                   <p className="text-xs text-gray-400 mt-1">Se asigna automaticamente al crear</p>
