@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Role, Department, Site } from "@/types";
+import { Role, Department, Site, Company } from "@/types";
 import api from "@/lib/api";
 import { useNotifications } from "@/hooks/useNotifications";
 
@@ -27,16 +27,36 @@ export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUse
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
-  // Site and department catalogs
+  // Company, Site and department catalogs
+  const [companies, setCompanies] = useState<Company[]>([]);
+  const [selectedCompanyID, setSelectedCompanyID] = useState<number>(0);
   const [sites, setSites] = useState<Site[]>([]);
   const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
+  const [isLoadingSites, setIsLoadingSites] = useState(false);
   const [isLoadingDepts, setIsLoadingDepts] = useState(false);
 
-  // Load sites when modal opens
+  // Load companies when modal opens
   useEffect(() => {
     if (!isOpen) return;
-    api.site.getAll().then(setSites).catch(() => setSites([]));
+    api.company.getAll().then(setCompanies).catch(() => setCompanies([]));
   }, [isOpen]);
+
+  // When company changes, load sites for that company
+  useEffect(() => {
+    if (!selectedCompanyID) {
+      setSites([]);
+      setFormData(prev => ({ ...prev, SiteID: 0, DepartmentID: 0 }));
+      setFilteredDepartments([]);
+      return;
+    }
+    setIsLoadingSites(true);
+    setFormData(prev => ({ ...prev, SiteID: 0, DepartmentID: 0 }));
+    setFilteredDepartments([]);
+    api.site.getByCompany(selectedCompanyID)
+      .then((sites) => setSites(sites))
+      .catch(() => setSites([]))
+      .finally(() => setIsLoadingSites(false));
+  }, [selectedCompanyID]);
 
   // When site changes, load departments for that site
   useEffect(() => {
@@ -157,7 +177,9 @@ export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUse
       SiteID: 0,
       DepartmentID: 0,
     });
+    setSelectedCompanyID(0);
     setErrors({});
+    setSites([]);
     setFilteredDepartments([]);
   };
 
@@ -172,7 +194,7 @@ export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUse
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
+      <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold">Crear Nuevo Usuario</h2>
           <Button
@@ -252,14 +274,41 @@ export const CreateUserModal = ({ roles, isOpen, onClose, onSuccess }: CreateUse
           </div>
 
           <div>
+            <Label htmlFor="create-companyID" className="block text-left mb-2">Company</Label>
+            <Select
+              value={selectedCompanyID ? selectedCompanyID.toString() : "none"}
+              onValueChange={(value) => setSelectedCompanyID(value === "none" ? 0 : Number(value))}
+              disabled={isLoading}
+            >
+              <SelectTrigger className="w-full">
+                <SelectValue placeholder="Seleccionar company" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="none">Seleccionar company</SelectItem>
+                {companies.map((company) => (
+                  <SelectItem key={company.companyID} value={company.companyID.toString()}>
+                    {company.description}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div>
             <Label htmlFor="create-siteID" className="block text-left mb-2">Site</Label>
             <Select
               value={formData.SiteID ? formData.SiteID.toString() : "none"}
               onValueChange={(value) => handleInputChange("SiteID", value === "none" ? 0 : Number(value))}
-              disabled={isLoading}
+              disabled={isLoading || !selectedCompanyID || isLoadingSites}
             >
               <SelectTrigger className={`w-full ${errors.SiteID ? "border-red-500" : ""}`}>
-                <SelectValue placeholder="Seleccionar sitio" />
+                <SelectValue placeholder={
+                  !selectedCompanyID
+                    ? "Primero selecciona una company"
+                    : isLoadingSites
+                    ? "Cargando sitios..."
+                    : "Seleccionar sitio"
+                } />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="none">Seleccionar sitio</SelectItem>
