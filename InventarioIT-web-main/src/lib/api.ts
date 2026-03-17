@@ -523,6 +523,70 @@ const api = {
       return response.data;
     },
   },
+  // Reportes y exportaciones
+  report: {
+    getDeliveryData: async (assetID: number) => {
+      const response = await apiClient.get<{
+        assetID: number;
+        name: string;
+        serialNum: string;
+        model: string;
+        processor: string;
+        ram: string;
+        hddCapacity: string;
+        operatingSystem: string;
+        vendor: string;
+        productType: string;
+        company: string;
+        site: string;
+        department: string;
+        userName: string;
+        userEmail: string;
+        childAssets: { name: string; productType: string; serialNum: string; model: string }[];
+        softwareChecklist: string[];
+      }>(`/report/delivery/${assetID}/data`);
+      return response.data;
+    },
+    downloadDeliveryPdf: async (assetID: number, data: { softwareStatus?: Record<string, string>; notes?: string }) => {
+      const response = await apiClient.post(`/report/delivery/${assetID}/pdf`, data, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadAssetsExcel: async (filters?: { group?: string; companyID?: number; assetState?: number }) => {
+      const params = new URLSearchParams();
+      if (filters?.group) params.append('group', filters.group);
+      if (filters?.companyID) params.append('companyID', filters.companyID.toString());
+      if (filters?.assetState) params.append('assetState', filters.assetState.toString());
+      const response = await apiClient.get(`/report/assets/excel?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadAssetsCsv: async (filters?: { group?: string; companyID?: number; assetState?: number }) => {
+      const params = new URLSearchParams();
+      if (filters?.group) params.append('group', filters.group);
+      if (filters?.companyID) params.append('companyID', filters.companyID.toString());
+      if (filters?.assetState) params.append('assetState', filters.assetState.toString());
+      const response = await apiClient.get(`/report/assets/csv?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadHistoryExcel: async (assetId?: number) => {
+      const params = assetId ? `?assetId=${assetId}` : '';
+      const response = await apiClient.get(`/report/history/excel${params}`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadUserAssetsExcel: async (userId: number) => {
+      const response = await apiClient.get(`/report/user/${userId}/assets/excel`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+  },
 };
 
 export default api;

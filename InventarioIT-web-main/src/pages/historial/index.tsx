@@ -33,6 +33,8 @@ import {
   Pencil,
   Trash2,
   Calendar,
+  FileSpreadsheet,
+  Loader2,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -213,9 +215,34 @@ export default function Historial() {
     return counts;
   }, [records]);
 
+  const [isExportingHistory, setIsExportingHistory] = useState(false);
+
   const handleRefresh = () => {
     loadData();
     toast.success("Historial actualizado");
+  };
+
+  const handleExportHistory = async () => {
+    try {
+      setIsExportingHistory(true);
+      const blob = await api.report.downloadHistoryExcel();
+      const url = window.URL.createObjectURL(
+        new Blob([blob], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `historial_movimientos_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Historial exportado a Excel");
+    } catch (error) {
+      console.error("Error exporting history:", error);
+      toast.error("Error al exportar historial");
+    } finally {
+      setIsExportingHistory(false);
+    }
   };
 
   const clearFilters = () => {
@@ -378,6 +405,20 @@ export default function Historial() {
 
               <div className="h-6 w-px bg-gray-300 mx-1" />
 
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportHistory}
+                disabled={isExportingHistory}
+                className="h-8 text-sm font-normal"
+              >
+                {isExportingHistory ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4 mr-1" />
+                )}
+                Exportar Excel
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
