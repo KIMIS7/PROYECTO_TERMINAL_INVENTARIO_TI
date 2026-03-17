@@ -73,6 +73,8 @@ model AssetDetail {
   Factura              String?   @db.NVarChar(150)
   Ticket               String?   @db.NVarChar(150)
   LastUpdateBy         Int
+  Factura              String?   @db.NVarChar(150)
+  Ticket               String?   @db.NVarChar(150)
   Asset                Asset     @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_AssetDetail_Asset")
   User                 User      @relation(fields: [LastUpdateBy], references: [UserID], onUpdate: NoAction, map: "FK_AssetDetail_User")
 }
