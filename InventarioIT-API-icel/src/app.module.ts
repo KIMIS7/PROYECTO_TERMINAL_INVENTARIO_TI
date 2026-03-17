@@ -16,6 +16,7 @@ import { AssetStateModule } from './asset-state/asset-state.module';
 import { CompanyModule } from './company/company.module';
 import { SiteModule } from './site/site.module';
 import { MovementModule } from './movement/movement.module';
+import { ReportModule } from './report/report.module';
 //import { APP_GUARD } from '@nestjs/core';
 //import { AzureAuthGuard } from './azure-auth/azure-auth.guard';
 
@@ -39,6 +40,7 @@ import { MovementModule } from './movement/movement.module';
     CompanyModule,
     SiteModule,
     MovementModule,
+    ReportModule,
   ],
   controllers: [AppController],
   providers: [],
@@ -66,6 +68,7 @@ export class AppModule implements NestModule {
         '/company',
         '/site',
         '/movement',
+        '/report',
       );
   }
 }
