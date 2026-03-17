@@ -706,13 +706,25 @@ export const CreateAssetModal = ({
                   <Label htmlFor="ram" className="text-sm font-medium">
                     Memoria RAM
                   </Label>
-                  <Input
-                    id="ram"
-                    value={formData.ram}
-                    onChange={(e) => handleInputChange("ram", e.target.value)}
-                    placeholder="Ej: 16 GB"
+                  <Select
+                    value={formData.ram || "none"}
+                    onValueChange={(value) => handleInputChange("ram", value === "none" ? "" : value)}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar capacidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar capacidad</SelectItem>
+                      <SelectItem value="2 GB">2 GB</SelectItem>
+                      <SelectItem value="4 GB">4 GB</SelectItem>
+                      <SelectItem value="8 GB">8 GB</SelectItem>
+                      <SelectItem value="16 GB">16 GB</SelectItem>
+                      <SelectItem value="32 GB">32 GB</SelectItem>
+                      <SelectItem value="64 GB">64 GB</SelectItem>
+                      <SelectItem value="128 GB">128 GB</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -749,13 +761,25 @@ export const CreateAssetModal = ({
                   <Label htmlFor="hddCapacity" className="text-sm font-medium">
                     Capacidad de Disco
                   </Label>
-                  <Input
-                    id="hddCapacity"
-                    value={formData.hddCapacity}
-                    onChange={(e) => handleInputChange("hddCapacity", e.target.value)}
-                    placeholder="Ej: 512 GB"
+                  <Select
+                    value={formData.hddCapacity || "none"}
+                    onValueChange={(value) => handleInputChange("hddCapacity", value === "none" ? "" : value)}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar capacidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar capacidad</SelectItem>
+                      <SelectItem value="128 GB">128 GB</SelectItem>
+                      <SelectItem value="256 GB">256 GB</SelectItem>
+                      <SelectItem value="512 GB">512 GB</SelectItem>
+                      <SelectItem value="1 TB">1 TB</SelectItem>
+                      <SelectItem value="2 TB">2 TB</SelectItem>
+                      <SelectItem value="4 TB">4 TB</SelectItem>
+                      <SelectItem value="8 TB">8 TB</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 
                 <div>
@@ -823,13 +847,25 @@ export const CreateAssetModal = ({
                   <Label htmlFor="ram" className="text-sm font-medium">
                     Memoria RAM
                   </Label>
-                  <Input
-                    id="ram"
-                    value={formData.ram}
-                    onChange={(e) => handleInputChange("ram", e.target.value)}
-                    placeholder="Ej: 16 GB"
+                  <Select
+                    value={formData.ram || "none"}
+                    onValueChange={(value) => handleInputChange("ram", value === "none" ? "" : value)}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar capacidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar capacidad</SelectItem>
+                      <SelectItem value="2 GB">2 GB</SelectItem>
+                      <SelectItem value="4 GB">4 GB</SelectItem>
+                      <SelectItem value="8 GB">8 GB</SelectItem>
+                      <SelectItem value="16 GB">16 GB</SelectItem>
+                      <SelectItem value="32 GB">32 GB</SelectItem>
+                      <SelectItem value="64 GB">64 GB</SelectItem>
+                      <SelectItem value="128 GB">128 GB</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>
@@ -860,13 +896,25 @@ export const CreateAssetModal = ({
                   <Label htmlFor="hddCapacity" className="text-sm font-medium">
                     Capacidad de Disco
                   </Label>
-                  <Input
-                    id="hddCapacity"
-                    value={formData.hddCapacity}
-                    onChange={(e) => handleInputChange("hddCapacity", e.target.value)}
-                    placeholder="Ej: 512 GB"
+                  <Select
+                    value={formData.hddCapacity || "none"}
+                    onValueChange={(value) => handleInputChange("hddCapacity", value === "none" ? "" : value)}
                     disabled={isLoading}
-                  />
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleccionar capacidad" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">Seleccionar capacidad</SelectItem>
+                      <SelectItem value="128 GB">128 GB</SelectItem>
+                      <SelectItem value="256 GB">256 GB</SelectItem>
+                      <SelectItem value="512 GB">512 GB</SelectItem>
+                      <SelectItem value="1 TB">1 TB</SelectItem>
+                      <SelectItem value="2 TB">2 TB</SelectItem>
+                      <SelectItem value="4 TB">4 TB</SelectItem>
+                      <SelectItem value="8 TB">8 TB</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div>

@@ -54,6 +54,26 @@ const FACET_COLORS: Record<string, { chip: string; badge: string }> = {
     chip: "bg-purple-50 text-purple-700 border-purple-200",
     badge: "bg-purple-100 text-purple-700",
   },
+  ram: {
+    chip: "bg-cyan-50 text-cyan-700 border-cyan-200",
+    badge: "bg-cyan-100 text-cyan-700",
+  },
+  disco_cap: {
+    chip: "bg-orange-50 text-orange-700 border-orange-200",
+    badge: "bg-orange-100 text-orange-700",
+  },
+  disco_tipo: {
+    chip: "bg-rose-50 text-rose-700 border-rose-200",
+    badge: "bg-rose-100 text-rose-700",
+  },
+  so: {
+    chip: "bg-indigo-50 text-indigo-700 border-indigo-200",
+    badge: "bg-indigo-100 text-indigo-700",
+  },
+  memoria_tipo: {
+    chip: "bg-teal-50 text-teal-700 border-teal-200",
+    badge: "bg-teal-100 text-teal-700",
+  },
 };
 
 export function OmniboxFilter({

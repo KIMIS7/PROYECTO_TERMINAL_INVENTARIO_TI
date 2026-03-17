@@ -146,6 +146,37 @@ export default function Altas() {
     return productTypes;
   }, [productTypes, selectedGroup]);
 
+  // Extraer valores únicos de componentes desde los activos
+  const uniqueRAM = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.ram) values.add(a.assetDetail.ram); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddCapacity = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddCapacity) values.add(a.assetDetail.hddCapacity); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddModel = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddModel) values.add(a.assetDetail.hddModel); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueOS = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.operatingSystem) values.add(a.assetDetail.operatingSystem); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueMemoryType = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.physicalMemory) values.add(a.assetDetail.physicalMemory); });
+    return Array.from(values).sort();
+  }, [assets]);
+
   // Definir facetas para el omnibox
   const facets: Facet[] = useMemo(
     () => [
@@ -185,8 +216,38 @@ export default function Altas() {
           label: pt.name,
         })),
       },
+      {
+        key: "ram",
+        label: "RAM",
+        color: "cyan",
+        options: uniqueRAM.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "disco_cap",
+        label: "Capacidad Disco",
+        color: "orange",
+        options: uniqueHddCapacity.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "disco_tipo",
+        label: "Tipo Disco",
+        color: "rose",
+        options: uniqueHddModel.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "so",
+        label: "Sistema Operativo",
+        color: "indigo",
+        options: uniqueOS.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "memoria_tipo",
+        label: "Tipo Memoria",
+        color: "teal",
+        options: uniqueMemoryType.map((v) => ({ value: v, label: v })),
+      },
     ],
-    [companies, uniqueUsers, assetStates, filteredProductTypes]
+    [companies, uniqueUsers, assetStates, filteredProductTypes, uniqueRAM, uniqueHddCapacity, uniqueHddModel, uniqueOS, uniqueMemoryType]
   );
 
   // Aplicar filtros cuando cambien
@@ -224,6 +285,26 @@ export default function Altas() {
     if (chipsByFacet.has("tipo")) {
       const values = chipsByFacet.get("tipo")!;
       result = result.filter((a) => values.has(String(a.productTypeID)));
+    }
+    if (chipsByFacet.has("ram")) {
+      const values = chipsByFacet.get("ram")!;
+      result = result.filter((a) => a.assetDetail?.ram && values.has(a.assetDetail.ram));
+    }
+    if (chipsByFacet.has("disco_cap")) {
+      const values = chipsByFacet.get("disco_cap")!;
+      result = result.filter((a) => a.assetDetail?.hddCapacity && values.has(a.assetDetail.hddCapacity));
+    }
+    if (chipsByFacet.has("disco_tipo")) {
+      const values = chipsByFacet.get("disco_tipo")!;
+      result = result.filter((a) => a.assetDetail?.hddModel && values.has(a.assetDetail.hddModel));
+    }
+    if (chipsByFacet.has("so")) {
+      const values = chipsByFacet.get("so")!;
+      result = result.filter((a) => a.assetDetail?.operatingSystem && values.has(a.assetDetail.operatingSystem));
+    }
+    if (chipsByFacet.has("memoria_tipo")) {
+      const values = chipsByFacet.get("memoria_tipo")!;
+      result = result.filter((a) => a.assetDetail?.physicalMemory && values.has(a.assetDetail.physicalMemory));
     }
 
     // Filtrar por búsqueda de texto libre
