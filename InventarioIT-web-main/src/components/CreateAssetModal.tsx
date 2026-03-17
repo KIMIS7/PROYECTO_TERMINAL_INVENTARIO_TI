@@ -380,6 +380,14 @@ export const CreateAssetModal = ({
       newErrors.vendorID = "El proveedor es requerido";
     }
 
+    if (!formData.factura.trim()) {
+      newErrors.factura = "La factura es requerida";
+    }
+
+    if (!formData.ticket.trim()) {
+      newErrors.ticket = "El ticket es requerido";
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -1086,28 +1094,34 @@ export const CreateAssetModal = ({
 
                 <div>
                   <Label htmlFor="factura" className="text-sm font-medium">
-                  Factura
+                  Factura <span className="text-red-500">*</span>
                   </Label>
-                  <Input className="flex items-center h-10 px-3 w-fit rounded-md border bg-gray-100 text-sm text-gray-600"
+                  <Input className={`flex items-center h-10 px-3 w-fit rounded-md border text-sm text-gray-600 ${errors.factura ? "border-red-500 bg-white" : "bg-gray-100"}`}
                     id="factura"
                     value={formData.factura}
                     onChange={(e) => handleInputChange("factura", e.target.value)}
                     placeholder="Ej: FAC-2024-001"
                     disabled={isLoading}
                   />
+                  {errors.factura && (
+                    <p className="text-red-500 text-xs mt-1">{errors.factura}</p>
+                  )}
                 </div>
 
                 <div>
                   <Label htmlFor="ticket" className="text-sm font-medium">
-                    Ticket
+                    Ticket <span className="text-red-500">*</span>
                   </Label>
-                  <Input className="flex items-center h-10 px-3 w-fit rounded-md border bg-gray-100 text-sm text-gray-600"
+                  <Input className={`flex items-center h-10 px-3 w-fit rounded-md border text-sm text-gray-600 ${errors.ticket ? "border-red-500 bg-white" : "bg-gray-100"}`}
                     id="ticket"
                     value={formData.ticket}
                     onChange={(e) => handleInputChange("ticket", e.target.value)}
                     placeholder="Ej: TKT-2024-001"
                     disabled={isLoading}
                   />
+                  {errors.ticket && (
+                    <p className="text-red-500 text-xs mt-1">{errors.ticket}</p>
+                  )}
                 </div>
               </div>
             </div>

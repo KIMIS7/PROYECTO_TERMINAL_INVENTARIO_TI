@@ -129,13 +129,13 @@ export class CreateAssetDetailDto {
   @IsString()
   barcode?: string;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'La factura es requerida' })
   @IsString()
-  factura?: string;
+  factura: string;
 
-  @IsOptional()
+  @IsNotEmpty({ message: 'El ticket es requerido' })
   @IsString()
-  ticket?: string;
+  ticket: string;
 }
 
 export class CreateAssetDto {
