@@ -600,30 +600,7 @@ export const CreateAssetModal = ({
                 disabled={isLoading}
               />
             </div>
-            <div>
-              <Label htmlFor="factura" className="text-sm font-medium">
-                Factura
-              </Label>
-              <Input
-                id="factura"
-                value={formData.factura}
-                onChange={(e) => handleInputChange("factura", e.target.value)}
-                placeholder="Ej: FAC-2024-001"
-                disabled={isLoading}
-              />
-            </div>
-            <div>
-              <Label htmlFor="ticket" className="text-sm font-medium">
-                Ticket
-              </Label>
-              <Input
-                id="ticket"
-                value={formData.ticket}
-                onChange={(e) => handleInputChange("ticket", e.target.value)}
-                placeholder="Ej: TKT-2024-001"
-                disabled={isLoading}
-              />
-            </div>
+            
           </div>
         </div>
 
@@ -1107,6 +1084,31 @@ export const CreateAssetModal = ({
                   <p className="text-xs text-gray-400 mt-1">Se asigna automaticamente al crear</p>
                 </div>
 
+                <div>
+                  <Label htmlFor="factura" className="text-sm font-medium">
+                  Factura
+                  </Label>
+                  <Input className="flex items-center h-10 px-3 w-fit rounded-md border bg-gray-100 text-sm text-gray-600"
+                    id="factura"
+                    value={formData.factura}
+                    onChange={(e) => handleInputChange("factura", e.target.value)}
+                    placeholder="Ej: FAC-2024-001"
+                    disabled={isLoading}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="ticket" className="text-sm font-medium">
+                    Ticket
+                  </Label>
+                  <Input className="flex items-center h-10 px-3 w-fit rounded-md border bg-gray-100 text-sm text-gray-600"
+                    id="ticket"
+                    value={formData.ticket}
+                    onChange={(e) => handleInputChange("ticket", e.target.value)}
+                    placeholder="Ej: TKT-2024-001"
+                    disabled={isLoading}
+                  />
+                </div>
               </div>
             </div>
 

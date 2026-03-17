@@ -281,6 +281,18 @@ export class AssetService {
             orderBy: { CreatedTime: 'desc' },
             take: 10,
           },
+          Asset: {
+            include: {
+              ProductType: true,
+              AssetDetail: true,
+            },
+          },
+          other_Asset: {
+            include: {
+              ProductType: true,
+              AssetDetail: true,
+            },
+          },
         },
       });
 
@@ -297,6 +309,7 @@ export class AssetService {
         companyID: asset.CompanyID,
         siteID: asset.SiteID,
         userID: asset.UserID,
+        parentAssetID: asset.ParentAssetID,
         vendor: asset.Vendor
           ? { vendorID: asset.Vendor.VendorID, name: asset.Vendor.Name }
           : null,
@@ -380,6 +393,34 @@ export class AssetService {
               lastUpdateBy: asset.AssetDetail[0].LastUpdateBy,
             }
           : null,
+        parentAsset: asset.Asset
+          ? {
+              assetID: asset.Asset.AssetID,
+              name: asset.Asset.Name,
+              productType: asset.Asset.ProductType
+                ? {
+                    productTypeID: asset.Asset.ProductType.ProductTypeID,
+                    name: asset.Asset.ProductType.Name,
+                    group: asset.Asset.ProductType.Group,
+                  }
+                : null,
+              model: asset.Asset.AssetDetail?.[0]?.Model || null,
+              serialNum: asset.Asset.AssetDetail?.[0]?.SerialNum || null,
+            }
+          : null,
+        childAssets: asset.other_Asset.map((child) => ({
+          assetID: child.AssetID,
+          name: child.Name,
+          productType: child.ProductType
+            ? {
+                productTypeID: child.ProductType.ProductTypeID,
+                name: child.ProductType.Name,
+                group: child.ProductType.Group,
+              }
+            : null,
+          model: child.AssetDetail?.[0]?.Model || null,
+          serialNum: child.AssetDetail?.[0]?.SerialNum || null,
+        })),
         history: asset.AssetHistory.map((h) => ({
           assetHistoryID: h.AssetHistoryID,
           assetID: h.AssetID,
@@ -557,5 +598,251 @@ export class AssetService {
         message: error.message || 'Error al eliminar el activo',
       });
     }
+  }
+
+  // --- Asset Assignment (Parent/Child relationships) ---
+
+  private mapChildAsset(child: any) {
+    return {
+      assetID: child.AssetID,
+      name: child.Name,
+      productType: child.ProductType
+        ? {
+            productTypeID: child.ProductType.ProductTypeID,
+            name: child.ProductType.Name,
+            group: child.ProductType.Group,
+          }
+        : null,
+      model: child.AssetDetail?.[0]?.Model || null,
+      serialNum: child.AssetDetail?.[0]?.SerialNum || null,
+    };
+  }
+
+  async getChildren(parentAssetID: number) {
+    const asset = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: parentAssetID },
+    });
+    if (!asset) {
+      throw new NotFoundException('Activo no encontrado');
+    }
+
+    const children = await this.prismaShopic.asset.findMany({
+      where: { ParentAssetID: parentAssetID },
+      include: {
+        ProductType: true,
+        AssetDetail: true,
+      },
+    });
+
+    return children.map(this.mapChildAsset);
+  }
+
+  async getParent(childAssetID: number) {
+    const asset = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: childAssetID },
+      include: {
+        Asset: {
+          include: {
+            ProductType: true,
+            AssetDetail: true,
+          },
+        },
+      },
+    });
+    if (!asset) {
+      throw new NotFoundException('Activo no encontrado');
+    }
+    if (!asset.Asset) {
+      return null;
+    }
+    return this.mapChildAsset(asset.Asset);
+  }
+
+  async getRelationships(assetID: number) {
+    const asset = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: assetID },
+      include: {
+        ProductType: true,
+        AssetDetail: true,
+        Asset: {
+          include: {
+            ProductType: true,
+            AssetDetail: true,
+          },
+        },
+        other_Asset: {
+          include: {
+            ProductType: true,
+            AssetDetail: true,
+          },
+        },
+        User: true,
+      },
+    });
+    if (!asset) {
+      throw new NotFoundException('Activo no encontrado');
+    }
+
+    return {
+      asset: {
+        assetID: asset.AssetID,
+        name: asset.Name,
+        parentAssetID: asset.ParentAssetID,
+        productType: asset.ProductType
+          ? {
+              productTypeID: asset.ProductType.ProductTypeID,
+              name: asset.ProductType.Name,
+              group: asset.ProductType.Group,
+            }
+          : null,
+        model: asset.AssetDetail?.[0]?.Model || null,
+        serialNum: asset.AssetDetail?.[0]?.SerialNum || null,
+        user: asset.User
+          ? { userID: asset.User.UserID, name: asset.User.Name }
+          : null,
+      },
+      parentAsset: asset.Asset ? this.mapChildAsset(asset.Asset) : null,
+      childAssets: asset.other_Asset.map(this.mapChildAsset),
+    };
+  }
+
+  async assignChild(parentAssetID: number, childAssetID: number, userEmail?: string) {
+    const parent = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: parentAssetID },
+      include: { ProductType: true },
+    });
+    if (!parent) {
+      throw new NotFoundException('Activo padre no encontrado');
+    }
+
+    const child = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: childAssetID },
+      include: { ProductType: true },
+    });
+    if (!child) {
+      throw new NotFoundException('Activo hijo no encontrado');
+    }
+
+    // Validate: parent must be "Equipo"
+    if (parent.ProductType?.Group !== 'Equipo') {
+      throw new InternalServerErrorException({
+        message: 'Solo los activos de tipo "Equipo" pueden tener componentes o accesorios asignados',
+      });
+    }
+
+    // Validate: child must be "Componente" or "Accesorio"
+    if (child.ProductType?.Group !== 'Componente' && child.ProductType?.Group !== 'Accesorio') {
+      throw new InternalServerErrorException({
+        message: 'Solo se pueden asignar activos de tipo "Componente" o "Accesorio" a un equipo',
+      });
+    }
+
+    // Validate: child is not already assigned to another parent
+    if (child.ParentAssetID && child.ParentAssetID !== parentAssetID) {
+      throw new InternalServerErrorException({
+        message: `Este activo ya esta asignado a otro equipo (ID: ${child.ParentAssetID})`,
+      });
+    }
+
+    // Prevent self-assignment
+    if (parentAssetID === childAssetID) {
+      throw new InternalServerErrorException({
+        message: 'Un activo no puede asignarse a si mismo',
+      });
+    }
+
+    await this.prismaShopic.asset.update({
+      where: { AssetID: childAssetID },
+      data: { ParentAssetID: parentAssetID },
+    });
+
+    await this.prismaShopic.assetHistory.create({
+      data: {
+        AssetID: parentAssetID,
+        Operation: 'ASSIGN',
+        Description: `"${child.Name}" asignado como ${child.ProductType?.Group || 'hijo'}${userEmail ? ` | Por: ${userEmail}` : ''}`,
+        CreatedTime: new Date(),
+      },
+    });
+
+    await this.prismaShopic.assetHistory.create({
+      data: {
+        AssetID: childAssetID,
+        Operation: 'ASSIGN',
+        Description: `Asignado al equipo "${parent.Name}"${userEmail ? ` | Por: ${userEmail}` : ''}`,
+        CreatedTime: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      message: `"${child.Name}" asignado exitosamente a "${parent.Name}"`,
+    };
+  }
+
+  async unassignChild(parentAssetID: number, childAssetID: number, userEmail?: string) {
+    const child = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: childAssetID },
+    });
+    if (!child) {
+      throw new NotFoundException('Activo hijo no encontrado');
+    }
+    if (child.ParentAssetID !== parentAssetID) {
+      throw new InternalServerErrorException({
+        message: 'Este activo no esta asignado a este equipo',
+      });
+    }
+
+    const parent = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: parentAssetID },
+    });
+
+    await this.prismaShopic.asset.update({
+      where: { AssetID: childAssetID },
+      data: { ParentAssetID: null },
+    });
+
+    await this.prismaShopic.assetHistory.create({
+      data: {
+        AssetID: parentAssetID,
+        Operation: 'UNASSIGN',
+        Description: `"${child.Name}" removido del equipo${userEmail ? ` | Por: ${userEmail}` : ''}`,
+        CreatedTime: new Date(),
+      },
+    });
+
+    await this.prismaShopic.assetHistory.create({
+      data: {
+        AssetID: childAssetID,
+        Operation: 'UNASSIGN',
+        Description: `Removido del equipo "${parent?.Name || parentAssetID}"${userEmail ? ` | Por: ${userEmail}` : ''}`,
+        CreatedTime: new Date(),
+      },
+    });
+
+    return {
+      success: true,
+      message: `"${child.Name}" removido exitosamente`,
+    };
+  }
+
+  async assignParent(childAssetID: number, parentAssetID: number, userEmail?: string) {
+    return this.assignChild(parentAssetID, childAssetID, userEmail);
+  }
+
+  async unassignParent(childAssetID: number, userEmail?: string) {
+    const child = await this.prismaShopic.asset.findUnique({
+      where: { AssetID: childAssetID },
+    });
+    if (!child) {
+      throw new NotFoundException('Activo no encontrado');
+    }
+    if (!child.ParentAssetID) {
+      throw new InternalServerErrorException({
+        message: 'Este activo no tiene un equipo asignado',
+      });
+    }
+
+    return this.unassignChild(child.ParentAssetID, childAssetID, userEmail);
   }
 }

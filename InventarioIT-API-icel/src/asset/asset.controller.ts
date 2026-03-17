@@ -50,4 +50,56 @@ export class AssetController {
   ) {
     return this.assetService.remove(+id, userEmail);
   }
+
+  // --- Asset Assignment (Parent/Child relationships) ---
+
+  @Get(':id/children')
+  getChildren(@Param('id') id: string) {
+    return this.assetService.getChildren(+id);
+  }
+
+  @Get(':id/parent')
+  getParent(@Param('id') id: string) {
+    return this.assetService.getParent(+id);
+  }
+
+  @Get(':id/relationships')
+  getRelationships(@Param('id') id: string) {
+    return this.assetService.getRelationships(+id);
+  }
+
+  @Patch(':id/assign')
+  assignChild(
+    @Param('id') id: string,
+    @Body() body: { childAssetID: number },
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.assetService.assignChild(+id, body.childAssetID, userEmail);
+  }
+
+  @Patch(':id/unassign')
+  unassignChild(
+    @Param('id') id: string,
+    @Body() body: { childAssetID: number },
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.assetService.unassignChild(+id, body.childAssetID, userEmail);
+  }
+
+  @Patch(':id/assign-parent')
+  assignParent(
+    @Param('id') id: string,
+    @Body() body: { parentAssetID: number },
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.assetService.assignParent(+id, body.parentAssetID, userEmail);
+  }
+
+  @Patch(':id/unassign-parent')
+  unassignParent(
+    @Param('id') id: string,
+    @Headers('user-email') userEmail: string,
+  ) {
+    return this.assetService.unassignParent(+id, userEmail);
+  }
 }

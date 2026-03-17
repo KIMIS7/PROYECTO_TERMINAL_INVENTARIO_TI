@@ -5,6 +5,7 @@ import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
 import { EditAssetModal } from "@/components/EditAssetModal";
 import { AssetDetailModal } from "@/components/AssetDetailModal";
+import { AssetAssignmentModal } from "@/components/AssetAssignmentModal";
 import {
   OmniboxFilter,
   type FilterChip,
@@ -58,6 +59,8 @@ export default function Altas() {
   const [editingAsset, setEditingAsset] = useState<Asset | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [detailAssetID, setDetailAssetID] = useState<number | null>(null);
+  const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
+  const [assignmentAssetID, setAssignmentAssetID] = useState<number | null>(null);
 
   // Estados para filtros y selección
   const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
@@ -320,6 +323,11 @@ export default function Altas() {
     }
     setEditingAsset(asset);
     setIsEditModalOpen(true);
+  };
+
+  const handleOpenAssignment = (assetID: number) => {
+    setAssignmentAssetID(assetID);
+    setIsAssignmentModalOpen(true);
   };
 
   const handleExport = () => {
@@ -596,6 +604,7 @@ export default function Altas() {
                 setEditingAsset(null);
               }}
               onSuccess={handleEditSuccess}
+              onOpenAssignment={handleOpenAssignment}
             />
           )}
 
@@ -609,6 +618,20 @@ export default function Altas() {
                 setDetailAssetID(null);
               }}
               onEdit={handleDetailToEdit}
+              onOpenAssignment={handleOpenAssignment}
+            />
+          )}
+
+          {/* Modal de Asignacion */}
+          {assignmentAssetID && (
+            <AssetAssignmentModal
+              assetID={assignmentAssetID}
+              isOpen={isAssignmentModalOpen}
+              onClose={() => {
+                setIsAssignmentModalOpen(false);
+                setAssignmentAssetID(null);
+              }}
+              onSuccess={loadAssets}
             />
           )}
 
