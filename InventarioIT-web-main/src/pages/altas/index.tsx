@@ -63,7 +63,6 @@ export default function Altas() {
   const [assignmentAssetID, setAssignmentAssetID] = useState<number | null>(null);
 
   // Estados para filtros y selección
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
@@ -138,13 +137,8 @@ export default function Altas() {
     );
   }, [assets]);
 
-  // Tipos de activo filtrados por grupo seleccionado
-  const filteredProductTypes = useMemo(() => {
-    if (selectedGroup) {
-      return productTypes.filter((pt) => pt.group === selectedGroup);
-    }
-    return productTypes;
-  }, [productTypes, selectedGroup]);
+  // Tipos de activo disponibles para filtros
+  const filteredProductTypes = productTypes;
 
   // Extraer valores únicos de componentes desde los activos
   const uniqueRAM = useMemo(() => {
@@ -177,9 +171,47 @@ export default function Altas() {
     return Array.from(values).sort();
   }, [assets]);
 
+  const uniqueSites = useMemo(() => {
+    const siteMap = new Map<number, { siteID: number; name: string }>();
+    assets.forEach((a) => {
+      if (a.site && a.site.siteID && a.site.name) {
+        siteMap.set(a.site.siteID, { siteID: a.site.siteID, name: a.site.name });
+      }
+    });
+    return Array.from(siteMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [assets]);
+
+  const uniqueDepartments = useMemo(() => {
+    const deptMap = new Map<number, { departID: number; name: string }>();
+    assets.forEach((a) => {
+      if (a.depart && a.depart.departID && a.depart.Name) {
+        deptMap.set(a.depart.departID, { departID: a.depart.departID, name: a.depart.Name });
+      }
+    });
+    return Array.from(deptMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [assets]);
+
+  const uniqueProcessors = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.processor) values.add(a.assetDetail.processor); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueManufacturers = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.productManuf) values.add(a.assetDetail.productManuf); });
+    return Array.from(values).sort();
+  }, [assets]);
+
   // Definir facetas para el omnibox
   const facets: Facet[] = useMemo(
     () => [
+      {
+        key: "grupo",
+        label: "Grupo",
+        color: "slate",
+        options: ASSET_GROUPS.map((g) => ({ value: g, label: g })),
+      },
       {
         key: "empresa",
         label: "Empresa",
@@ -187,6 +219,24 @@ export default function Altas() {
         options: companies.map((c) => ({
           value: String(c.companyID),
           label: c.description,
+        })),
+      },
+      {
+        key: "site",
+        label: "Site",
+        color: "sky",
+        options: uniqueSites.map((s) => ({
+          value: String(s.siteID),
+          label: s.name,
+        })),
+      },
+      {
+        key: "departamento",
+        label: "Departamento",
+        color: "lime",
+        options: uniqueDepartments.map((d) => ({
+          value: String(d.departID),
+          label: d.name,
         })),
       },
       {
@@ -214,6 +264,15 @@ export default function Altas() {
         options: filteredProductTypes.map((pt) => ({
           value: String(pt.productTypeID),
           label: pt.name,
+        })),
+      },
+      {
+        key: "proveedor",
+        label: "Proveedor",
+        color: "violet",
+        options: vendors.map((v) => ({
+          value: String(v.vendorID),
+          label: v.name,
         })),
       },
       {
@@ -246,20 +305,25 @@ export default function Altas() {
         color: "teal",
         options: uniqueMemoryType.map((v) => ({ value: v, label: v })),
       },
+      {
+        key: "procesador",
+        label: "Procesador",
+        color: "fuchsia",
+        options: uniqueProcessors.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "fabricante",
+        label: "Fabricante",
+        color: "stone",
+        options: uniqueManufacturers.map((v) => ({ value: v, label: v })),
+      },
     ],
-    [companies, uniqueUsers, assetStates, filteredProductTypes, uniqueRAM, uniqueHddCapacity, uniqueHddModel, uniqueOS, uniqueMemoryType]
+    [companies, uniqueUsers, assetStates, filteredProductTypes, vendors, uniqueRAM, uniqueHddCapacity, uniqueHddModel, uniqueOS, uniqueMemoryType, uniqueSites, uniqueDepartments, uniqueProcessors, uniqueManufacturers]
   );
 
   // Aplicar filtros cuando cambien
   useEffect(() => {
     let result = [...assets];
-
-    // Filtrar por grupo (botones)
-    if (selectedGroup) {
-      result = result.filter(
-        (asset) => asset.productType?.group === selectedGroup
-      );
-    }
 
     // Aplicar chips: AND entre facetas distintas, OR dentro de la misma faceta
     const chipsByFacet = new Map<string, Set<string>>();
@@ -270,9 +334,21 @@ export default function Altas() {
       chipsByFacet.get(chip.facet)!.add(chip.value);
     });
 
+    if (chipsByFacet.has("grupo")) {
+      const values = chipsByFacet.get("grupo")!;
+      result = result.filter((a) => a.productType?.group && values.has(a.productType.group));
+    }
     if (chipsByFacet.has("empresa")) {
       const values = chipsByFacet.get("empresa")!;
       result = result.filter((a) => values.has(String(a.companyID)));
+    }
+    if (chipsByFacet.has("site")) {
+      const values = chipsByFacet.get("site")!;
+      result = result.filter((a) => values.has(String(a.siteID)));
+    }
+    if (chipsByFacet.has("departamento")) {
+      const values = chipsByFacet.get("departamento")!;
+      result = result.filter((a) => a.depart && values.has(String(a.depart.departID)));
     }
     if (chipsByFacet.has("usuario")) {
       const values = chipsByFacet.get("usuario")!;
@@ -285,6 +361,10 @@ export default function Altas() {
     if (chipsByFacet.has("tipo")) {
       const values = chipsByFacet.get("tipo")!;
       result = result.filter((a) => values.has(String(a.productTypeID)));
+    }
+    if (chipsByFacet.has("proveedor")) {
+      const values = chipsByFacet.get("proveedor")!;
+      result = result.filter((a) => values.has(String(a.vendorID)));
     }
     if (chipsByFacet.has("ram")) {
       const values = chipsByFacet.get("ram")!;
@@ -306,6 +386,14 @@ export default function Altas() {
       const values = chipsByFacet.get("memoria_tipo")!;
       result = result.filter((a) => a.assetDetail?.physicalMemory && values.has(a.assetDetail.physicalMemory));
     }
+    if (chipsByFacet.has("procesador")) {
+      const values = chipsByFacet.get("procesador")!;
+      result = result.filter((a) => a.assetDetail?.processor && values.has(a.assetDetail.processor));
+    }
+    if (chipsByFacet.has("fabricante")) {
+      const values = chipsByFacet.get("fabricante")!;
+      result = result.filter((a) => a.assetDetail?.productManuf && values.has(a.assetDetail.productManuf));
+    }
 
     // Filtrar por búsqueda de texto libre
     if (searchQuery.trim()) {
@@ -324,7 +412,7 @@ export default function Altas() {
 
     setFilteredAssets(result);
     setCurrentPage(1);
-  }, [assets, selectedGroup, filterChips, searchQuery]);
+  }, [assets, filterChips, searchQuery]);
 
   // Paginación
   const paginatedAssets = useMemo(() => {
@@ -428,39 +516,6 @@ export default function Altas() {
     >
       {() => (
         <div className="flex flex-col h-full bg-white">
-          {/* Header - Botones de grupo */}
-          <div className="px-4 py-3 border-b">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={selectedGroup === null ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedGroup(null)}
-                className="h-9 text-sm font-medium"
-              >
-                Todos
-              </Button>
-              {ASSET_GROUPS.map((group) => (
-                <Button
-                  key={group}
-                  variant={selectedGroup === group ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setSelectedGroup(
-                      selectedGroup === group ? null : group
-                    );
-                    // Limpiar chips de tipo de activo al cambiar grupo
-                    setFilterChips((prev) =>
-                      prev.filter((c) => c.facet !== "tipo")
-                    );
-                  }}
-                  className="h-9 text-sm font-medium"
-                >
-                  {group}
-                </Button>
-              ))}
-            </div>
-          </div>
-
           {/* Toolbar con omnibox y acciones */}
           <div className="flex items-center gap-3 px-4 py-2 border-b bg-gray-50">
             {/* Omnibox */}

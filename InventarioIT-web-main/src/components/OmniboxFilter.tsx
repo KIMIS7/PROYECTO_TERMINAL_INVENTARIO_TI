@@ -74,6 +74,30 @@ const FACET_COLORS: Record<string, { chip: string; badge: string }> = {
     chip: "bg-teal-50 text-teal-700 border-teal-200",
     badge: "bg-teal-100 text-teal-700",
   },
+  grupo: {
+    chip: "bg-slate-50 text-slate-700 border-slate-200",
+    badge: "bg-slate-100 text-slate-700",
+  },
+  site: {
+    chip: "bg-sky-50 text-sky-700 border-sky-200",
+    badge: "bg-sky-100 text-sky-700",
+  },
+  departamento: {
+    chip: "bg-lime-50 text-lime-700 border-lime-200",
+    badge: "bg-lime-100 text-lime-700",
+  },
+  proveedor: {
+    chip: "bg-violet-50 text-violet-700 border-violet-200",
+    badge: "bg-violet-100 text-violet-700",
+  },
+  procesador: {
+    chip: "bg-fuchsia-50 text-fuchsia-700 border-fuchsia-200",
+    badge: "bg-fuchsia-100 text-fuchsia-700",
+  },
+  fabricante: {
+    chip: "bg-stone-50 text-stone-700 border-stone-200",
+    badge: "bg-stone-100 text-stone-700",
+  },
 };
 
 export function OmniboxFilter({
