@@ -385,6 +385,7 @@ export class ReportService {
       {
         stack: [
           { text: '________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
+          ...(options?.deliveryPerson ? [{ text: options.deliveryPerson, bold: true, alignment: 'center' as const, fontSize: 9 }] : []),
           { text: 'DEPARTAMENTO DE', bold: true, alignment: 'center', fontSize: 9 },
           { text: 'SISTEMAS', bold: true, alignment: 'center', fontSize: 9 },
         ],
