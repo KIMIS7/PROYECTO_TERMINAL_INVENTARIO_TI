@@ -203,123 +203,165 @@ export default function Altas() {
     return Array.from(values).sort();
   }, [assets]);
 
+  // Determinar grupo activo desde los chips de filtro
+  const activeGroup = useMemo(() => {
+    const grupoChips = filterChips.filter((c) => c.facet === "grupo");
+    if (grupoChips.length === 1) return grupoChips[0].value;
+    return null; // Ninguno o múltiples grupos → mostrar todos los filtros
+  }, [filterChips]);
+
+  // Filtros técnicos por grupo:
+  // Equipo: RAM, Tipo Memoria, Capacidad Disco, Tipo Disco, SO, Procesador
+  // Componente: RAM, Tipo Memoria, Capacidad Disco, Tipo Disco
+  // Otro: SO, RAM, Capacidad Disco
+  // Accesorio: ninguno técnico
+  // null (todos): todos disponibles
+  const TECH_FILTERS_BY_GROUP: Record<string, string[]> = {
+    Equipo: ["ram", "memoria_tipo", "disco_cap", "disco_tipo", "so", "procesador"],
+    Componente: ["ram", "memoria_tipo", "disco_cap", "disco_tipo"],
+    Otro: ["so", "ram", "disco_cap"],
+    Accesorio: [],
+  };
+
+  const allowedTechFilters = useMemo(() => {
+    if (!activeGroup) return null; // null = mostrar todos
+    return new Set(TECH_FILTERS_BY_GROUP[activeGroup] || []);
+  }, [activeGroup]);
+
+  const TECH_FILTER_KEYS = new Set(["ram", "memoria_tipo", "disco_cap", "disco_tipo", "so", "procesador"]);
+
   // Definir facetas para el omnibox
   const facets: Facet[] = useMemo(
-    () => [
-      {
-        key: "grupo",
-        label: "Grupo",
-        color: "slate",
-        options: ASSET_GROUPS.map((g) => ({ value: g, label: g })),
-      },
-      {
-        key: "empresa",
-        label: "Empresa",
-        color: "blue",
-        options: companies.map((c) => ({
-          value: String(c.companyID),
-          label: c.description,
-        })),
-      },
-      {
-        key: "site",
-        label: "Site",
-        color: "sky",
-        options: uniqueSites.map((s) => ({
-          value: String(s.siteID),
-          label: s.name,
-        })),
-      },
-      {
-        key: "departamento",
-        label: "Departamento",
-        color: "lime",
-        options: uniqueDepartments.map((d) => ({
-          value: String(d.departID),
-          label: d.name,
-        })),
-      },
-      {
-        key: "usuario",
-        label: "Usuario",
-        color: "emerald",
-        options: uniqueUsers.map((u) => ({
-          value: String(u.userID),
-          label: u.name,
-        })),
-      },
-      {
-        key: "estado",
-        label: "Estado",
-        color: "amber",
-        options: assetStates.map((s) => ({
-          value: String(s.assetStateID),
-          label: s.name,
-        })),
-      },
-      {
-        key: "tipo",
-        label: "Tipo",
-        color: "purple",
-        options: filteredProductTypes.map((pt) => ({
-          value: String(pt.productTypeID),
-          label: pt.name,
-        })),
-      },
-      {
-        key: "proveedor",
-        label: "Proveedor",
-        color: "violet",
-        options: vendors.map((v) => ({
-          value: String(v.vendorID),
-          label: v.name,
-        })),
-      },
-      {
-        key: "ram",
-        label: "RAM",
-        color: "cyan",
-        options: uniqueRAM.map((v) => ({ value: v, label: v })),
-      },
-      {
-        key: "disco_cap",
-        label: "Capacidad Disco",
-        color: "orange",
-        options: uniqueHddCapacity.map((v) => ({ value: v, label: v })),
-      },
-      {
-        key: "disco_tipo",
-        label: "Tipo Disco",
-        color: "rose",
-        options: uniqueHddModel.map((v) => ({ value: v, label: v })),
-      },
-      {
-        key: "so",
-        label: "Sistema Operativo",
-        color: "indigo",
-        options: uniqueOS.map((v) => ({ value: v, label: v })),
-      },
-      {
-        key: "memoria_tipo",
-        label: "Tipo Memoria",
-        color: "teal",
-        options: uniqueMemoryType.map((v) => ({ value: v, label: v })),
-      },
-      {
-        key: "procesador",
-        label: "Procesador",
-        color: "fuchsia",
-        options: uniqueProcessors.map((v) => ({ value: v, label: v })),
-      },
-      {
-        key: "fabricante",
-        label: "Fabricante",
-        color: "stone",
-        options: uniqueManufacturers.map((v) => ({ value: v, label: v })),
-      },
-    ],
-    [companies, uniqueUsers, assetStates, filteredProductTypes, vendors, uniqueRAM, uniqueHddCapacity, uniqueHddModel, uniqueOS, uniqueMemoryType, uniqueSites, uniqueDepartments, uniqueProcessors, uniqueManufacturers]
+    () => {
+      const allFacets: Facet[] = [
+        {
+          key: "grupo",
+          label: "Grupo",
+          color: "slate",
+          options: ASSET_GROUPS.map((g) => ({ value: g, label: g })),
+        },
+        {
+          key: "empresa",
+          label: "Empresa",
+          color: "blue",
+          options: companies.map((c) => ({
+            value: String(c.companyID),
+            label: c.description,
+          })),
+        },
+        {
+          key: "site",
+          label: "Site",
+          color: "sky",
+          options: uniqueSites.map((s) => ({
+            value: String(s.siteID),
+            label: s.name,
+          })),
+        },
+        {
+          key: "departamento",
+          label: "Departamento",
+          color: "lime",
+          options: uniqueDepartments.map((d) => ({
+            value: String(d.departID),
+            label: d.name,
+          })),
+        },
+        {
+          key: "usuario",
+          label: "Usuario",
+          color: "emerald",
+          options: uniqueUsers.map((u) => ({
+            value: String(u.userID),
+            label: u.name,
+          })),
+        },
+        {
+          key: "estado",
+          label: "Estado",
+          color: "amber",
+          options: assetStates.map((s) => ({
+            value: String(s.assetStateID),
+            label: s.name,
+          })),
+        },
+        {
+          key: "tipo",
+          label: "Tipo",
+          color: "purple",
+          options: filteredProductTypes.map((pt) => ({
+            value: String(pt.productTypeID),
+            label: pt.name,
+          })),
+        },
+        {
+          key: "proveedor",
+          label: "Proveedor",
+          color: "violet",
+          options: vendors.map((v) => ({
+            value: String(v.vendorID),
+            label: v.name,
+          })),
+        },
+        {
+          key: "fabricante",
+          label: "Fabricante",
+          color: "stone",
+          options: uniqueManufacturers.map((v) => ({ value: v, label: v })),
+        },
+        // Filtros técnicos (condicionales según grupo)
+        {
+          key: "ram",
+          label: "RAM",
+          color: "cyan",
+          options: uniqueRAM.map((v) => ({ value: v, label: v })),
+        },
+        {
+          key: "memoria_tipo",
+          label: "Tipo Memoria",
+          color: "teal",
+          options: uniqueMemoryType.map((v) => ({ value: v, label: v })),
+        },
+        {
+          key: "disco_cap",
+          label: "Capacidad Disco",
+          color: "orange",
+          options: uniqueHddCapacity.map((v) => ({ value: v, label: v })),
+        },
+        {
+          key: "disco_tipo",
+          label: "Tipo Disco",
+          color: "rose",
+          options: uniqueHddModel.map((v) => ({ value: v, label: v })),
+        },
+        {
+          key: "so",
+          label: "Sistema Operativo",
+          color: "indigo",
+          options: uniqueOS.map((v) => ({ value: v, label: v })),
+        },
+        {
+          key: "procesador",
+          label: "Procesador",
+          color: "fuchsia",
+          options: uniqueProcessors.map((v) => ({ value: v, label: v })),
+        },
+      ];
+
+      // Filtrar facetas técnicas según el grupo seleccionado
+      if (allowedTechFilters === null) return allFacets; // Sin grupo → todos
+      return allFacets.filter((f) => !TECH_FILTER_KEYS.has(f.key) || allowedTechFilters.has(f.key));
+    },
+    [companies, uniqueUsers, assetStates, filteredProductTypes, vendors, uniqueRAM, uniqueHddCapacity, uniqueHddModel, uniqueOS, uniqueMemoryType, uniqueSites, uniqueDepartments, uniqueProcessors, uniqueManufacturers, allowedTechFilters]
   );
+
+  // Limpiar chips de filtros técnicos que ya no son visibles al cambiar de grupo
+  useEffect(() => {
+    if (allowedTechFilters === null) return; // Sin grupo → no limpiar
+    setFilterChips((prev) =>
+      prev.filter((c) => !TECH_FILTER_KEYS.has(c.facet) || allowedTechFilters.has(c.facet))
+    );
+  }, [allowedTechFilters]);
 
   // Aplicar filtros cuando cambien
   useEffect(() => {
