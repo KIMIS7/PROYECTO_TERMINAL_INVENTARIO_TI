@@ -251,19 +251,10 @@ export class ReportService {
       ];
     });
 
-    // Empty rows after software checklist to fill space
-    const emptyDescRows: any[][] = [];
-    for (let i = 0; i < 4; i++) {
-      emptyDescRows.push([
-        { text: '', margin: CELL_PAD },
-        { text: '', margin: CELL_PAD },
-      ]);
-    }
-
     // Build the outer table that wraps everything (like the Excel grid)
     const outerBody: any[][] = [];
 
-    // Row 1: Logo + FECHA
+    // Row 1: Logo + FECHA (logo spans 2 rows)
     outerBody.push([
       {
         ...this.getLogoForPdf(),
@@ -271,18 +262,18 @@ export class ReportService {
         margin: [5, 5, 5, 5],
       },
       {
-        columns: [
-          { text: '', width: '*' },
-          { text: 'FECHA:', bold: true, width: 'auto', margin: [0, 0, 10, 0] },
-          { text: dateStr, width: 'auto', decoration: 'underline' },
+        text: [
+          { text: 'FECHA:    ', bold: true },
+          { text: dateStr, decoration: 'underline' },
         ],
+        alignment: 'right',
         margin: [0, 10, 10, 0],
       },
     ]);
 
-    // Row 2: (logo rowSpan continues) + empty
+    // Row 2: (logo continues) + empty
     outerBody.push([
-      { text: '' }, // merged with logo above
+      { text: '' },
       { text: '', margin: CELL_PAD },
     ]);
 
@@ -317,19 +308,13 @@ export class ReportService {
       },
     ]);
 
-    // Row 5: Blank separator
-    outerBody.push([
-      { text: '', colSpan: 2, margin: [0, 2, 0, 2] },
-      {},
-    ]);
-
-    // Row 6: CANTIDAD | DESCRIPCION headers
+    // Row 5: CANTIDAD | DESCRIPCION headers
     outerBody.push([
       { text: 'CANTIDAD', bold: true, alignment: 'center', margin: CELL_PAD },
       { text: 'DESCRIPCION', bold: true, alignment: 'center', margin: CELL_PAD },
     ]);
 
-    // Row 7: 1 | Equipment description + Serial + Software checklist
+    // Row 6: 1 | Equipment description + Serial + Software checklist
     outerBody.push([
       { text: '1', alignment: 'center', margin: [0, 5, 0, 5] },
       {
@@ -350,20 +335,13 @@ export class ReportService {
               body: swRows,
             },
             layout: this.thinGridLayout(),
-            margin: [80, 0, 80, 5],
+            alignment: 'center',
+            margin: [60, 0, 60, 5],
           },
         ],
         margin: CELL_PAD,
       },
     ]);
-
-    // Empty rows (like in the original format)
-    for (let i = 0; i < 4; i++) {
-      outerBody.push([
-        { text: '', margin: [0, 4, 0, 4] },
-        { text: '', margin: [0, 4, 0, 4] },
-      ]);
-    }
 
     // Notes row
     outerBody.push([
@@ -371,15 +349,9 @@ export class ReportService {
         text: options?.notes || 'Se entrega equipo en buenas condiciones sin golpes ni defectos, recien instalado. Detalles de uso.',
         colSpan: 2,
         alignment: 'center',
-        margin: [10, 8, 10, 8],
+        margin: [15, 10, 15, 10],
         fontSize: 9,
       },
-      {},
-    ]);
-
-    // Empty row
-    outerBody.push([
-      { text: '', colSpan: 2, margin: [0, 4, 0, 4] },
       {},
     ]);
 
@@ -391,14 +363,8 @@ export class ReportService {
         fontSize: 9,
         alignment: 'center',
         colSpan: 2,
-        margin: [10, 8, 10, 8],
+        margin: [15, 8, 15, 8],
       },
-      {},
-    ]);
-
-    // Empty row
-    outerBody.push([
-      { text: '', colSpan: 2, margin: [0, 3, 0, 3] },
       {},
     ]);
 
@@ -410,18 +376,15 @@ export class ReportService {
 
     // Empty row for signature space
     outerBody.push([
-      { text: '', margin: [0, 15, 0, 15] },
-      { text: '', margin: [0, 15, 0, 15] },
+      { text: '', margin: [0, 20, 0, 20] },
+      { text: '', margin: [0, 20, 0, 20] },
     ]);
 
     // Signature lines + names
     outerBody.push([
       {
         stack: [
-          {
-            canvas: [{ type: 'line', x1: 40, y1: 0, x2: 170, y2: 0, lineWidth: 1 }],
-            margin: [0, 0, 0, 3],
-          },
+          { text: '________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
           { text: 'DEPARTAMENTO DE', bold: true, alignment: 'center', fontSize: 9 },
           { text: 'SISTEMAS', bold: true, alignment: 'center', fontSize: 9 },
         ],
@@ -429,10 +392,7 @@ export class ReportService {
       },
       {
         stack: [
-          {
-            canvas: [{ type: 'line', x1: 40, y1: 0, x2: 220, y2: 0, lineWidth: 1 }],
-            margin: [0, 0, 0, 3],
-          },
+          { text: '________________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
           { text: data.userName || 'N/A', bold: true, alignment: 'center', fontSize: 9 },
         ],
         margin: CELL_PAD,
@@ -441,18 +401,18 @@ export class ReportService {
 
     const docDefinition: any = {
       pageSize: 'LETTER',
-      pageMargins: [30, 30, 30, 40],
+      pageMargins: [40, 30, 40, 40],
       defaultStyle: { fontSize: 10 },
       content: [
         {
           table: {
-            widths: [180, '*'],
+            widths: [160, '*'],
             body: outerBody,
           },
           layout: this.gridLayout(),
         },
       ],
-      footer: (currentPage: number, pageCount: number) => ({
+      footer: (currentPage: number) => ({
         text: currentPage.toString(),
         alignment: 'center',
         fontSize: 9,
@@ -461,6 +421,157 @@ export class ReportService {
     };
 
     return this.createPdfBuffer(docDefinition);
+  }
+
+  // ==========================================
+  // Helper compartido para formatos 2 y 3
+  // ==========================================
+
+  private buildMultiItemBody(
+    dateStr: string,
+    asunto: string,
+    razonSocial: string,
+    deptoTienda: string,
+    recibe: string,
+    items: { name: string; productType: string; vendor: string; model: string; serialNum: string }[],
+    legalText: string,
+    signatures: {
+      leftLabel: string;
+      leftLine1: string;
+      leftLine2: string;
+      rightLabel: string;
+      rightLine1: string;
+      rightLine2: string;
+    },
+  ): any[][] {
+    const body: any[][] = [];
+
+    // Row 1: Logo + FECHA
+    body.push([
+      {
+        ...this.getLogoForPdf(),
+        rowSpan: 2,
+        margin: [5, 5, 5, 5],
+        colSpan: 2,
+      },
+      {},
+      { text: '', colSpan: 2 },
+      {},
+      {
+        text: [
+          { text: 'FECHA:    ', bold: true },
+          { text: dateStr, decoration: 'underline' },
+        ],
+        alignment: 'right',
+        margin: [0, 10, 5, 0],
+      },
+    ]);
+
+    // Row 2: Logo continues
+    body.push([{ text: '' }, {}, { text: '', colSpan: 3 }, {}, {}]);
+
+    // Row 3: ASUNTO
+    body.push([
+      { text: [{ text: 'ASUNTO: ', bold: true }, { text: asunto, bold: true }], colSpan: 5, margin: CELL_PAD },
+      {}, {}, {}, {},
+    ]);
+
+    // Row 4: RAZON SOCIAL
+    body.push([
+      { text: [{ text: 'RAZON SOCIAL: ', bold: true }, { text: razonSocial }], colSpan: 5, margin: CELL_PAD },
+      {}, {}, {}, {},
+    ]);
+
+    // Row 5: DEPTO\TIENDA + RECIBE
+    body.push([
+      { text: [{ text: 'DEPTO\\TIENDA ', bold: true }, { text: deptoTienda }], colSpan: 2, margin: CELL_PAD },
+      {},
+      { text: [{ text: 'RECIBE: ', bold: true }, { text: recibe }], colSpan: 3, margin: CELL_PAD },
+      {}, {},
+    ]);
+
+    // Row 6: Table headers
+    body.push([
+      { text: 'CANTIDAD', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
+      { text: 'DESCRIPCION', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
+      { text: 'MARCA', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
+      { text: 'MODELO', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
+      { text: 'NUMERO DE SERIE', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
+    ]);
+
+    // Data rows
+    items.forEach((item) => {
+      body.push([
+        { text: '1', alignment: 'center', fontSize: 9, margin: CELL_PAD },
+        { text: (item.productType || item.name).toUpperCase(), fontSize: 9, margin: CELL_PAD },
+        { text: item.vendor.toUpperCase(), fontSize: 9, margin: CELL_PAD },
+        { text: item.model, fontSize: 9, margin: CELL_PAD },
+        { text: item.serialNum || 'N/A', fontSize: 9, margin: CELL_PAD },
+      ]);
+    });
+
+    // Empty rows to fill page
+    const minRows = 22;
+    for (let i = items.length; i < minRows; i++) {
+      body.push([
+        { text: '', fontSize: 9, margin: CELL_PAD },
+        { text: '', fontSize: 9, margin: CELL_PAD },
+        { text: '', fontSize: 9, margin: CELL_PAD },
+        { text: '', fontSize: 9, margin: CELL_PAD },
+        { text: '', fontSize: 9, margin: CELL_PAD },
+      ]);
+    }
+
+    // Legal text
+    body.push([
+      { text: legalText, bold: true, fontSize: 9, alignment: 'center', colSpan: 5, margin: [15, 8, 15, 8] },
+      {}, {}, {}, {},
+    ]);
+
+    // ENTREGA: | RECIBE:
+    body.push([
+      { text: signatures.leftLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
+      {},
+      { text: '', margin: CELL_PAD },
+      { text: signatures.rightLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
+      {},
+    ]);
+
+    // Empty signature space
+    body.push([
+      { text: '', colSpan: 2, margin: [0, 15, 0, 15] },
+      {},
+      { text: '', margin: [0, 15, 0, 15] },
+      { text: '', colSpan: 2, margin: [0, 15, 0, 15] },
+      {},
+    ]);
+
+    // Signature names
+    body.push([
+      {
+        stack: [
+          { text: signatures.leftLine1 ? '________________________' : '________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
+          ...(signatures.leftLine1 ? [{ text: signatures.leftLine1, bold: true, alignment: 'center' as const, fontSize: 9 }] : []),
+          { text: signatures.leftLine2, bold: true, alignment: 'center', fontSize: 9 },
+        ],
+        colSpan: 2,
+        margin: CELL_PAD,
+      },
+      {},
+      { text: '', margin: CELL_PAD },
+      {
+        stack: [
+          { text: '________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
+          ...(signatures.rightLine1 ? [{ text: signatures.rightLine1, bold: true, alignment: 'center' as const, fontSize: 9 }] : []),
+          { text: signatures.rightLine2, bold: true, alignment: 'center', fontSize: 9 },
+        ],
+        colSpan: 2,
+        margin: CELL_PAD,
+      },
+      {},
+    ]);
+
+    return body;
   }
 
   // ==========================================
@@ -481,194 +592,33 @@ export class ReportService {
     const data = await this.getMultiItemReportData(assetIds);
     const dateStr = this.getDateStr();
 
-    // Build outer table body
-    const outerBody: any[][] = [];
-
-    // Row 1: Logo + FECHA
-    outerBody.push([
+    const outerBody: any[][] = this.buildMultiItemBody(
+      dateStr,
+      'ENTREGA DE EQUIPO',
+      options?.razonSocial || data.company || 'N/A',
+      options?.department || data.department || 'N/A',
+      options?.receiverName || data.userName || 'N/A',
+      data.items,
+      `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
+      // Signatures: ENTREGA = deliveryPerson + DEPTO DE SISTEMAS | RECIBE = userName
       {
-        ...this.getLogoForPdf(),
-        rowSpan: 2,
-        margin: [5, 5, 5, 5],
-        colSpan: 2,
+        leftLabel: 'ENTREGA:',
+        leftLine1: options?.deliveryPerson || '',
+        leftLine2: 'DEPTO DE SISTEMAS',
+        rightLabel: 'RECIBE:',
+        rightLine1: '',
+        rightLine2: options?.receiverName || data.userName || 'N/A',
       },
-      {},
-      { text: '', colSpan: 2 },
-      {},
-      {
-        columns: [
-          { text: 'FECHA:', bold: true, width: 'auto', margin: [0, 0, 10, 0] },
-          { text: dateStr, width: 'auto', decoration: 'underline' },
-        ],
-        margin: [0, 10, 5, 0],
-        alignment: 'right',
-      },
-    ]);
-
-    // Row 2: Logo continues + empty
-    outerBody.push([
-      { text: '' }, // merged
-      {},
-      { text: '', colSpan: 3 },
-      {},
-      {},
-    ]);
-
-    // Row 3: ASUNTO
-    outerBody.push([
-      {
-        text: [
-          { text: 'ASUNTO: ', bold: true },
-          { text: 'ENTREGA DE EQUIPO', bold: true },
-        ],
-        colSpan: 5,
-        margin: CELL_PAD,
-      },
-      {}, {}, {}, {},
-    ]);
-
-    // Row 4: RAZON SOCIAL
-    outerBody.push([
-      {
-        text: [
-          { text: 'RAZON SOCIAL: ', bold: true },
-          { text: options?.razonSocial || data.company || 'N/A' },
-        ],
-        colSpan: 5,
-        margin: CELL_PAD,
-      },
-      {}, {}, {}, {},
-    ]);
-
-    // Row 5: DEPTO\TIENDA + RECIBE
-    outerBody.push([
-      {
-        text: [
-          { text: 'DEPTO\\TIENDA ', bold: true },
-          { text: options?.department || data.department || 'N/A' },
-        ],
-        colSpan: 2,
-        margin: CELL_PAD,
-      },
-      {},
-      {
-        text: [
-          { text: 'RECIBE: ', bold: true },
-          { text: options?.receiverName || data.userName || 'N/A' },
-        ],
-        colSpan: 3,
-        margin: CELL_PAD,
-      },
-      {}, {},
-    ]);
-
-    // Row 6: Blank separator
-    outerBody.push([
-      { text: '', colSpan: 5, margin: [0, 2, 0, 2] },
-      {}, {}, {}, {},
-    ]);
-
-    // Row 7: Table headers
-    outerBody.push([
-      { text: 'CANTIDAD', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'DESCRIPCION', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'MARCA', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'MODELO', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'NUMERO DE SERIE', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-    ]);
-
-    // Data rows
-    data.items.forEach((item) => {
-      outerBody.push([
-        { text: '1', alignment: 'center', fontSize: 9, margin: CELL_PAD },
-        { text: (item.productType || item.name).toUpperCase(), fontSize: 9, margin: CELL_PAD },
-        { text: item.vendor.toUpperCase(), fontSize: 9, margin: CELL_PAD },
-        { text: item.model, fontSize: 9, margin: CELL_PAD },
-        { text: item.serialNum || 'N/A', fontSize: 9, margin: CELL_PAD },
-      ]);
-    });
-
-    // Empty rows to fill
-    const totalDataRows = data.items.length;
-    const minRows = 20;
-    for (let i = totalDataRows; i < minRows; i++) {
-      outerBody.push([
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-      ]);
-    }
-
-    // Legal text row
-    outerBody.push([
-      {
-        text: `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
-        bold: true,
-        fontSize: 9,
-        alignment: 'center',
-        colSpan: 5,
-        margin: [10, 8, 10, 8],
-      },
-      {}, {}, {}, {},
-    ]);
-
-    // Empty row
-    outerBody.push([
-      { text: '', colSpan: 5, margin: [0, 3, 0, 3] },
-      {}, {}, {}, {},
-    ]);
-
-    // ENTREGA: | RECIBE:
-    outerBody.push([
-      { text: 'ENTREGA:', bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
-      {},
-      { text: '', margin: CELL_PAD },
-      { text: 'RECIBE:', bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
-      {},
-    ]);
-
-    // Empty signature space
-    outerBody.push([
-      { text: '', colSpan: 2, margin: [0, 10, 0, 10] },
-      {},
-      { text: '', margin: [0, 10, 0, 10] },
-      { text: '', colSpan: 2, margin: [0, 10, 0, 10] },
-      {},
-    ]);
-
-    // Names under signatures
-    outerBody.push([
-      {
-        stack: [
-          { text: options?.deliveryPerson || '', bold: true, alignment: 'center', fontSize: 9, decoration: 'underline' },
-          { text: 'DEPTO DE SISTEMAS', bold: true, alignment: 'center', fontSize: 9 },
-        ],
-        colSpan: 2,
-        margin: CELL_PAD,
-      },
-      {},
-      { text: '', margin: CELL_PAD },
-      {
-        stack: [
-          { text: '', margin: [0, 0, 0, 0] },
-          { text: options?.receiverName || data.userName || 'N/A', bold: true, alignment: 'center', fontSize: 9 },
-        ],
-        colSpan: 2,
-        margin: CELL_PAD,
-      },
-      {},
-    ]);
+    );
 
     const docDefinition: any = {
       pageSize: 'LETTER',
-      pageMargins: [30, 30, 30, 40],
+      pageMargins: [40, 30, 40, 40],
       defaultStyle: { fontSize: 10 },
       content: [
         {
           table: {
-            widths: [60, '*', 70, 120, 110],
+            widths: [55, '*', 65, 110, 105],
             body: outerBody,
           },
           layout: this.gridLayout(),
@@ -702,199 +652,32 @@ export class ReportService {
     const data = await this.getMultiItemReportData(assetIds);
     const dateStr = this.getDateStr();
 
-    const outerBody: any[][] = [];
-
-    // Row 1: Logo + FECHA
-    outerBody.push([
+    const outerBody: any[][] = this.buildMultiItemBody(
+      dateStr,
+      'RESGUARDO DE EQUIPO',
+      options?.razonSocial || data.company || 'N/A',
+      options?.storeName || data.site || 'N/A',
+      'DEPARTAMENTO DE SISTEMAS',
+      data.items,
+      'Recibo del Encargado de tienda la(s) Herramienta(s) arriba mencionada(s) para resguardo, reinstalacion o asignacion del mismo. Sirva el presente documento para el deslinde responsabilidades posteriores.',
       {
-        ...this.getLogoForPdf(),
-        rowSpan: 2,
-        margin: [5, 5, 5, 5],
-        colSpan: 2,
+        leftLabel: 'ENTREGA:',
+        leftLine1: '',
+        leftLine2: 'ENCARGADO DE TIENDA',
+        rightLabel: 'RECIBE:',
+        rightLine1: '',
+        rightLine2: 'DEPARTAMENTO DE SISTEMAS',
       },
-      {},
-      { text: '', colSpan: 2 },
-      {},
-      {
-        columns: [
-          { text: 'FECHA:', bold: true, width: 'auto', margin: [0, 0, 10, 0] },
-          { text: dateStr, width: 'auto', decoration: 'underline' },
-        ],
-        margin: [0, 10, 5, 0],
-        alignment: 'right',
-      },
-    ]);
-
-    // Row 2: Logo continues
-    outerBody.push([
-      { text: '' },
-      {},
-      { text: '', colSpan: 3 },
-      {},
-      {},
-    ]);
-
-    // Row 3: ASUNTO
-    outerBody.push([
-      {
-        text: [
-          { text: 'ASUNTO: ', bold: true },
-          { text: 'RESGUARDO DE EQUIPO', bold: true },
-        ],
-        colSpan: 5,
-        margin: CELL_PAD,
-      },
-      {}, {}, {}, {},
-    ]);
-
-    // Row 4: RAZON SOCIAL
-    outerBody.push([
-      {
-        text: [
-          { text: 'RAZON SOCIAL: ', bold: true },
-          { text: options?.razonSocial || data.company || 'N/A' },
-        ],
-        colSpan: 5,
-        margin: CELL_PAD,
-      },
-      {}, {}, {}, {},
-    ]);
-
-    // Row 5: DEPTO\TIENDA + RECIBE
-    outerBody.push([
-      {
-        text: [
-          { text: 'DEPTO\\TIENDA ', bold: true },
-          { text: options?.storeName || data.site || 'N/A' },
-        ],
-        colSpan: 2,
-        margin: CELL_PAD,
-      },
-      {},
-      {
-        text: [
-          { text: 'RECIBE: ', bold: true },
-          { text: 'DEPARTAMENTO DE SISTEMAS' },
-        ],
-        colSpan: 3,
-        margin: CELL_PAD,
-      },
-      {}, {},
-    ]);
-
-    // Row 6: Blank separator
-    outerBody.push([
-      { text: '', colSpan: 5, margin: [0, 2, 0, 2] },
-      {}, {}, {}, {},
-    ]);
-
-    // Row 7: Table headers
-    outerBody.push([
-      { text: 'CANTIDAD', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'DESCRIPCION', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'MARCA', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'MODELO', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'NUMERO DE SERIE', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-    ]);
-
-    // Data rows
-    data.items.forEach((item) => {
-      outerBody.push([
-        { text: '1', alignment: 'center', fontSize: 9, margin: CELL_PAD },
-        { text: (item.productType || item.name).toUpperCase(), fontSize: 9, margin: CELL_PAD },
-        { text: item.vendor.toUpperCase(), fontSize: 9, margin: CELL_PAD },
-        { text: item.model, fontSize: 9, margin: CELL_PAD },
-        { text: item.serialNum || 'N/A', fontSize: 9, margin: CELL_PAD },
-      ]);
-    });
-
-    // Empty rows to fill page
-    const totalDataRows = data.items.length;
-    const minRows = 25;
-    for (let i = totalDataRows; i < minRows; i++) {
-      outerBody.push([
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-      ]);
-    }
-
-    // Legal text
-    outerBody.push([
-      {
-        text: 'Recibo del Encargado de tienda la(s) Herramienta(s) arriba mencionada(s) para resguardo, reinstalacion o asignacion del mismo. Sirva el presente documento para el deslinde responsabilidades posteriores.',
-        bold: true,
-        fontSize: 9,
-        alignment: 'center',
-        colSpan: 5,
-        margin: [10, 8, 10, 8],
-      },
-      {}, {}, {}, {},
-    ]);
-
-    // Empty row
-    outerBody.push([
-      { text: '', colSpan: 5, margin: [0, 3, 0, 3] },
-      {}, {}, {}, {},
-    ]);
-
-    // ENTREGA: | RECIBE:
-    outerBody.push([
-      { text: 'ENTREGA:', bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
-      {},
-      { text: '', margin: CELL_PAD },
-      { text: 'RECIBE:', bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
-      {},
-    ]);
-
-    // Empty signature space
-    outerBody.push([
-      { text: '', colSpan: 2, margin: [0, 10, 0, 10] },
-      {},
-      { text: '', margin: [0, 10, 0, 10] },
-      { text: '', colSpan: 2, margin: [0, 10, 0, 10] },
-      {},
-    ]);
-
-    // Names
-    outerBody.push([
-      {
-        stack: [
-          {
-            canvas: [{ type: 'line', x1: 20, y1: 0, x2: 120, y2: 0, lineWidth: 1 }],
-            margin: [0, 0, 0, 3],
-          },
-          { text: 'ENCARGADO DE TIENDA', bold: true, alignment: 'center', fontSize: 9 },
-        ],
-        colSpan: 2,
-        margin: CELL_PAD,
-      },
-      {},
-      { text: '', margin: CELL_PAD },
-      {
-        stack: [
-          {
-            canvas: [{ type: 'line', x1: 20, y1: 0, x2: 190, y2: 0, lineWidth: 1 }],
-            margin: [0, 0, 0, 3],
-          },
-          { text: 'DEPARTAMENTO DE SISTEMAS', bold: true, alignment: 'center', fontSize: 9 },
-        ],
-        colSpan: 2,
-        margin: CELL_PAD,
-      },
-      {},
-    ]);
+    );
 
     const docDefinition: any = {
       pageSize: 'LETTER',
-      pageMargins: [30, 30, 30, 40],
+      pageMargins: [40, 30, 40, 40],
       defaultStyle: { fontSize: 10 },
       content: [
         {
           table: {
-            widths: [60, '*', 70, 120, 110],
+            widths: [55, '*', 65, 110, 105],
             body: outerBody,
           },
           layout: this.gridLayout(),
