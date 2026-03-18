@@ -21,6 +21,7 @@ import {
   Users,
   History,
   Package,
+  RotateCcw,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -35,7 +36,7 @@ function triggerDownload(blob: Blob, filename: string) {
   document.body.removeChild(a);
 }
 
-type ReportType = "inventory" | "delivery" | "history" | "user-assets";
+type ReportType = "inventory" | "delivery" | "resguardo-pdf" | "history" | "user-assets";
 
 export default function Reportes() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -53,6 +54,10 @@ export default function Reportes() {
   // Delivery modal
   const [deliveryAssetID, setDeliveryAssetID] = useState<number | null>(null);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [deliveryFormat, setDeliveryFormat] = useState<"entrega_software" | "entrega_multiitem" | "resguardo">("entrega_software");
+
+  // Resguardo PDF (multi-select)
+  const [selectedResguardoAssets, setSelectedResguardoAssets] = useState<Set<number>>(new Set());
 
   // Active report tab
   const [activeReport, setActiveReport] = useState<ReportType>("inventory");
@@ -176,10 +181,45 @@ export default function Reportes() {
     (a) => a.productType?.group === "Equipo" && a.assetStateInfo?.name !== "Baja"
   );
 
+  const handleResguardoPdf = async () => {
+    if (selectedResguardoAssets.size === 0) {
+      toast.error("Selecciona al menos un activo");
+      return;
+    }
+    try {
+      setIsExporting("resguardo-pdf");
+      const blob = await api.report.downloadResguardoPdf({
+        assetIds: Array.from(selectedResguardoAssets),
+      });
+      const dateStr = new Date().toISOString().split("T")[0];
+      triggerDownload(
+        new Blob([blob], { type: "application/pdf" }),
+        `resguardo_equipo_${dateStr}.pdf`
+      );
+      toast.success("Resguardo PDF generado");
+      setSelectedResguardoAssets(new Set());
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Error al generar resguardo PDF");
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  const toggleResguardoAsset = (id: number) => {
+    setSelectedResguardoAssets((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const reportTabs: { key: ReportType; label: string; icon: React.ReactNode }[] = [
     { key: "inventory", label: "Inventario General", icon: <Package className="h-4 w-4" /> },
     { key: "delivery", label: "Entrega de Equipo", icon: <ClipboardList className="h-4 w-4" /> },
-    { key: "history", label: "Historial de Movimientos", icon: <History className="h-4 w-4" /> },
+    { key: "resguardo-pdf", label: "Resguardo de Equipo", icon: <RotateCcw className="h-4 w-4" /> },
+    { key: "history", label: "Historial", icon: <History className="h-4 w-4" /> },
     { key: "user-assets", label: "Resguardo por Usuario", icon: <Users className="h-4 w-4" /> },
   ];
 
@@ -318,8 +358,8 @@ export default function Reportes() {
                     <div>
                       <h2 className="text-xl font-semibold text-gray-800">Reporte de Entrega de Equipo</h2>
                       <p className="text-sm text-gray-500 mt-1">
-                        Genera el formato de entrega de equipo en PDF con checklist de software,
-                        datos del equipo y firmas. Selecciona un equipo de la lista.
+                        Genera el formato de entrega en PDF. Puedes elegir entre formato con checklist
+                        de software (laptops) o formato multi-item (perifericos como monitores, escaners, etc).
                       </p>
                     </div>
 
@@ -327,16 +367,18 @@ export default function Reportes() {
                       <TableHeader>
                         <TableRow>
                           <TableHead className="font-semibold">Equipo</TableHead>
+                          <TableHead className="font-semibold">Marca</TableHead>
+                          <TableHead className="font-semibold">Modelo</TableHead>
                           <TableHead className="font-semibold">No. Serie</TableHead>
                           <TableHead className="font-semibold">Usuario</TableHead>
-                          <TableHead className="font-semibold">Departamento</TableHead>
+                          <TableHead className="font-semibold">Depto</TableHead>
                           <TableHead className="font-semibold w-40">Accion</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {equipos.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={5} className="text-center text-gray-500 py-8">
+                            <TableCell colSpan={7} className="text-center text-gray-500 py-8">
                               No hay equipos disponibles
                             </TableCell>
                           </TableRow>
@@ -344,6 +386,8 @@ export default function Reportes() {
                           equipos.map((asset) => (
                             <TableRow key={asset.assetID} className="hover:bg-gray-50">
                               <TableCell className="font-medium">{asset.name}</TableCell>
+                              <TableCell className="text-sm">{asset.vendor?.name || "-"}</TableCell>
+                              <TableCell className="text-sm">{asset.assetDetail?.model || "-"}</TableCell>
                               <TableCell className="font-mono text-sm">
                                 {asset.assetDetail?.serialNum || "N/A"}
                               </TableCell>
@@ -355,6 +399,7 @@ export default function Reportes() {
                                   variant="outline"
                                   onClick={() => {
                                     setDeliveryAssetID(asset.assetID);
+                                    setDeliveryFormat("entrega_software");
                                     setIsDeliveryModalOpen(true);
                                   }}
                                   className="text-green-600 border-green-200 hover:bg-green-50"
@@ -363,6 +408,98 @@ export default function Reportes() {
                                   Generar PDF
                                 </Button>
                               </TableCell>
+                            </TableRow>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
+                )}
+
+                {/* ===== RESGUARDO DE EQUIPO (PDF) ===== */}
+                {activeReport === "resguardo-pdf" && (
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-800">Resguardo de Equipo</h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Genera el formato de resguardo en PDF cuando la tienda devuelve equipo al
+                        Departamento de Sistemas. Selecciona los activos y genera el PDF.
+                      </p>
+                    </div>
+
+                    {selectedResguardoAssets.size > 0 && (
+                      <div className="flex items-center gap-3 bg-blue-50 rounded-lg p-3">
+                        <span className="text-sm font-medium text-blue-700">
+                          {selectedResguardoAssets.size} activos seleccionados
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={handleResguardoPdf}
+                          disabled={isExporting !== null}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {isExporting === "resguardo-pdf" ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                          ) : (
+                            <FileText className="h-4 w-4 mr-1" />
+                          )}
+                          Generar Resguardo PDF
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedResguardoAssets(new Set())}
+                          className="text-gray-500"
+                        >
+                          Limpiar seleccion
+                        </Button>
+                      </div>
+                    )}
+
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead className="font-semibold">Equipo</TableHead>
+                          <TableHead className="font-semibold">Marca</TableHead>
+                          <TableHead className="font-semibold">Modelo</TableHead>
+                          <TableHead className="font-semibold">No. Serie</TableHead>
+                          <TableHead className="font-semibold">Sitio</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {assets.filter((a) => a.assetStateInfo?.name !== "Baja").length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                              No hay activos disponibles
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          assets
+                            .filter((a) => a.assetStateInfo?.name !== "Baja")
+                            .map((asset) => (
+                            <TableRow
+                              key={asset.assetID}
+                              className={`hover:bg-gray-50 cursor-pointer ${
+                                selectedResguardoAssets.has(asset.assetID) ? "bg-blue-50" : ""
+                              }`}
+                              onClick={() => toggleResguardoAsset(asset.assetID)}
+                            >
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedResguardoAssets.has(asset.assetID)}
+                                  onChange={() => toggleResguardoAsset(asset.assetID)}
+                                  className="rounded border-gray-300"
+                                />
+                              </TableCell>
+                              <TableCell className="font-medium">{asset.name}</TableCell>
+                              <TableCell className="text-sm">{asset.vendor?.name || "-"}</TableCell>
+                              <TableCell className="text-sm">{asset.assetDetail?.model || "-"}</TableCell>
+                              <TableCell className="font-mono text-sm">
+                                {asset.assetDetail?.serialNum || "N/A"}
+                              </TableCell>
+                              <TableCell>{asset.site?.name || "-"}</TableCell>
                             </TableRow>
                           ))
                         )}
@@ -472,6 +609,7 @@ export default function Reportes() {
           {deliveryAssetID && (
             <DeliveryReportModal
               assetID={deliveryAssetID}
+              format={deliveryFormat}
               isOpen={isDeliveryModalOpen}
               onClose={() => {
                 setIsDeliveryModalOpen(false);

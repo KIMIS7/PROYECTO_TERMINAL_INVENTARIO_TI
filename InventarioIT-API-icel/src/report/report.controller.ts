@@ -6,7 +6,6 @@ import {
   Param,
   Query,
   Res,
-  Headers,
 } from '@nestjs/common';
 import { ReportService } from './report.service';
 import { Response } from 'express';
@@ -15,30 +14,38 @@ import { Response } from 'express';
 export class ReportController {
   constructor(private readonly reportService: ReportService) {}
 
-  /**
-   * GET /report/delivery/:assetId/data
-   * Obtiene los datos necesarios para previsualizar un reporte de entrega
-   */
+  // ==========================================
+  // Data endpoints (para previsualización)
+  // ==========================================
+
   @Get('delivery/:assetId/data')
   getDeliveryReportData(@Param('assetId') assetId: string) {
     return this.reportService.getDeliveryReportData(+assetId);
   }
 
-  /**
-   * POST /report/delivery/:assetId/pdf
-   * Genera y descarga el PDF de entrega de equipo
-   * Body: { softwareStatus?: Record<string, string>, notes?: string }
-   */
+  @Post('multi-item/data')
+  getMultiItemReportData(@Body() body: { assetIds: number[] }) {
+    return this.reportService.getMultiItemReportData(body.assetIds);
+  }
+
+  // ==========================================
+  // PDF Formato 1: Entrega con software checklist
+  // ==========================================
+
   @Post('delivery/:assetId/pdf')
   async generateDeliveryPdf(
     @Param('assetId') assetId: string,
-    @Body() body: { softwareStatus?: Record<string, string>; notes?: string },
+    @Body()
+    body: {
+      softwareStatus?: Record<string, string>;
+      notes?: string;
+      deliveryPerson?: string;
+    },
     @Res() res: Response,
   ) {
-    const pdfBuffer = await this.reportService.generateDeliveryPdf(
+    const pdfBuffer = await this.reportService.generateEntregaSoftwarePdf(
       +assetId,
-      body.softwareStatus,
-      body.notes,
+      body,
     );
 
     res.set({
@@ -50,11 +57,73 @@ export class ReportController {
     res.end(pdfBuffer);
   }
 
-  /**
-   * GET /report/assets/excel
-   * Genera y descarga el Excel del inventario completo
-   * Query params: group, companyID, assetState
-   */
+  // ==========================================
+  // PDF Formato 2: Entrega multi-item (periféricos)
+  // ==========================================
+
+  @Post('entrega-multiitem/pdf')
+  async generateEntregaMultiItemPdf(
+    @Body()
+    body: {
+      assetIds: number[];
+      razonSocial?: string;
+      department?: string;
+      receiverName?: string;
+      deliveryPerson?: string;
+      notes?: string;
+    },
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.reportService.generateEntregaMultiItemPdf(
+      body.assetIds,
+      body,
+    );
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="entrega_multiitem_${dateStr}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
+  }
+
+  // ==========================================
+  // PDF Formato 3: Resguardo de equipo
+  // ==========================================
+
+  @Post('resguardo/pdf')
+  async generateResguardoPdf(
+    @Body()
+    body: {
+      assetIds: number[];
+      razonSocial?: string;
+      storeName?: string;
+      receiverName?: string;
+      deliveryPerson?: string;
+    },
+    @Res() res: Response,
+  ) {
+    const pdfBuffer = await this.reportService.generateResguardoPdf(
+      body.assetIds,
+      body,
+    );
+
+    const dateStr = new Date().toISOString().split('T')[0];
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': `attachment; filename="resguardo_equipo_${dateStr}.pdf"`,
+      'Content-Length': pdfBuffer.length,
+    });
+
+    res.end(pdfBuffer);
+  }
+
+  // ==========================================
+  // Excel / CSV exports
+  // ==========================================
+
   @Get('assets/excel')
   async generateAssetsExcel(
     @Query('group') group: string,
@@ -80,10 +149,6 @@ export class ReportController {
     res.end(buffer);
   }
 
-  /**
-   * GET /report/assets/csv
-   * Genera y descarga el CSV del inventario
-   */
   @Get('assets/csv')
   async generateAssetsCsv(
     @Query('group') group: string,
@@ -104,14 +169,9 @@ export class ReportController {
       'Content-Disposition': `attachment; filename="inventario_${dateStr}.csv"`,
     });
 
-    // Agregar BOM para UTF-8 en Excel
     res.send('\ufeff' + csv);
   }
 
-  /**
-   * GET /report/history/excel
-   * Genera y descarga el Excel del historial de movimientos
-   */
   @Get('history/excel')
   async generateMovementHistoryExcel(
     @Query('assetId') assetId: string,
@@ -132,10 +192,6 @@ export class ReportController {
     res.end(buffer);
   }
 
-  /**
-   * GET /report/user/:userId/assets/excel
-   * Genera reporte de resguardo de equipo por usuario
-   */
   @Get('user/:userId/assets/excel')
   async generateUserAssetsReport(
     @Param('userId') userId: string,

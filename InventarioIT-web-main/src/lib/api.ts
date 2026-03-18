@@ -546,18 +546,48 @@ const api = {
         operatingSystem: string;
         vendor: string;
         productType: string;
+        productManuf: string;
         company: string;
         site: string;
         department: string;
         userName: string;
         userEmail: string;
-        childAssets: { name: string; productType: string; serialNum: string; model: string }[];
+        childAssets: { name: string; productType: string; serialNum: string; model: string; vendor: string }[];
         softwareChecklist: string[];
       }>(`/report/delivery/${assetID}/data`);
       return response.data;
     },
-    downloadDeliveryPdf: async (assetID: number, data: { softwareStatus?: Record<string, string>; notes?: string }) => {
+    downloadDeliveryPdf: async (assetID: number, data: {
+      softwareStatus?: Record<string, string>;
+      notes?: string;
+      deliveryPerson?: string;
+    }) => {
       const response = await apiClient.post(`/report/delivery/${assetID}/pdf`, data, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadEntregaMultiItemPdf: async (data: {
+      assetIds: number[];
+      razonSocial?: string;
+      department?: string;
+      receiverName?: string;
+      deliveryPerson?: string;
+      notes?: string;
+    }) => {
+      const response = await apiClient.post('/report/entrega-multiitem/pdf', data, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadResguardoPdf: async (data: {
+      assetIds: number[];
+      razonSocial?: string;
+      storeName?: string;
+      receiverName?: string;
+      deliveryPerson?: string;
+    }) => {
+      const response = await apiClient.post('/report/resguardo/pdf', data, {
         responseType: 'blob',
       });
       return response.data;
