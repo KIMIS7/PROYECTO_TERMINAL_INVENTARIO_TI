@@ -4,9 +4,21 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { PrismaShopic } from 'src/database/database.service';
+import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PdfPrinter = require('pdfmake/src/Printer');
 import * as ExcelJS from 'exceljs';
+
+const PDFMAKE_FONTS_DIR = path.join(
+  __dirname,
+  '..',
+  '..',
+  'node_modules',
+  'pdfmake',
+  'build',
+  'fonts',
+  'Roboto',
+);
 
 // Lista de software estándar que se revisa en cada entrega de equipo
 const SOFTWARE_CHECKLIST = [
@@ -150,10 +162,10 @@ export class ReportService {
   private createPdfBuffer(docDefinition: any): Promise<Buffer> {
     const fonts = {
       Roboto: {
-        normal: Buffer.from(''),
-        bold: Buffer.from(''),
-        italics: Buffer.from(''),
-        bolditalics: Buffer.from(''),
+        normal: path.join(PDFMAKE_FONTS_DIR, 'Roboto-Regular.ttf'),
+        bold: path.join(PDFMAKE_FONTS_DIR, 'Roboto-Medium.ttf'),
+        italics: path.join(PDFMAKE_FONTS_DIR, 'Roboto-Italic.ttf'),
+        bolditalics: path.join(PDFMAKE_FONTS_DIR, 'Roboto-MediumItalic.ttf'),
       },
     };
 
