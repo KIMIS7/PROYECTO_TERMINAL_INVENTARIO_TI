@@ -6,19 +6,10 @@ import {
 import { PrismaShopic } from 'src/database/database.service';
 import * as path from 'path';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
-const PdfPrinter = require('pdfmake/src/Printer');
+const PdfPrinter = require('pdfmake/src/printer');
 import * as ExcelJS from 'exceljs';
 
-const PDFMAKE_FONTS_DIR = path.join(
-  __dirname,
-  '..',
-  '..',
-  'node_modules',
-  'pdfmake',
-  'build',
-  'fonts',
-  'Roboto',
-);
+const FONTS_DIR = path.join(__dirname, '..', '..', 'assets', 'fonts');
 
 // Lista de software estándar que se revisa en cada entrega de equipo
 const SOFTWARE_CHECKLIST = [
@@ -162,10 +153,10 @@ export class ReportService {
   private createPdfBuffer(docDefinition: any): Promise<Buffer> {
     const fonts = {
       Roboto: {
-        normal: path.join(PDFMAKE_FONTS_DIR, 'Roboto-Regular.ttf'),
-        bold: path.join(PDFMAKE_FONTS_DIR, 'Roboto-Medium.ttf'),
-        italics: path.join(PDFMAKE_FONTS_DIR, 'Roboto-Italic.ttf'),
-        bolditalics: path.join(PDFMAKE_FONTS_DIR, 'Roboto-MediumItalic.ttf'),
+        normal: path.join(FONTS_DIR, 'Roboto-Regular.ttf'),
+        bold: path.join(FONTS_DIR, 'Roboto-Medium.ttf'),
+        italics: path.join(FONTS_DIR, 'Roboto-Italic.ttf'),
+        bolditalics: path.join(FONTS_DIR, 'Roboto-MediumItalic.ttf'),
       },
     };
 
