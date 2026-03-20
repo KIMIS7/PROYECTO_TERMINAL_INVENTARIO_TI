@@ -502,16 +502,36 @@ export class MovementService {
         },
       });
 
+      // Collect unique emails to resolve names in bulk
+      const emailsToResolve = new Set<string>();
+      for (const m of records) {
+        const { createdBy } = this.parseDescription(m.Description);
+        if (createdBy) emailsToResolve.add(createdBy);
+      }
+
+      // Resolve email → name mapping
+      const emailNameMap = new Map<string, string>();
+      if (emailsToResolve.size > 0) {
+        const users = await this.prismaShopic.user.findMany({
+          where: { Email: { in: Array.from(emailsToResolve) } },
+          select: { Email: true, Name: true },
+        });
+        for (const u of users) {
+          emailNameMap.set(u.Email, u.Name);
+        }
+      }
+
       return records.map((m) => {
         const { description, responsible, createdBy } = this.parseDescription(m.Description);
+        // Use responsible name if available, otherwise resolve createdBy email to name
+        const performedBy = responsible || (createdBy ? emailNameMap.get(createdBy) || createdBy : null);
         return {
           historyID: m.AssetHistoryID,
           assetID: m.AssetID,
           assetName: m.Asset?.Name || 'Activo eliminado',
           operation: m.Operation,
           description,
-          responsible,
-          createdBy,
+          performedBy,
           createdTime: m.CreatedTime,
           assignedUser: m.Asset?.User?.Name || null,
           department: m.Asset?.Depart?.Name || null,

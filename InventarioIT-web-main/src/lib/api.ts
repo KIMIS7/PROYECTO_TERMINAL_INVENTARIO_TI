@@ -405,8 +405,7 @@ const api = {
         assetName: string;
         operation: string;
         description: string;
-        responsible: string | null;
-        createdBy: string | null;
+        performedBy: string | null;
         createdTime: string;
         assignedUser: string | null;
         department: string | null;

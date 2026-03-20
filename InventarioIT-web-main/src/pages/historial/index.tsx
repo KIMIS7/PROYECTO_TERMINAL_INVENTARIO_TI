@@ -47,8 +47,7 @@ interface HistoryRecord {
   assetName: string;
   operation: string;
   description: string;
-  responsible: string | null;
-  createdBy: string | null;
+  performedBy: string | null;
   createdTime: string;
   assignedUser: string | null;
   department: string | null;
@@ -192,8 +191,7 @@ export default function Historial() {
         (r) =>
           r.assetName?.toLowerCase().includes(query) ||
           r.description?.toLowerCase().includes(query) ||
-          r.responsible?.toLowerCase().includes(query) ||
-          r.createdBy?.toLowerCase().includes(query) ||
+          r.performedBy?.toLowerCase().includes(query) ||
           r.assignedUser?.toLowerCase().includes(query) ||
           r.department?.toLowerCase().includes(query) ||
           r.site?.toLowerCase().includes(query) ||
@@ -463,17 +461,14 @@ export default function Historial() {
                     <TableHead className="font-semibold text-gray-700">
                       Descripción
                     </TableHead>
-                    <TableHead className="font-semibold text-gray-700 w-36">
-                      Responsable
+                    <TableHead className="font-semibold text-gray-700 w-40">
+                      Realizado por
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700 w-36">
                       Asignado a
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700 w-36">
                       Departamento / Sitio
-                    </TableHead>
-                    <TableHead className="font-semibold text-gray-700 w-40">
-                      Registrado por
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700 w-44">
                       Fecha
@@ -484,7 +479,7 @@ export default function Historial() {
                   {paginatedRecords.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={8}
+                        colSpan={7}
                         className="h-24 text-center text-gray-500"
                       >
                         {hasActiveFilters
@@ -526,13 +521,20 @@ export default function Historial() {
                           <TableCell className="text-gray-600 text-sm max-w-[250px] truncate">
                             {record.description || "-"}
                           </TableCell>
-                          <TableCell className="text-gray-600 text-sm">
-                            {record.responsible || "-"}
+                          <TableCell className="text-sm">
+                            {record.performedBy ? (
+                              <div className="flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5 text-gray-400 shrink-0" />
+                                <span className="text-gray-700">{record.performedBy}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-sm">
                             {record.assignedUser ? (
                               <div className="flex items-center gap-1.5">
-                                <User className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                <UserCheck className="h-3.5 w-3.5 text-blue-500 shrink-0" />
                                 <span className="text-gray-700">{record.assignedUser}</span>
                               </div>
                             ) : (
@@ -558,9 +560,6 @@ export default function Historial() {
                             ) : (
                               <span className="text-gray-400">-</span>
                             )}
-                          </TableCell>
-                          <TableCell className="text-gray-600 text-sm">
-                            {record.createdBy || "-"}
                           </TableCell>
                           <TableCell className="text-gray-500 text-xs font-mono">
                             {formatDate(record.createdTime)}
