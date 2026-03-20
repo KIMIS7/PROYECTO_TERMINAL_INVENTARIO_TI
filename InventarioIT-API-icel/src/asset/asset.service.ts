@@ -130,12 +130,27 @@ export class AssetService {
         });
       }
 
+      // Obtener nombre del usuario para el historial
+      let creatorName: string | null = null;
+      if (userEmail) {
+        const creatorForHistory = await this.prismaShopic.user.findFirst({
+          where: { Email: userEmail },
+        });
+        if (creatorForHistory) {
+          creatorName = creatorForHistory.Name;
+        }
+      }
+
       // Registrar en historial
+      const createDescParts: string[] = [`Activo "${name}" creado`];
+      if (creatorName) createDescParts.push(`Responsable: ${creatorName}`);
+      if (userEmail) createDescParts.push(`Registrado por: ${userEmail}`);
+
       await this.prismaShopic.assetHistory.create({
         data: {
           AssetID: newAsset.AssetID,
           Operation: 'CREATE',
-          Description: `Activo "${name}" creado${userEmail ? ` | Registrado por: ${userEmail}` : ''}`,
+          Description: createDescParts.join(' | '),
           CreatedTime: new Date(),
         },
       });
@@ -536,12 +551,27 @@ export class AssetService {
         }
       }
 
+      // Obtener nombre del usuario para el historial
+      let updaterName: string | null = null;
+      if (userEmail) {
+        const updaterUser = await this.prismaShopic.user.findFirst({
+          where: { Email: userEmail },
+        });
+        if (updaterUser) {
+          updaterName = updaterUser.Name;
+        }
+      }
+
       // Registrar en historial
+      const updateDescParts: string[] = [`Activo "${updatedAsset.Name}" actualizado`];
+      if (updaterName) updateDescParts.push(`Responsable: ${updaterName}`);
+      if (userEmail) updateDescParts.push(`Registrado por: ${userEmail}`);
+
       await this.prismaShopic.assetHistory.create({
         data: {
           AssetID: id,
           Operation: 'UPDATE',
-          Description: `Activo "${updatedAsset.Name}" actualizado${userEmail ? ` | Registrado por: ${userEmail}` : ''}`,
+          Description: updateDescParts.join(' | '),
           CreatedTime: new Date(),
         },
       });

@@ -39,8 +39,53 @@ export class MovementService {
     try {
       const newStateID = await this.resolveNewState(movementType);
 
+      // Enrich description with target user, department, site info
+      let targetUserName: string | null = null;
+      let targetDepartName: string | null = null;
+      let targetSiteName: string | null = null;
+      let targetCompanyName: string | null = null;
+
+      if (userID) {
+        const targetUser = await this.prismaShopic.user.findUnique({
+          where: { UserID: userID },
+          include: { Depart: true },
+        });
+        if (targetUser) {
+          targetUserName = targetUser.Name;
+          targetDepartName = targetUser.Depart?.Name || null;
+        }
+      }
+      if (siteID) {
+        const targetSite = await this.prismaShopic.site.findUnique({
+          where: { SiteID: siteID },
+          include: { Company: true },
+        });
+        if (targetSite) {
+          targetSiteName = targetSite.Name;
+          targetCompanyName = targetSite.Company?.Description || null;
+        }
+      }
+      if (departID && !targetDepartName) {
+        const targetDepart = await this.prismaShopic.depart.findUnique({
+          where: { DepartID: departID },
+        });
+        if (targetDepart) targetDepartName = targetDepart.Name;
+      }
+
+      // Build enriched default description
+      const defaultDesc = description || this.getDefaultDescription(movementType, asset.Name);
+      const contextParts: string[] = [];
+      if (targetUserName) contextParts.push(targetUserName);
+      if (targetDepartName) contextParts.push(targetDepartName);
+      if (targetSiteName) contextParts.push(targetSiteName);
+      if (targetCompanyName) contextParts.push(targetCompanyName);
+
+      const enrichedDesc = contextParts.length > 0
+        ? `${defaultDesc} → ${contextParts.join(' / ')}`
+        : defaultDesc;
+
       const descriptionParts: string[] = [];
-      descriptionParts.push(description || this.getDefaultDescription(movementType, asset.Name));
+      descriptionParts.push(enrichedDesc);
       if (responsible) {
         descriptionParts.push(`Responsable: ${responsible}`);
       }
@@ -172,15 +217,57 @@ export class MovementService {
     }
 
     try {
+      // Enrich: resolve target user, department, site, company names once
+      let bulkTargetUserName: string | null = null;
+      let bulkTargetDepartName: string | null = null;
+      let bulkTargetSiteName: string | null = null;
+      let bulkTargetCompanyName: string | null = null;
+
+      if (userID) {
+        const targetUser = await this.prismaShopic.user.findUnique({
+          where: { UserID: userID },
+          include: { Depart: true },
+        });
+        if (targetUser) {
+          bulkTargetUserName = targetUser.Name;
+          bulkTargetDepartName = targetUser.Depart?.Name || null;
+        }
+      }
+      if (siteID) {
+        const targetSite = await this.prismaShopic.site.findUnique({
+          where: { SiteID: siteID },
+          include: { Company: true },
+        });
+        if (targetSite) {
+          bulkTargetSiteName = targetSite.Name;
+          bulkTargetCompanyName = targetSite.Company?.Description || null;
+        }
+      }
+      if (departID && !bulkTargetDepartName) {
+        const targetDepart = await this.prismaShopic.depart.findUnique({
+          where: { DepartID: departID },
+        });
+        if (targetDepart) bulkTargetDepartName = targetDepart.Name;
+      }
+
+      const bulkContextParts: string[] = [];
+      if (bulkTargetUserName) bulkContextParts.push(bulkTargetUserName);
+      if (bulkTargetDepartName) bulkContextParts.push(bulkTargetDepartName);
+      if (bulkTargetSiteName) bulkContextParts.push(bulkTargetSiteName);
+      if (bulkTargetCompanyName) bulkContextParts.push(bulkTargetCompanyName);
+
       const results = await this.prismaShopic.$transaction(async (tx) => {
         const movementResults: { movementID: number; assetID: number; assetName: string }[] = [];
 
         for (const asset of assets) {
-          // Construir descripción
+          // Construir descripción enriquecida
+          const defaultDesc = description || this.getDefaultDescription(movementType as MovementType, asset.Name);
+          const enrichedDesc = bulkContextParts.length > 0
+            ? `${defaultDesc} → ${bulkContextParts.join(' / ')}`
+            : defaultDesc;
+
           const descParts: string[] = [];
-          descParts.push(
-            description || this.getDefaultDescription(movementType as MovementType, asset.Name),
-          );
+          descParts.push(enrichedDesc);
           if (responsible) descParts.push(`Responsable: ${responsible}`);
           if (userEmail) descParts.push(`Registrado por: ${userEmail}`);
           const fullDescription = descParts.join(' | ');
@@ -385,6 +472,31 @@ export class MovementService {
             select: {
               AssetID: true,
               Name: true,
+              User: {
+                select: {
+                  UserID: true,
+                  Name: true,
+                  Email: true,
+                },
+              },
+              Depart: {
+                select: {
+                  DepartID: true,
+                  Name: true,
+                },
+              },
+              Site: {
+                select: {
+                  SiteID: true,
+                  Name: true,
+                },
+              },
+              Company: {
+                select: {
+                  CompanyID: true,
+                  Description: true,
+                },
+              },
             },
           },
         },
@@ -401,6 +513,10 @@ export class MovementService {
           responsible,
           createdBy,
           createdTime: m.CreatedTime,
+          assignedUser: m.Asset?.User?.Name || null,
+          department: m.Asset?.Depart?.Name || null,
+          site: m.Asset?.Site?.Name || null,
+          company: m.Asset?.Company?.Description || null,
         };
       });
     } catch (error) {

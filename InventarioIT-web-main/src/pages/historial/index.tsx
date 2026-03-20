@@ -33,6 +33,11 @@ import {
   Pencil,
   Trash2,
   Calendar,
+  Repeat,
+  Wrench,
+  Building2,
+  MapPin,
+  User,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -45,6 +50,10 @@ interface HistoryRecord {
   responsible: string | null;
   createdBy: string | null;
   createdTime: string;
+  assignedUser: string | null;
+  department: string | null;
+  site: string | null;
+  company: string | null;
 }
 
 const OPERATION_TYPES = [
@@ -54,7 +63,9 @@ const OPERATION_TYPES = [
   "ALTA",
   "BAJA",
   "ASIGNACION",
+  "REASIGNACION",
   "RESGUARDO",
+  "REPARACION",
 ] as const;
 
 const operationConfig: Record<
@@ -97,11 +108,23 @@ const operationConfig: Record<
     bgColor: "bg-blue-100",
     icon: <UserCheck className="h-3.5 w-3.5" />,
   },
+  REASIGNACION: {
+    label: "Reasignación",
+    color: "text-cyan-700",
+    bgColor: "bg-cyan-100",
+    icon: <Repeat className="h-3.5 w-3.5" />,
+  },
   RESGUARDO: {
     label: "Resguardo",
     color: "text-amber-700",
     bgColor: "bg-amber-100",
     icon: <Shield className="h-3.5 w-3.5" />,
+  },
+  REPARACION: {
+    label: "Reparación",
+    color: "text-orange-700",
+    bgColor: "bg-orange-100",
+    icon: <Wrench className="h-3.5 w-3.5" />,
   },
 };
 
@@ -170,7 +193,11 @@ export default function Historial() {
           r.assetName?.toLowerCase().includes(query) ||
           r.description?.toLowerCase().includes(query) ||
           r.responsible?.toLowerCase().includes(query) ||
-          r.createdBy?.toLowerCase().includes(query)
+          r.createdBy?.toLowerCase().includes(query) ||
+          r.assignedUser?.toLowerCase().includes(query) ||
+          r.department?.toLowerCase().includes(query) ||
+          r.site?.toLowerCase().includes(query) ||
+          r.company?.toLowerCase().includes(query)
       );
     }
 
@@ -430,7 +457,7 @@ export default function Historial() {
                     <TableHead className="font-semibold text-gray-700 w-36">
                       Operación
                     </TableHead>
-                    <TableHead className="font-semibold text-gray-700 w-48">
+                    <TableHead className="font-semibold text-gray-700 w-32">
                       Activo
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700">
@@ -438,6 +465,12 @@ export default function Historial() {
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700 w-36">
                       Responsable
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 w-36">
+                      Asignado a
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 w-36">
+                      Departamento / Sitio
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700 w-40">
                       Registrado por
@@ -451,7 +484,7 @@ export default function Historial() {
                   {paginatedRecords.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={6}
+                        colSpan={8}
                         className="h-24 text-center text-gray-500"
                       >
                         {hasActiveFilters
@@ -468,6 +501,12 @@ export default function Historial() {
                           bgColor: "bg-gray-100",
                           icon: <History className="h-3.5 w-3.5" />,
                         };
+
+                      // Build department/site display
+                      const locationParts: string[] = [];
+                      if (record.department) locationParts.push(record.department);
+                      if (record.site) locationParts.push(record.site);
+
                       return (
                         <TableRow
                           key={record.historyID}
@@ -484,11 +523,41 @@ export default function Historial() {
                           <TableCell className="font-medium text-gray-900">
                             {record.assetName}
                           </TableCell>
-                          <TableCell className="text-gray-600 text-sm max-w-[300px] truncate">
+                          <TableCell className="text-gray-600 text-sm max-w-[250px] truncate">
                             {record.description || "-"}
                           </TableCell>
                           <TableCell className="text-gray-600 text-sm">
                             {record.responsible || "-"}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {record.assignedUser ? (
+                              <div className="flex items-center gap-1.5">
+                                <User className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                                <span className="text-gray-700">{record.assignedUser}</span>
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {locationParts.length > 0 ? (
+                              <div className="flex flex-col gap-0.5">
+                                {record.department && (
+                                  <div className="flex items-center gap-1">
+                                    <Building2 className="h-3 w-3 text-gray-400 shrink-0" />
+                                    <span className="text-gray-600 text-xs">{record.department}</span>
+                                  </div>
+                                )}
+                                {record.site && (
+                                  <div className="flex items-center gap-1">
+                                    <MapPin className="h-3 w-3 text-gray-400 shrink-0" />
+                                    <span className="text-gray-600 text-xs">{record.site}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-gray-600 text-sm">
                             {record.createdBy || "-"}

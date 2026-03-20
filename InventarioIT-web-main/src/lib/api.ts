@@ -408,6 +408,10 @@ const api = {
         responsible: string | null;
         createdBy: string | null;
         createdTime: string;
+        assignedUser: string | null;
+        department: string | null;
+        site: string | null;
+        company: string | null;
       }[]>("/movement/history");
       return response.data;
     },
