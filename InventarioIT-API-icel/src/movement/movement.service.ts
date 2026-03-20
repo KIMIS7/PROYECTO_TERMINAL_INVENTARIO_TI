@@ -9,10 +9,9 @@ import { CreateBulkMovementDto } from './dto/create-bulk-movement.dto';
 import { UpdateMovementDto } from './dto/update-movement.dto';
 import { PrismaShopic } from 'src/database/database.service';
 
-// All movement operation types (current + legacy) for queries
+// All movement operation types for queries
 const ALL_MOVEMENT_OPERATIONS = [
-  'ALTA', 'BAJA', 'ASIGNACION', 'RESGUARDO',
-  'REASIGNACION', 'REPARACION', 'PRESTAMO',
+  'BAJA', 'RESGUARDO', 'REASIGNACION', 'REPARACION',
 ];
 
 @Injectable()
