@@ -13,8 +13,10 @@ El **Sistema de Gestion de Inventario de TI** es una aplicacion empresarial full
 | [Infraestructura de Software](./diagramas/INFRAESTRUCTURA.md) | Componentes tecnologicos y su interaccion |
 | [Flujo de Autenticacion](./diagramas/AUTENTICACION.md) | Proceso de autenticacion con Azure AD |
 | [Diagramas de Secuencia](./diagramas/SECUENCIAS.md) | Flujos de operaciones principales |
+| [Modelo de Datos](./datos/DATOS.md) | Esquema de BD, entidades, relaciones y flujo de datos |
 | [Documentacion de API](./api/API_REFERENCE.md) | Endpoints REST del backend |
 | [Componentes Frontend](./componentes/COMPONENTES.md) | Componentes React del frontend |
+| [Tipos de Activo](./guias/TIPOS_DE_ACTIVO.md) | Guia de clasificacion de activos |
 | [Manual de Instalacion](./instalacion/INSTALACION.md) | Guia de configuracion e instalacion |
 
 ## Stack Tecnologico
