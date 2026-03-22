@@ -12,9 +12,18 @@ import { toast } from "sonner";
 
 type ReportFormat = "entrega_software" | "entrega_multiitem";
 
+interface AvailableAsset {
+  assetID: number;
+  name: string;
+  vendor: string;
+  model: string;
+  serialNum: string;
+}
+
 interface DeliveryReportModalProps {
   assetID?: number;
   assetIDs?: number[];
+  availableAssets?: AvailableAsset[];
   format?: ReportFormat;
   isOpen: boolean;
   onClose: () => void;
@@ -60,6 +69,7 @@ const FORMAT_LABELS: Record<ReportFormat, string> = {
 export function DeliveryReportModal({
   assetID,
   assetIDs,
+  availableAssets = [],
   format: initialFormat,
   isOpen,
   onClose,
@@ -67,7 +77,8 @@ export function DeliveryReportModal({
   const [data, setData] = useState<DeliveryData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const format = initialFormat || "entrega_software";
+  const [format, setFormat] = useState<ReportFormat>(initialFormat || "entrega_software");
+  const [selectedItems, setSelectedItems] = useState<Set<number>>(new Set());
   const [softwareStatus, setSoftwareStatus] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState(
     "Se entrega equipo en buenas condiciones sin golpes ni defectos, recien instalado. Detalles de uso."
@@ -79,7 +90,18 @@ export function DeliveryReportModal({
     if (isOpen && assetID) {
       loadData();
     }
-  }, [isOpen, assetID]);
+    if (isOpen) {
+      setFormat(initialFormat || "entrega_software");
+      // Pre-select the asset(s)
+      const initial = new Set<number>();
+      if (assetIDs && assetIDs.length > 0) {
+        assetIDs.forEach((id) => initial.add(id));
+      } else if (assetID) {
+        initial.add(assetID);
+      }
+      setSelectedItems(initial);
+    }
+  }, [isOpen, assetID, initialFormat]);
 
   const loadData = async () => {
     if (!assetID) return;
@@ -109,10 +131,18 @@ export function DeliveryReportModal({
     }));
   };
 
+  const toggleItem = (id: number) => {
+    setSelectedItems((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
   const handleDownloadPdf = async () => {
     try {
       setIsGenerating(true);
-      const ids = assetIDs || (assetID ? [assetID] : []);
 
       if (format === "entrega_software" && assetID) {
         const blob = await api.report.downloadDeliveryPdf(assetID, {
@@ -125,6 +155,12 @@ export function DeliveryReportModal({
           `entrega_equipo_${assetID}.pdf`
         );
       } else if (format === "entrega_multiitem") {
+        const ids = Array.from(selectedItems);
+        if (ids.length === 0) {
+          toast.error("Selecciona al menos un item");
+          setIsGenerating(false);
+          return;
+        }
         const blob = await api.report.downloadEntregaMultiItemPdf({
           assetIds: ids,
           razonSocial: razonSocial || undefined,
@@ -174,48 +210,91 @@ export function DeliveryReportModal({
             </div>
           ) : data ? (
             <div className="space-y-6">
-              {/* Info del equipo */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-700 mb-3">
-                  {format === "entrega_multiitem" ? "Informacion de la Entrega" : "Informacion del Equipo"}
-                </h3>
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  {format === "entrega_software" && (
-                    <>
-                      <div>
-                        <span className="font-medium text-gray-500">Equipo:</span>{" "}
-                        <span className="text-gray-900">{data.name}</span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-gray-500">No. Serie:</span>{" "}
-                        <span className="text-gray-900 font-mono">{data.serialNum}</span>
-                      </div>
-                    </>
-                  )}
-                  {format === "entrega_multiitem" && assetIDs && (
-                    <div>
-                      <span className="font-medium text-gray-500">Equipos a entregar:</span>{" "}
-                      <span className="text-gray-900 font-semibold">{assetIDs.length} items</span>
-                    </div>
-                  )}
-                  <div>
-                    <span className="font-medium text-gray-500">Departamento:</span>{" "}
-                    <span className="text-gray-900">{data.department || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-500">Recibe:</span>{" "}
-                    <span className="text-gray-900">{data.userName || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-500">Empresa:</span>{" "}
-                    <span className="text-gray-900">{data.company || "N/A"}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-500">Sitio:</span>{" "}
-                    <span className="text-gray-900">{data.site || "N/A"}</span>
-                  </div>
+              {/* Selector de formato */}
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-2">Tipo de Reporte</h3>
+                <div className="flex gap-2">
+                  {(Object.keys(FORMAT_LABELS) as ReportFormat[]).map((f) => (
+                    <button
+                      key={f}
+                      onClick={() => setFormat(f)}
+                      className={`px-3 py-2 rounded-md border text-sm transition-colors ${
+                        format === f
+                          ? "bg-blue-50 border-blue-300 text-blue-800 font-medium"
+                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
+                      }`}
+                    >
+                      {FORMAT_LABELS[f]}
+                    </button>
+                  ))}
                 </div>
               </div>
+
+              {/* Info del equipo - solo para entrega_software */}
+              {format === "entrega_software" && (
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="font-semibold text-gray-700 mb-3">Informacion del Equipo</h3>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <div>
+                      <span className="font-medium text-gray-500">Equipo:</span>{" "}
+                      <span className="text-gray-900">{data.name}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-500">No. Serie:</span>{" "}
+                      <span className="text-gray-900 font-mono">{data.serialNum}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-500">Departamento:</span>{" "}
+                      <span className="text-gray-900">{data.department || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-500">Recibe:</span>{" "}
+                      <span className="text-gray-900">{data.userName || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-500">Empresa:</span>{" "}
+                      <span className="text-gray-900">{data.company || "N/A"}</span>
+                    </div>
+                    <div>
+                      <span className="font-medium text-gray-500">Sitio:</span>{" "}
+                      <span className="text-gray-900">{data.site || "N/A"}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Selector de items - solo para multi-item */}
+              {format === "entrega_multiitem" && (
+                <div>
+                  <h3 className="font-semibold text-gray-700 mb-2">
+                    Selecciona los items a entregar
+                    <span className="text-xs font-normal text-gray-400 ml-2">
+                      ({selectedItems.size} seleccionados)
+                    </span>
+                  </h3>
+                  <div className="border rounded-lg max-h-52 overflow-y-auto">
+                    {availableAssets.map((asset) => (
+                      <label
+                        key={asset.assetID}
+                        className={`flex items-center gap-3 px-3 py-2 border-b last:border-b-0 cursor-pointer hover:bg-gray-50 text-sm ${
+                          selectedItems.has(asset.assetID) ? "bg-blue-50" : ""
+                        }`}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={selectedItems.has(asset.assetID)}
+                          onChange={() => toggleItem(asset.assetID)}
+                          className="rounded border-gray-300"
+                        />
+                        <span className="font-medium">{asset.name}</span>
+                        <span className="text-gray-500">{asset.vendor}</span>
+                        <span className="text-gray-500">{asset.model || "-"}</span>
+                        <span className="text-gray-400 font-mono">{asset.serialNum || "N/A"}</span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Campos editables comunes */}
               <div className="grid grid-cols-2 gap-4">
@@ -275,11 +354,11 @@ export function DeliveryReportModal({
                 </div>
               )}
 
-              {/* Componentes incluidos */}
-              {data.childAssets.length > 0 && (
+              {/* Componentes incluidos - solo para entrega_software */}
+              {format === "entrega_software" && data.childAssets.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-3">
-                    {format === "entrega_multiitem" ? "Items a entregar" : "Componentes / Accesorios Incluidos"}
+                    Componentes / Accesorios Incluidos
                   </h3>
                   <div className="space-y-2">
                     {data.childAssets.map((child, idx) => (
@@ -343,7 +422,7 @@ export function DeliveryReportModal({
           </Button>
           <Button
             onClick={handleDownloadPdf}
-            disabled={!data || isGenerating}
+            disabled={!data || isGenerating || (format === "entrega_multiitem" && selectedItems.size === 0)}
             className="bg-blue-600 hover:bg-blue-700 text-white"
           >
             {isGenerating ? (

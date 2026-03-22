@@ -711,6 +711,13 @@ export default function Reportes() {
             <DeliveryReportModal
               assetID={deliveryAssetID}
               assetIDs={deliveryAssetIDs}
+              availableAssets={equipos.map((a) => ({
+                assetID: a.assetID,
+                name: a.name,
+                vendor: a.vendor?.name || "-",
+                model: a.assetDetail?.model || "-",
+                serialNum: a.assetDetail?.serialNum || "N/A",
+              }))}
               format={deliveryFormat}
               isOpen={isDeliveryModalOpen}
               onClose={() => {
