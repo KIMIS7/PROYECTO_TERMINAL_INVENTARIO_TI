@@ -67,7 +67,7 @@ export function DeliveryReportModal({
   const [data, setData] = useState<DeliveryData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [format, setFormat] = useState<ReportFormat>(initialFormat || "entrega_software");
+  const format = initialFormat || "entrega_software";
   const [softwareStatus, setSoftwareStatus] = useState<Record<string, string>>({});
   const [notes, setNotes] = useState(
     "Se entrega equipo en buenas condiciones sin golpes ni defectos, recien instalado. Detalles de uso."
@@ -79,10 +79,7 @@ export function DeliveryReportModal({
     if (isOpen && assetID) {
       loadData();
     }
-    if (initialFormat) {
-      setFormat(initialFormat);
-    }
-  }, [isOpen, assetID, initialFormat]);
+  }, [isOpen, assetID]);
 
   const loadData = async () => {
     if (!assetID) return;
@@ -177,38 +174,30 @@ export function DeliveryReportModal({
             </div>
           ) : data ? (
             <div className="space-y-6">
-              {/* Selector de formato */}
-              <div>
-                <h3 className="font-semibold text-gray-700 mb-2">Tipo de Reporte</h3>
-                <div className="flex gap-2">
-                  {(Object.keys(FORMAT_LABELS) as ReportFormat[]).map((f) => (
-                    <button
-                      key={f}
-                      onClick={() => setFormat(f)}
-                      className={`px-3 py-2 rounded-md border text-sm transition-colors ${
-                        format === f
-                          ? "bg-blue-50 border-blue-300 text-blue-800 font-medium"
-                          : "bg-white border-gray-200 text-gray-600 hover:border-gray-300"
-                      }`}
-                    >
-                      {FORMAT_LABELS[f]}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               {/* Info del equipo */}
               <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="font-semibold text-gray-700 mb-3">Informacion del Equipo</h3>
+                <h3 className="font-semibold text-gray-700 mb-3">
+                  {format === "entrega_multiitem" ? "Informacion de la Entrega" : "Informacion del Equipo"}
+                </h3>
                 <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <span className="font-medium text-gray-500">Equipo:</span>{" "}
-                    <span className="text-gray-900">{data.name}</span>
-                  </div>
-                  <div>
-                    <span className="font-medium text-gray-500">No. Serie:</span>{" "}
-                    <span className="text-gray-900 font-mono">{data.serialNum}</span>
-                  </div>
+                  {format === "entrega_software" && (
+                    <>
+                      <div>
+                        <span className="font-medium text-gray-500">Equipo:</span>{" "}
+                        <span className="text-gray-900">{data.name}</span>
+                      </div>
+                      <div>
+                        <span className="font-medium text-gray-500">No. Serie:</span>{" "}
+                        <span className="text-gray-900 font-mono">{data.serialNum}</span>
+                      </div>
+                    </>
+                  )}
+                  {format === "entrega_multiitem" && assetIDs && (
+                    <div>
+                      <span className="font-medium text-gray-500">Equipos a entregar:</span>{" "}
+                      <span className="text-gray-900 font-semibold">{assetIDs.length} items</span>
+                    </div>
+                  )}
                   <div>
                     <span className="font-medium text-gray-500">Departamento:</span>{" "}
                     <span className="text-gray-900">{data.department || "N/A"}</span>
