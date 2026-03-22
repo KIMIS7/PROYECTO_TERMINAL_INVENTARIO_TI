@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   Loader2,
   ClipboardList,
+  Users,
   History,
   Package,
   RotateCcw,
@@ -35,7 +36,7 @@ function triggerDownload(blob: Blob, filename: string) {
   document.body.removeChild(a);
 }
 
-type ReportType = "inventory" | "delivery" | "resguardo-pdf" | "history";
+type ReportType = "inventory" | "delivery" | "resguardo-pdf" | "history" | "user-assets";
 
 export default function Reportes() {
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -259,6 +260,7 @@ export default function Reportes() {
     { key: "delivery", label: "Entrega de Equipo", icon: <ClipboardList className="h-4 w-4" /> },
     { key: "resguardo-pdf", label: "Resguardo de Equipo", icon: <RotateCcw className="h-4 w-4" /> },
     { key: "history", label: "Historial", icon: <History className="h-4 w-4" /> },
+    { key: "user-assets", label: "Resguardo por Usuario", icon: <Users className="h-4 w-4" /> },
   ];
 
   return (
@@ -505,167 +507,89 @@ export default function Reportes() {
                     <div>
                       <h2 className="text-xl font-semibold text-gray-800">Resguardo de Equipo</h2>
                       <p className="text-sm text-gray-500 mt-1">
-                        Genera el formato de resguardo en PDF. Selecciona activos individualmente
-                        o genera el resguardo por usuario con todos sus equipos asignados.
+                        Genera el formato de resguardo en PDF cuando la tienda devuelve equipo al
+                        Departamento de Sistemas. Selecciona los activos y genera el PDF.
                       </p>
                     </div>
 
-                    {/* --- Resguardo por usuario --- */}
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-700 mb-3">Resguardo por Usuario</h3>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead className="font-semibold">Usuario</TableHead>
-                            <TableHead className="font-semibold">Email</TableHead>
-                            <TableHead className="font-semibold">Equipos Asignados</TableHead>
-                            <TableHead className="font-semibold w-48">Accion</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {users.length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={4} className="text-center text-gray-500 py-8">
-                                No hay usuarios con equipos asignados
-                              </TableCell>
-                            </TableRow>
+                    {selectedResguardoAssets.size > 0 && (
+                      <div className="flex items-center gap-3 bg-blue-50 rounded-lg p-3">
+                        <span className="text-sm font-medium text-blue-700">
+                          {selectedResguardoAssets.size} activos seleccionados
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={handleResguardoPdf}
+                          disabled={isExporting !== null}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          {isExporting === "resguardo-pdf" ? (
+                            <Loader2 className="h-4 w-4 mr-1 animate-spin" />
                           ) : (
-                            users.map((user) => {
-                              const userAssetCount = assets.filter(
-                                (a) => a.userID === user.userID
-                              ).length;
-                              return (
-                                <TableRow key={user.userID} className="hover:bg-gray-50">
-                                  <TableCell className="font-medium">{user.name}</TableCell>
-                                  <TableCell className="text-sm text-gray-500">{user.email}</TableCell>
-                                  <TableCell>
-                                    <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
-                                      {userAssetCount} activos
-                                    </span>
-                                  </TableCell>
-                                  <TableCell>
-                                    <div className="flex gap-2">
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleExportUserResguardoPdf(user.userID, user.name)}
-                                        disabled={isExporting === `user-pdf-${user.userID}` || userAssetCount === 0}
-                                        className="text-green-600 border-green-200 hover:bg-green-50"
-                                      >
-                                        {isExporting === `user-pdf-${user.userID}` ? (
-                                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                        ) : (
-                                          <FileText className="h-4 w-4 mr-1" />
-                                        )}
-                                        Resguardo
-                                      </Button>
-                                      <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => handleExportUserAssets(user.userID, user.name)}
-                                        disabled={isExporting === `user-${user.userID}` || userAssetCount === 0}
-                                        className="text-gray-600 border-gray-200 hover:bg-gray-50"
-                                      >
-                                        {isExporting === `user-${user.userID}` ? (
-                                          <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                        ) : (
-                                          <FileSpreadsheet className="h-4 w-4 mr-1" />
-                                        )}
-                                        Excel
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              );
-                            })
+                            <FileText className="h-4 w-4 mr-1" />
                           )}
-                        </TableBody>
-                      </Table>
-                    </div>
+                          Generar Resguardo PDF
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedResguardoAssets(new Set())}
+                          className="text-gray-500"
+                        >
+                          Limpiar seleccion
+                        </Button>
+                      </div>
+                    )}
 
-                    {/* --- Resguardo por seleccion de activos --- */}
-                    <div>
-                      <h3 className="text-base font-semibold text-gray-700 mb-3">Seleccion individual de activos</h3>
-
-                      {selectedResguardoAssets.size > 0 && (
-                        <div className="flex items-center gap-3 bg-blue-50 rounded-lg p-3 mb-3">
-                          <span className="text-sm font-medium text-blue-700">
-                            {selectedResguardoAssets.size} activos seleccionados
-                          </span>
-                          <Button
-                            size="sm"
-                            onClick={handleResguardoPdf}
-                            disabled={isExporting !== null}
-                            className="bg-green-600 hover:bg-green-700 text-white"
-                          >
-                            {isExporting === "resguardo-pdf" ? (
-                              <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                            ) : (
-                              <FileText className="h-4 w-4 mr-1" />
-                            )}
-                            Generar Resguardo PDF
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() => setSelectedResguardoAssets(new Set())}
-                            className="text-gray-500"
-                          >
-                            Limpiar seleccion
-                          </Button>
-                        </div>
-                      )}
-
-                      <Table>
-                        <TableHeader>
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-10"></TableHead>
+                          <TableHead className="font-semibold">Equipo</TableHead>
+                          <TableHead className="font-semibold">Marca</TableHead>
+                          <TableHead className="font-semibold">Modelo</TableHead>
+                          <TableHead className="font-semibold">No. Serie</TableHead>
+                          <TableHead className="font-semibold">Sitio</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {assets.filter((a) => a.assetStateInfo?.name !== "Baja").length === 0 ? (
                           <TableRow>
-                            <TableHead className="w-10"></TableHead>
-                            <TableHead className="font-semibold">Equipo</TableHead>
-                            <TableHead className="font-semibold">Marca</TableHead>
-                            <TableHead className="font-semibold">Modelo</TableHead>
-                            <TableHead className="font-semibold">No. Serie</TableHead>
-                            <TableHead className="font-semibold">Sitio</TableHead>
+                            <TableCell colSpan={6} className="text-center text-gray-500 py-8">
+                              No hay activos disponibles
+                            </TableCell>
                           </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {assets.filter((a) => a.assetStateInfo?.name !== "Baja").length === 0 ? (
-                            <TableRow>
-                              <TableCell colSpan={6} className="text-center text-gray-500 py-8">
-                                No hay activos disponibles
+                        ) : (
+                          assets
+                            .filter((a) => a.assetStateInfo?.name !== "Baja")
+                            .map((asset) => (
+                            <TableRow
+                              key={asset.assetID}
+                              className={`hover:bg-gray-50 cursor-pointer ${
+                                selectedResguardoAssets.has(asset.assetID) ? "bg-blue-50" : ""
+                              }`}
+                              onClick={() => toggleResguardoAsset(asset.assetID)}
+                            >
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedResguardoAssets.has(asset.assetID)}
+                                  onChange={() => toggleResguardoAsset(asset.assetID)}
+                                  className="rounded border-gray-300"
+                                />
                               </TableCell>
+                              <TableCell className="font-medium">{asset.name}</TableCell>
+                              <TableCell className="text-sm">{asset.vendor?.name || "-"}</TableCell>
+                              <TableCell className="text-sm">{asset.assetDetail?.model || "-"}</TableCell>
+                              <TableCell className="font-mono text-sm">
+                                {asset.assetDetail?.serialNum || "N/A"}
+                              </TableCell>
+                              <TableCell>{asset.site?.name || "-"}</TableCell>
                             </TableRow>
-                          ) : (
-                            assets
-                              .filter((a) => a.assetStateInfo?.name !== "Baja")
-                              .map((asset) => (
-                              <TableRow
-                                key={asset.assetID}
-                                className={`hover:bg-gray-50 cursor-pointer ${
-                                  selectedResguardoAssets.has(asset.assetID) ? "bg-blue-50" : ""
-                                }`}
-                                onClick={() => toggleResguardoAsset(asset.assetID)}
-                              >
-                                <TableCell>
-                                  <input
-                                    type="checkbox"
-                                    checked={selectedResguardoAssets.has(asset.assetID)}
-                                    onChange={() => toggleResguardoAsset(asset.assetID)}
-                                    className="rounded border-gray-300"
-                                  />
-                                </TableCell>
-                                <TableCell className="font-medium">{asset.name}</TableCell>
-                                <TableCell className="text-sm">{asset.vendor?.name || "-"}</TableCell>
-                                <TableCell className="text-sm">{asset.assetDetail?.model || "-"}</TableCell>
-                                <TableCell className="font-mono text-sm">
-                                  {asset.assetDetail?.serialNum || "N/A"}
-                                </TableCell>
-                                <TableCell>{asset.site?.name || "-"}</TableCell>
-                              </TableRow>
-                            ))
-                          )}
-                        </TableBody>
-                      </Table>
-                    </div>
+                          ))
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
 
@@ -694,6 +618,88 @@ export default function Reportes() {
                       )}
                       Exportar Historial a Excel
                     </Button>
+                  </div>
+                )}
+
+                {/* ===== RESGUARDO POR USUARIO ===== */}
+                {activeReport === "user-assets" && (
+                  <div className="space-y-6">
+                    <div>
+                      <h2 className="text-xl font-semibold text-gray-800">Resguardo por Usuario</h2>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Genera un reporte de resguardo con todos los equipos asignados a un usuario.
+                        Incluye firmas de entrega y recepcion.
+                      </p>
+                    </div>
+
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="font-semibold">Usuario</TableHead>
+                          <TableHead className="font-semibold">Email</TableHead>
+                          <TableHead className="font-semibold">Equipos Asignados</TableHead>
+                          <TableHead className="font-semibold w-48">Accion</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {users.length === 0 ? (
+                          <TableRow>
+                            <TableCell colSpan={4} className="text-center text-gray-500 py-8">
+                              No hay usuarios con equipos asignados
+                            </TableCell>
+                          </TableRow>
+                        ) : (
+                          users.map((user) => {
+                            const userAssetCount = assets.filter(
+                              (a) => a.userID === user.userID
+                            ).length;
+                            return (
+                              <TableRow key={user.userID} className="hover:bg-gray-50">
+                                <TableCell className="font-medium">{user.name}</TableCell>
+                                <TableCell className="text-sm text-gray-500">{user.email}</TableCell>
+                                <TableCell>
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-700">
+                                    {userAssetCount} activos
+                                  </span>
+                                </TableCell>
+                                <TableCell>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleExportUserResguardoPdf(user.userID, user.name)}
+                                      disabled={isExporting === `user-pdf-${user.userID}` || userAssetCount === 0}
+                                      className="text-green-600 border-green-200 hover:bg-green-50"
+                                    >
+                                      {isExporting === `user-pdf-${user.userID}` ? (
+                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                      ) : (
+                                        <FileText className="h-4 w-4 mr-1" />
+                                      )}
+                                      Resguardo
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleExportUserAssets(user.userID, user.name)}
+                                      disabled={isExporting === `user-${user.userID}` || userAssetCount === 0}
+                                      className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    >
+                                      {isExporting === `user-${user.userID}` ? (
+                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                      ) : (
+                                        <FileSpreadsheet className="h-4 w-4 mr-1" />
+                                      )}
+                                      Excel
+                                    </Button>
+                                  </div>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        )}
+                      </TableBody>
+                    </Table>
                   </div>
                 )}
               </>
