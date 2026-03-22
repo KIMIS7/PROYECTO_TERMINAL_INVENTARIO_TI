@@ -33,6 +33,11 @@ import {
   Calendar,
   FileSpreadsheet,
   Loader2,
+  Repeat,
+  Wrench,
+  User,
+  Building2,
+  MapPin,
 } from "lucide-react";
 import { toast } from "sonner";
 
