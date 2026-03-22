@@ -13,7 +13,6 @@ import {
   type Facet,
 } from "@/components/OmniboxFilter";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -560,7 +559,7 @@ export default function Altas() {
     try {
       setIsExporting(true);
       const filters: { group?: string } = {};
-      if (selectedGroup) filters.group = selectedGroup;
+      if (activeGroup) filters.group = activeGroup;
       const blob = await api.report.downloadAssetsCsv(filters);
       const dateStr = new Date().toISOString().split("T")[0];
       triggerDownload(new Blob([blob], { type: "text/csv" }), `inventario_${dateStr}.csv`);
@@ -577,7 +576,7 @@ export default function Altas() {
     try {
       setIsExporting(true);
       const filters: { group?: string } = {};
-      if (selectedGroup) filters.group = selectedGroup;
+      if (activeGroup) filters.group = activeGroup;
       const blob = await api.report.downloadAssetsExcel(filters);
       const dateStr = new Date().toISOString().split("T")[0];
       triggerDownload(

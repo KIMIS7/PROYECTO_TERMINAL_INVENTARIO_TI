@@ -42,12 +42,12 @@ interface HistoryRecord {
   assetName: string;
   operation: string;
   description: string;
-  performedBy: string | null;
+  performedBy?: string | null;
   createdTime: string;
-  assignedUser: string | null;
-  department: string | null;
-  site: string | null;
-  company: string | null;
+  assignedUser?: string | null;
+  department?: string | null;
+  site?: string | null;
+  company?: string | null;
 }
 
 const OPERATION_TYPES = [
@@ -109,14 +109,6 @@ function formatDate(dateStr: string): string {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
-}
-
-function formatDateShort(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
   });
 }
 

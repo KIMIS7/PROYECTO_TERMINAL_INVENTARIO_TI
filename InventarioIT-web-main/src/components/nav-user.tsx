@@ -4,7 +4,7 @@ import {
   ChevronsUpDown,
   LogOut,
 } from "lucide-react";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
@@ -22,8 +22,17 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { signOut } from "next-auth/react";
-import api from "@/lib/api";
 import { getInitials } from "@/lib/utils";
+
+interface UserProfile {
+  userInfo?: {
+    buyerID?: string;
+    name?: string;
+    emailAddress?: string;
+    approvalPerson?: string;
+  };
+  companies?: string[];
+}
 
 export function NavUser({
   user,
@@ -35,7 +44,7 @@ export function NavUser({
   };
 }) {
   const { isMobile } = useSidebar();
-  const [userProfile, setUserProfile] = useState<any>(null);
+  const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
 
   /*useEffect(() => {
     const fetchUserProfile = async () => {

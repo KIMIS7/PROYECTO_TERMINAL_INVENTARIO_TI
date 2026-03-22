@@ -69,7 +69,7 @@ export default function Reportes() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [assetsRes, companiesRes, statesRes, usersRes] = await Promise.all([
+      const [assetsRes, companiesRes, statesRes] = await Promise.all([
         api.asset.getAll().catch(() => []),
         api.company.getAll().catch(() => []),
         api.assetState.getAll().catch(() => []),

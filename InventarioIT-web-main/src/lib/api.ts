@@ -626,6 +626,27 @@ const api = {
       return response.data;
     },
   },
+  // Jerarquía de aprobaciones
+  approvalHierarchy: {
+    getHierarchy: async (buyerID: string, company?: string) => {
+      const params = new URLSearchParams();
+      params.append('buyerID', buyerID);
+      if (company) params.append('company', company);
+      const response = await apiClient.get<{
+        success: boolean;
+        message: string;
+        data: {
+          Company: string;
+          Name: string;
+          BuyerID: string;
+          EMailAddress: string;
+          ApprovalPerson: string;
+          Nivel: number;
+        }[];
+      }>(`/user/approval-hierarchy?${params.toString()}`);
+      return response.data;
+    },
+  },
 };
 
 export default api;

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import api from '@/lib/api';
 
 interface ApprovalHierarchyBuyer {
@@ -31,7 +31,7 @@ export const useApprovalHierarchy = (
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const fetchHierarchy = async () => {
+  const fetchHierarchy = useCallback(async () => {
     if (!buyerID) {
       setBuyers([]);
       return;
@@ -42,25 +42,26 @@ export const useApprovalHierarchy = (
 
     try {
       const response = await api.approvalHierarchy.getHierarchy(buyerID, company);
-      
+
       if (response.success && response.data) {
         setBuyers(response.data);
       } else {
         setError(response.message || 'Error al obtener jerarquía');
         setBuyers([]);
       }
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error en useApprovalHierarchy:', err);
-      setError(err?.response?.data?.message || 'Error al cargar jerarquía de aprobaciones');
+      const axiosErr = err as { response?: { data?: { message?: string } } };
+      setError(axiosErr?.response?.data?.message || 'Error al cargar jerarquía de aprobaciones');
       setBuyers([]);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [buyerID, company]);
 
   useEffect(() => {
     fetchHierarchy();
-  }, [buyerID, company]);
+  }, [fetchHierarchy]);
 
   return {
     buyers,
