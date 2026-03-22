@@ -54,7 +54,7 @@ export default function Reportes() {
   // Delivery modal
   const [deliveryAssetID, setDeliveryAssetID] = useState<number | null>(null);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
-  const [deliveryFormat, setDeliveryFormat] = useState<"entrega_software" | "entrega_multiitem" | "resguardo">("entrega_software");
+  const [deliveryFormat, setDeliveryFormat] = useState<"entrega_software" | "entrega_multiitem">("entrega_software");
 
   // Resguardo PDF (multi-select)
   const [selectedResguardoAssets, setSelectedResguardoAssets] = useState<Set<number>>(new Set());
@@ -171,6 +171,33 @@ export default function Reportes() {
     } catch (error) {
       console.error("Error:", error);
       toast.error("Error al exportar resguardo");
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
+  const handleExportUserResguardoPdf = async (userId: number, userName: string) => {
+    try {
+      setIsExporting(`user-pdf-${userId}`);
+      const userAssetIds = assets
+        .filter((a) => a.userID === userId)
+        .map((a) => a.assetID);
+      if (userAssetIds.length === 0) {
+        toast.error("Este usuario no tiene activos asignados");
+        return;
+      }
+      const blob = await api.report.downloadResguardoPdf({
+        assetIds: userAssetIds,
+      });
+      const dateStr = new Date().toISOString().split("T")[0];
+      triggerDownload(
+        new Blob([blob], { type: "application/pdf" }),
+        `resguardo_${userName.replace(/\s+/g, "_")}_${dateStr}.pdf`
+      );
+      toast.success(`Resguardo PDF de ${userName} generado`);
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Error al generar resguardo PDF");
     } finally {
       setIsExporting(null);
     }
@@ -578,20 +605,36 @@ export default function Reportes() {
                                   </span>
                                 </TableCell>
                                 <TableCell>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => handleExportUserAssets(user.userID, user.name)}
-                                    disabled={isExporting === `user-${user.userID}` || userAssetCount === 0}
-                                    className="text-green-600 border-green-200 hover:bg-green-50"
-                                  >
-                                    {isExporting === `user-${user.userID}` ? (
-                                      <Loader2 className="h-4 w-4 mr-1 animate-spin" />
-                                    ) : (
-                                      <FileSpreadsheet className="h-4 w-4 mr-1" />
-                                    )}
-                                    Resguardo
-                                  </Button>
+                                  <div className="flex gap-2">
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleExportUserResguardoPdf(user.userID, user.name)}
+                                      disabled={isExporting === `user-pdf-${user.userID}` || userAssetCount === 0}
+                                      className="text-green-600 border-green-200 hover:bg-green-50"
+                                    >
+                                      {isExporting === `user-pdf-${user.userID}` ? (
+                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                      ) : (
+                                        <FileText className="h-4 w-4 mr-1" />
+                                      )}
+                                      Resguardo
+                                    </Button>
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                      onClick={() => handleExportUserAssets(user.userID, user.name)}
+                                      disabled={isExporting === `user-${user.userID}` || userAssetCount === 0}
+                                      className="text-gray-600 border-gray-200 hover:bg-gray-50"
+                                    >
+                                      {isExporting === `user-${user.userID}` ? (
+                                        <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                                      ) : (
+                                        <FileSpreadsheet className="h-4 w-4 mr-1" />
+                                      )}
+                                      Excel
+                                    </Button>
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             );

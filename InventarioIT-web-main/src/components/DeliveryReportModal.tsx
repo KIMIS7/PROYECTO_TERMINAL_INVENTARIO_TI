@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 
-type ReportFormat = "entrega_software" | "entrega_multiitem" | "resguardo";
+type ReportFormat = "entrega_software" | "entrega_multiitem";
 
 interface DeliveryReportModalProps {
   assetID?: number;
@@ -55,7 +55,6 @@ function triggerDownload(blob: Blob, filename: string) {
 const FORMAT_LABELS: Record<ReportFormat, string> = {
   entrega_software: "Entrega de Equipo (con Software)",
   entrega_multiitem: "Entrega de Equipo (Multi-item)",
-  resguardo: "Resguardo de Equipo",
 };
 
 export function DeliveryReportModal({
@@ -75,7 +74,6 @@ export function DeliveryReportModal({
   );
   const [deliveryPerson, setDeliveryPerson] = useState("");
   const [razonSocial, setRazonSocial] = useState("");
-  const [storeName, setStoreName] = useState("");
 
   useEffect(() => {
     if (isOpen && assetID) {
@@ -93,7 +91,6 @@ export function DeliveryReportModal({
       const result = await api.report.getDeliveryData(assetID);
       setData(result);
       setRazonSocial(result.company || "");
-      setStoreName(result.site || "");
 
       const initialStatus: Record<string, string> = {};
       result.softwareChecklist.forEach((sw: string) => {
@@ -142,18 +139,6 @@ export function DeliveryReportModal({
         triggerDownload(
           new Blob([blob], { type: "application/pdf" }),
           `entrega_multiitem_${new Date().toISOString().split("T")[0]}.pdf`
-        );
-      } else if (format === "resguardo") {
-        const blob = await api.report.downloadResguardoPdf({
-          assetIds: ids,
-          razonSocial: razonSocial || undefined,
-          storeName: storeName || undefined,
-          receiverName: deliveryPerson || undefined,
-          deliveryPerson: data?.userName || undefined,
-        });
-        triggerDownload(
-          new Blob([blob], { type: "application/pdf" }),
-          `resguardo_equipo_${new Date().toISOString().split("T")[0]}.pdf`
         );
       }
 
@@ -229,9 +214,7 @@ export function DeliveryReportModal({
                     <span className="text-gray-900">{data.department || "N/A"}</span>
                   </div>
                   <div>
-                    <span className="font-medium text-gray-500">
-                      {format === "resguardo" ? "Entrega:" : "Recibe:"}
-                    </span>{" "}
+                    <span className="font-medium text-gray-500">Recibe:</span>{" "}
                     <span className="text-gray-900">{data.userName || "N/A"}</span>
                   </div>
                   <div>
@@ -259,18 +242,14 @@ export function DeliveryReportModal({
                 </div>
                 <div>
                   <label className="text-sm font-medium text-gray-600 block mb-1">
-                    {format === "resguardo" ? "Nombre Tienda" : "Persona que entrega"}
+                    Persona que entrega
                   </label>
                   <input
                     type="text"
-                    value={format === "resguardo" ? storeName : deliveryPerson}
-                    onChange={(e) =>
-                      format === "resguardo"
-                        ? setStoreName(e.target.value)
-                        : setDeliveryPerson(e.target.value)
-                    }
+                    value={deliveryPerson}
+                    onChange={(e) => setDeliveryPerson(e.target.value)}
                     className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder={format === "resguardo" ? "Nombre de la tienda" : "Nombre de quien entrega"}
+                    placeholder="Nombre de quien entrega"
                   />
                 </div>
               </div>
@@ -307,8 +286,8 @@ export function DeliveryReportModal({
                 </div>
               )}
 
-              {/* Componentes incluidos - para entrega_software y entrega_multiitem */}
-              {format !== "resguardo" && data.childAssets.length > 0 && (
+              {/* Componentes incluidos */}
+              {data.childAssets.length > 0 && (
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-3">
                     {format === "entrega_multiitem" ? "Items a entregar" : "Componentes / Accesorios Incluidos"}
@@ -326,8 +305,8 @@ export function DeliveryReportModal({
                 </div>
               )}
 
-              {/* Notas - solo para entrega, no para resguardo */}
-              {format !== "resguardo" && (
+              {/* Notas */}
+              {(
                 <div>
                   <h3 className="font-semibold text-gray-700 mb-2">Notas / Condicion del equipo</h3>
                   <textarea
@@ -343,9 +322,7 @@ export function DeliveryReportModal({
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
                 <p className="text-xs text-yellow-800 font-medium mb-1">Aviso legal que aparecera en el PDF:</p>
                 <p className="text-xs text-yellow-700 italic">
-                  {format === "resguardo"
-                    ? "Recibo del Encargado de tienda la(s) Herramienta(s) arriba mencionada(s) para resguardo, reinstalacion o asignacion del mismo. Sirva el presente documento para el deslinde responsabilidades posteriores."
-                    : `Recibo de ${razonSocial || "la Empresa"} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`}
+                  {`Recibo de ${razonSocial || "la Empresa"} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`}
                 </p>
               </div>
 
@@ -354,17 +331,13 @@ export function DeliveryReportModal({
                 <div className="flex-1 border-t-2 border-gray-300 pt-2">
                   <p className="font-semibold text-gray-700">ENTREGA:</p>
                   <p className="text-gray-500 text-xs">
-                    {format === "resguardo"
-                      ? `${data.userName || "..."}\nENCARGADO DE TIENDA`
-                      : `${deliveryPerson || "..."}\nDEPARTAMENTO DE SISTEMAS`}
+                    {`${deliveryPerson || "..."}\nDEPARTAMENTO DE SISTEMAS`}
                   </p>
                 </div>
                 <div className="flex-1 border-t-2 border-gray-300 pt-2">
                   <p className="font-semibold text-gray-700">RECIBE:</p>
                   <p className="text-gray-500 text-xs">
-                    {format === "resguardo"
-                      ? `${deliveryPerson || "..."}\nDEPARTAMENTO DE SISTEMAS`
-                      : data.userName || "..."}
+                    {data.userName || "..."}
                   </p>
                 </div>
               </div>
