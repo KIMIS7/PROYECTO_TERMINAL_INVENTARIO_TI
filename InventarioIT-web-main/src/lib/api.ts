@@ -405,11 +405,20 @@ const api = {
         assetName: string;
         operation: string;
         description: string;
-        responsible: string | null;
-        createdBy: string | null;
+        performedBy?: string | null;
+        responsible?: string | null;
+        createdBy?: string | null;
         createdTime: string;
+        assignedUser?: string | null;
+        department?: string | null;
+        site?: string | null;
+        company?: string | null;
       }[]>("/movement/history");
-      return response.data;
+      // Normalize: compute performedBy from whichever fields the API returns
+      return response.data.map((r) => ({
+        ...r,
+        performedBy: r.performedBy || r.responsible || r.createdBy || null,
+      }));
     },
     getByAssetId: async (assetID: number) => {
       const response = await apiClient.get<Movement[]>(`/movement/asset/${assetID}`);
