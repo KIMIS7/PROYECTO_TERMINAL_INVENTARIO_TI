@@ -38,8 +38,10 @@ import {
   User,
   Building2,
   MapPin,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DeliveryReportModal } from "@/components/DeliveryReportModal";
 
 interface HistoryRecord {
   historyID: number;
@@ -210,6 +212,15 @@ export default function Historial() {
   }, [records]);
 
   const [isExportingHistory, setIsExportingHistory] = useState(false);
+
+  // Delivery report modal
+  const [reportAssetID, setReportAssetID] = useState<number | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const handleGenerateReport = (record: HistoryRecord) => {
+    setReportAssetID(record.assetID);
+    setIsReportModalOpen(true);
+  };
 
   const handleRefresh = () => {
     loadData();
@@ -483,13 +494,16 @@ export default function Historial() {
                     <TableHead className="font-semibold text-gray-700 w-44">
                       Fecha
                     </TableHead>
+                    <TableHead className="font-semibold text-gray-700 w-28 text-center">
+                      Acciones
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedRecords.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-24 text-center text-gray-500"
                       >
                         {hasActiveFilters
@@ -574,6 +588,18 @@ export default function Historial() {
                           <TableCell className="text-gray-500 text-xs font-mono">
                             {formatDate(record.createdTime)}
                           </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => handleGenerateReport(record)}
+                              title="Generar reporte de entrega"
+                            >
+                              <FileText className="h-3.5 w-3.5 mr-1" />
+                              Reporte
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })
@@ -582,6 +608,17 @@ export default function Historial() {
               </Table>
             )}
           </div>
+          {/* Delivery Report Modal */}
+          {reportAssetID && (
+            <DeliveryReportModal
+              assetID={reportAssetID}
+              isOpen={isReportModalOpen}
+              onClose={() => {
+                setIsReportModalOpen(false);
+                setReportAssetID(null);
+              }}
+            />
+          )}
         </div>
       )}
     </MainLayout>
