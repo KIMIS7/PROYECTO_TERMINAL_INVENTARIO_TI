@@ -306,17 +306,15 @@ export function DeliveryReportModal({
               )}
 
               {/* Notas */}
-              {(
-                <div>
-                  <h3 className="font-semibold text-gray-700 mb-2">Notas / Condicion del equipo</h3>
-                  <textarea
-                    value={notes}
-                    onChange={(e) => setNotes(e.target.value)}
-                    className="w-full border rounded-md p-3 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Describe la condicion del equipo..."
-                  />
-                </div>
-              )}
+              <div>
+                <h3 className="font-semibold text-gray-700 mb-2">Notas / Condicion del equipo</h3>
+                <textarea
+                  value={notes}
+                  onChange={(e) => setNotes(e.target.value)}
+                  className="w-full border rounded-md p-3 text-sm resize-none h-20 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Describe la condicion del equipo..."
+                />
+              </div>
 
               {/* Preview del aviso legal */}
               <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">

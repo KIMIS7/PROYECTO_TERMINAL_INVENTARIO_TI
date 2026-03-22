@@ -53,8 +53,12 @@ export default function Reportes() {
 
   // Delivery modal
   const [deliveryAssetID, setDeliveryAssetID] = useState<number | null>(null);
+  const [deliveryAssetIDs, setDeliveryAssetIDs] = useState<number[]>([]);
   const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
   const [deliveryFormat, setDeliveryFormat] = useState<"entrega_software" | "entrega_multiitem">("entrega_software");
+
+  // Multi-select for delivery
+  const [selectedDeliveryAssets, setSelectedDeliveryAssets] = useState<Set<number>>(new Set());
 
   // Resguardo PDF (multi-select)
   const [selectedResguardoAssets, setSelectedResguardoAssets] = useState<Set<number>>(new Set());
@@ -207,6 +211,15 @@ export default function Reportes() {
   const equipos = assets.filter(
     (a) => a.productType?.group === "Equipo" && a.assetStateInfo?.name !== "Baja"
   );
+
+  const toggleDeliveryAsset = (id: number) => {
+    setSelectedDeliveryAssets((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
 
   const handleResguardoPdf = async () => {
     if (selectedResguardoAssets.size === 0) {
@@ -385,14 +398,45 @@ export default function Reportes() {
                     <div>
                       <h2 className="text-xl font-semibold text-gray-800">Reporte de Entrega de Equipo</h2>
                       <p className="text-sm text-gray-500 mt-1">
-                        Genera el formato de entrega en PDF. Puedes elegir entre formato con checklist
-                        de software (laptops) o formato multi-item (perifericos como monitores, escaners, etc).
+                        Genera el formato de entrega en PDF. Usa el boton para formato individual con checklist
+                        de software, o selecciona varios equipos para generar un formato multi-item.
                       </p>
                     </div>
+
+                    {selectedDeliveryAssets.size > 0 && (
+                      <div className="flex items-center gap-3 bg-blue-50 rounded-lg p-3">
+                        <span className="text-sm font-medium text-blue-700">
+                          {selectedDeliveryAssets.size} equipos seleccionados
+                        </span>
+                        <Button
+                          size="sm"
+                          onClick={() => {
+                            const firstId = Array.from(selectedDeliveryAssets)[0];
+                            setDeliveryAssetID(firstId);
+                            setDeliveryAssetIDs(Array.from(selectedDeliveryAssets));
+                            setDeliveryFormat("entrega_multiitem");
+                            setIsDeliveryModalOpen(true);
+                          }}
+                          className="bg-green-600 hover:bg-green-700 text-white"
+                        >
+                          <FileText className="h-4 w-4 mr-1" />
+                          Generar Multi-item PDF
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => setSelectedDeliveryAssets(new Set())}
+                          className="text-gray-500"
+                        >
+                          Limpiar seleccion
+                        </Button>
+                      </div>
+                    )}
 
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          <TableHead className="w-10"></TableHead>
                           <TableHead className="font-semibold">Equipo</TableHead>
                           <TableHead className="font-semibold">Marca</TableHead>
                           <TableHead className="font-semibold">Modelo</TableHead>
@@ -405,13 +449,26 @@ export default function Reportes() {
                       <TableBody>
                         {equipos.length === 0 ? (
                           <TableRow>
-                            <TableCell colSpan={7} className="text-center text-gray-500 py-8">
+                            <TableCell colSpan={8} className="text-center text-gray-500 py-8">
                               No hay equipos disponibles
                             </TableCell>
                           </TableRow>
                         ) : (
                           equipos.map((asset) => (
-                            <TableRow key={asset.assetID} className="hover:bg-gray-50">
+                            <TableRow
+                              key={asset.assetID}
+                              className={`hover:bg-gray-50 ${
+                                selectedDeliveryAssets.has(asset.assetID) ? "bg-blue-50" : ""
+                              }`}
+                            >
+                              <TableCell>
+                                <input
+                                  type="checkbox"
+                                  checked={selectedDeliveryAssets.has(asset.assetID)}
+                                  onChange={() => toggleDeliveryAsset(asset.assetID)}
+                                  className="rounded border-gray-300"
+                                />
+                              </TableCell>
                               <TableCell className="font-medium">{asset.name}</TableCell>
                               <TableCell className="text-sm">{asset.vendor?.name || "-"}</TableCell>
                               <TableCell className="text-sm">{asset.assetDetail?.model || "-"}</TableCell>
@@ -426,6 +483,7 @@ export default function Reportes() {
                                   variant="outline"
                                   onClick={() => {
                                     setDeliveryAssetID(asset.assetID);
+                                    setDeliveryAssetIDs([asset.assetID]);
                                     setDeliveryFormat("entrega_software");
                                     setIsDeliveryModalOpen(true);
                                   }}
@@ -652,11 +710,13 @@ export default function Reportes() {
           {deliveryAssetID && (
             <DeliveryReportModal
               assetID={deliveryAssetID}
+              assetIDs={deliveryAssetIDs}
               format={deliveryFormat}
               isOpen={isDeliveryModalOpen}
               onClose={() => {
                 setIsDeliveryModalOpen(false);
                 setDeliveryAssetID(null);
+                setDeliveryAssetIDs([]);
               }}
             />
           )}
