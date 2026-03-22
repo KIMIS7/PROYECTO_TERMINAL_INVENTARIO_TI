@@ -376,8 +376,8 @@ export class ReportService {
 
     // Empty row for signature space
     outerBody.push([
-      { text: '', margin: [0, 20, 0, 20] },
-      { text: '', margin: [0, 20, 0, 20] },
+      { text: '', margin: [0, 40, 0, 40] },
+      { text: '', margin: [0, 40, 0, 40] },
     ]);
 
     // Signature lines + names
@@ -540,10 +540,10 @@ export class ReportService {
 
     // Empty signature space
     body.push([
-      { text: '', colSpan: 2, margin: [0, 15, 0, 15] },
+      { text: '', colSpan: 2, margin: [0, 40, 0, 40] },
       {},
-      { text: '', margin: [0, 15, 0, 15] },
-      { text: '', colSpan: 2, margin: [0, 15, 0, 15] },
+      { text: '', margin: [0, 40, 0, 40] },
+      { text: '', colSpan: 2, margin: [0, 40, 0, 40] },
       {},
     ]);
 
