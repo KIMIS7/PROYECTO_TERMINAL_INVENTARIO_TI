@@ -31,13 +31,17 @@ import {
   Plus,
   Pencil,
   Calendar,
+  FileSpreadsheet,
+  Loader2,
   Repeat,
   Wrench,
+  User,
   Building2,
   MapPin,
-  User,
+  FileText,
 } from "lucide-react";
 import { toast } from "sonner";
+import { DeliveryReportModal } from "@/components/DeliveryReportModal";
 
 interface HistoryRecord {
   historyID: number;
@@ -45,12 +49,12 @@ interface HistoryRecord {
   assetName: string;
   operation: string;
   description: string;
-  performedBy: string | null;
+  performedBy?: string | null;
   createdTime: string;
-  assignedUser: string | null;
-  department: string | null;
-  site: string | null;
-  company: string | null;
+  assignedUser?: string | null;
+  department?: string | null;
+  site?: string | null;
+  company?: string | null;
 }
 
 const OPERATION_TYPES = [
@@ -112,14 +116,6 @@ function formatDate(dateStr: string): string {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
-  });
-}
-
-function formatDateShort(dateStr: string): string {
-  return new Date(dateStr).toLocaleDateString("es-MX", {
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
   });
 }
 
@@ -215,9 +211,43 @@ export default function Historial() {
     return counts;
   }, [records]);
 
+  const [isExportingHistory, setIsExportingHistory] = useState(false);
+
+  // Delivery report modal
+  const [reportAssetID, setReportAssetID] = useState<number | null>(null);
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+
+  const handleGenerateReport = (record: HistoryRecord) => {
+    setReportAssetID(record.assetID);
+    setIsReportModalOpen(true);
+  };
+
   const handleRefresh = () => {
     loadData();
     toast.success("Historial actualizado");
+  };
+
+  const handleExportHistory = async () => {
+    try {
+      setIsExportingHistory(true);
+      const blob = await api.report.downloadHistoryExcel();
+      const url = window.URL.createObjectURL(
+        new Blob([blob], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" })
+      );
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `historial_movimientos_${new Date().toISOString().split("T")[0]}.xlsx`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      toast.success("Historial exportado a Excel");
+    } catch (error) {
+      console.error("Error exporting history:", error);
+      toast.error("Error al exportar historial");
+    } finally {
+      setIsExportingHistory(false);
+    }
   };
 
   const clearFilters = () => {
@@ -383,6 +413,20 @@ export default function Historial() {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={handleExportHistory}
+                disabled={isExportingHistory}
+                className="h-8 text-sm font-normal"
+              >
+                {isExportingHistory ? (
+                  <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4 mr-1" />
+                )}
+                Exportar Excel
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={handleRefresh}
                 className="h-8 text-sm font-normal"
               >
@@ -450,13 +494,16 @@ export default function Historial() {
                     <TableHead className="font-semibold text-gray-700 w-44">
                       Fecha
                     </TableHead>
+                    <TableHead className="font-semibold text-gray-700 w-28 text-center">
+                      Acciones
+                    </TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {paginatedRecords.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-24 text-center text-gray-500"
                       >
                         {hasActiveFilters
@@ -541,6 +588,18 @@ export default function Historial() {
                           <TableCell className="text-gray-500 text-xs font-mono">
                             {formatDate(record.createdTime)}
                           </TableCell>
+                          <TableCell className="text-center">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="h-7 text-xs text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                              onClick={() => handleGenerateReport(record)}
+                              title="Generar reporte de entrega"
+                            >
+                              <FileText className="h-3.5 w-3.5 mr-1" />
+                              Reporte
+                            </Button>
+                          </TableCell>
                         </TableRow>
                       );
                     })
@@ -549,6 +608,17 @@ export default function Historial() {
               </Table>
             )}
           </div>
+          {/* Delivery Report Modal */}
+          {reportAssetID && (
+            <DeliveryReportModal
+              assetID={reportAssetID}
+              isOpen={isReportModalOpen}
+              onClose={() => {
+                setIsReportModalOpen(false);
+                setReportAssetID(null);
+              }}
+            />
+          )}
         </div>
       )}
     </MainLayout>

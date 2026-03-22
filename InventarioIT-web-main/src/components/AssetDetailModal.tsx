@@ -31,6 +31,7 @@ interface AssetDetailModalProps {
   onClose: () => void;
   onEdit: (asset: Asset) => void;
   onOpenAssignment?: (assetID: number) => void;
+  onOpenDeliveryReport?: (assetID: number) => void;
 }
 
 interface AssetFullData {
@@ -146,6 +147,7 @@ export const AssetDetailModal = ({
   onClose,
   onEdit,
   onOpenAssignment,
+  onOpenDeliveryReport,
 }: AssetDetailModalProps) => {
   const [data, setData] = useState<AssetFullData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -486,6 +488,17 @@ export const AssetDetailModal = ({
           >
             Cerrar
           </Button>
+          {onOpenDeliveryReport && (
+            <Button
+              variant="outline"
+              onClick={() => onOpenDeliveryReport(assetID)}
+              disabled={isLoading || !data}
+              className="flex items-center gap-2 border-green-200 text-green-600 hover:bg-green-50"
+            >
+              <FileText className="h-4 w-4" />
+              Entrega
+            </Button>
+          )}
           {onOpenAssignment && (
             <Button
               variant="outline"

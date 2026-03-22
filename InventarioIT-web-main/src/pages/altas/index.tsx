@@ -6,13 +6,13 @@ import { CreateAssetModal } from "@/components/CreateAssetModal";
 import { EditAssetModal } from "@/components/EditAssetModal";
 import { AssetDetailModal } from "@/components/AssetDetailModal";
 import { AssetAssignmentModal } from "@/components/AssetAssignmentModal";
+import { DeliveryReportModal } from "@/components/DeliveryReportModal";
 import {
   OmniboxFilter,
   type FilterChip,
   type Facet,
 } from "@/components/OmniboxFilter";
 import { Button } from "@/components/ui/button";
-import { Checkbox } from "@/components/ui/checkbox";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -61,6 +61,9 @@ export default function Altas() {
   const [detailAssetID, setDetailAssetID] = useState<number | null>(null);
   const [isAssignmentModalOpen, setIsAssignmentModalOpen] = useState(false);
   const [assignmentAssetID, setAssignmentAssetID] = useState<number | null>(null);
+  const [isDeliveryModalOpen, setIsDeliveryModalOpen] = useState(false);
+  const [deliveryAssetID, setDeliveryAssetID] = useState<number | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
 
   // Estados para filtros y selección
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
@@ -541,8 +544,57 @@ export default function Altas() {
     setIsAssignmentModalOpen(true);
   };
 
-  const handleExport = () => {
-    toast.info("Funcionalidad de exportación en desarrollo");
+  const triggerDownload = (blob: Blob, filename: string) => {
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    window.URL.revokeObjectURL(url);
+    document.body.removeChild(a);
+  };
+
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting(true);
+      const filters: { group?: string } = {};
+      if (activeGroup) filters.group = activeGroup;
+      const blob = await api.report.downloadAssetsCsv(filters);
+      const dateStr = new Date().toISOString().split("T")[0];
+      triggerDownload(new Blob([blob], { type: "text/csv" }), `inventario_${dateStr}.csv`);
+      toast.success("CSV exportado exitosamente");
+    } catch (error) {
+      console.error("Error exporting CSV:", error);
+      toast.error("Error al exportar CSV");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    try {
+      setIsExporting(true);
+      const filters: { group?: string } = {};
+      if (activeGroup) filters.group = activeGroup;
+      const blob = await api.report.downloadAssetsExcel(filters);
+      const dateStr = new Date().toISOString().split("T")[0];
+      triggerDownload(
+        new Blob([blob], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" }),
+        `inventario_${dateStr}.xlsx`
+      );
+      toast.success("Excel exportado exitosamente");
+    } catch (error) {
+      console.error("Error exporting Excel:", error);
+      toast.error("Error al exportar Excel");
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const handleOpenDeliveryReport = (assetID: number) => {
+    setDeliveryAssetID(assetID);
+    setIsDeliveryModalOpen(true);
   };
 
   const handleImportCSV = () => {
@@ -590,13 +642,13 @@ export default function Altas() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={handleExport}>
+                  <DropdownMenuItem onClick={handleExportCsv} disabled={isExporting}>
                     <Download className="h-4 w-4 mr-2" />
-                    Export to CSV
+                    Exportar a CSV
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => toast.info("Export PDF en desarrollo")}>
+                  <DropdownMenuItem onClick={handleExportExcel} disabled={isExporting}>
                     <FileText className="h-4 w-4 mr-2" />
-                    Export to PDF
+                    Exportar a Excel
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleImportCSV}>
@@ -797,6 +849,7 @@ export default function Altas() {
               }}
               onEdit={handleDetailToEdit}
               onOpenAssignment={handleOpenAssignment}
+              onOpenDeliveryReport={handleOpenDeliveryReport}
             />
           )}
 
@@ -810,6 +863,18 @@ export default function Altas() {
                 setAssignmentAssetID(null);
               }}
               onSuccess={loadAssets}
+            />
+          )}
+
+          {/* Modal de Reporte de Entrega */}
+          {deliveryAssetID && (
+            <DeliveryReportModal
+              assetID={deliveryAssetID}
+              isOpen={isDeliveryModalOpen}
+              onClose={() => {
+                setIsDeliveryModalOpen(false);
+                setDeliveryAssetID(null);
+              }}
             />
           )}
 

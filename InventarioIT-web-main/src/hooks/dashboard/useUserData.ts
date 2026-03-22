@@ -1,11 +1,10 @@
 import { useState, useEffect } from 'react';
 import { useSession } from 'next-auth/react';
-import api from '@/lib/api';
 
 export function useUserData() {
     const { data: session } = useSession();
     const [usuario, setUsuario] = useState("");
-    const [userCompanies, setUserCompanies] = useState<string[]>([]);
+    const [userCompanies] = useState<string[]>([]);
 
     useEffect(() => {
         if (session?.user?.preferred_username) {

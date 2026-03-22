@@ -13,10 +13,10 @@ export default function CarteraPO() {
   // Obtener la sesión del usuario
   const { data : session } = useSession();
 
-  const { usuario, setUsuario, userCompanies } = useUserData();
+  const { usuario } = useUserData();
   
   const userEmail = session?.user?.preferred_username || '';
-  const { showAlert, AlertDialog } = useAlert();
+  const { AlertDialog } = useAlert();
 
 
 

@@ -532,6 +532,121 @@ const api = {
       return response.data;
     },
   },
+  // Reportes y exportaciones
+  report: {
+    getDeliveryData: async (assetID: number) => {
+      const response = await apiClient.get<{
+        assetID: number;
+        name: string;
+        serialNum: string;
+        model: string;
+        processor: string;
+        ram: string;
+        hddCapacity: string;
+        operatingSystem: string;
+        vendor: string;
+        productType: string;
+        productManuf: string;
+        company: string;
+        site: string;
+        department: string;
+        userName: string;
+        userEmail: string;
+        childAssets: { name: string; productType: string; serialNum: string; model: string; vendor: string }[];
+        softwareChecklist: string[];
+      }>(`/report/delivery/${assetID}/data`);
+      return response.data;
+    },
+    downloadDeliveryPdf: async (assetID: number, data: {
+      softwareStatus?: Record<string, string>;
+      notes?: string;
+      deliveryPerson?: string;
+    }) => {
+      const response = await apiClient.post(`/report/delivery/${assetID}/pdf`, data, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadEntregaMultiItemPdf: async (data: {
+      assetIds: number[];
+      razonSocial?: string;
+      department?: string;
+      receiverName?: string;
+      deliveryPerson?: string;
+      notes?: string;
+    }) => {
+      const response = await apiClient.post('/report/entrega-multiitem/pdf', data, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadResguardoPdf: async (data: {
+      assetIds: number[];
+      razonSocial?: string;
+      storeName?: string;
+      receiverName?: string;
+      deliveryPerson?: string;
+    }) => {
+      const response = await apiClient.post('/report/resguardo/pdf', data, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadAssetsExcel: async (filters?: { group?: string; companyID?: number; assetState?: number }) => {
+      const params = new URLSearchParams();
+      if (filters?.group) params.append('group', filters.group);
+      if (filters?.companyID) params.append('companyID', filters.companyID.toString());
+      if (filters?.assetState) params.append('assetState', filters.assetState.toString());
+      const response = await apiClient.get(`/report/assets/excel?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadAssetsCsv: async (filters?: { group?: string; companyID?: number; assetState?: number }) => {
+      const params = new URLSearchParams();
+      if (filters?.group) params.append('group', filters.group);
+      if (filters?.companyID) params.append('companyID', filters.companyID.toString());
+      if (filters?.assetState) params.append('assetState', filters.assetState.toString());
+      const response = await apiClient.get(`/report/assets/csv?${params.toString()}`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadHistoryExcel: async (assetId?: number) => {
+      const params = assetId ? `?assetId=${assetId}` : '';
+      const response = await apiClient.get(`/report/history/excel${params}`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+    downloadUserAssetsExcel: async (userId: number) => {
+      const response = await apiClient.get(`/report/user/${userId}/assets/excel`, {
+        responseType: 'blob',
+      });
+      return response.data;
+    },
+  },
+  // Jerarquía de aprobaciones
+  approvalHierarchy: {
+    getHierarchy: async (buyerID: string, company?: string) => {
+      const params = new URLSearchParams();
+      params.append('buyerID', buyerID);
+      if (company) params.append('company', company);
+      const response = await apiClient.get<{
+        success: boolean;
+        message: string;
+        data: {
+          Company: string;
+          Name: string;
+          BuyerID: string;
+          EMailAddress: string;
+          ApprovalPerson: string;
+          Nivel: number;
+        }[];
+      }>(`/user/approval-hierarchy?${params.toString()}`);
+      return response.data;
+    },
+  },
 };
 
 export default api;

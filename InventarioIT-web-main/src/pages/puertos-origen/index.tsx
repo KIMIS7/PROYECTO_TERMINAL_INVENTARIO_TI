@@ -4,7 +4,7 @@ import { useAlert } from "@/hooks/useAlert";
 export default function PuertosOrigenPage() {
  
 
-   const { showAlert, AlertDialog } = useAlert();
+   const { AlertDialog } = useAlert();
 
 
   return (
