@@ -65,6 +65,7 @@ export class ReportController {
     @Body()
     body: {
       assetIds: number[];
+      asunto?: string;
       razonSocial?: string;
       department?: string;
       receiverName?: string;

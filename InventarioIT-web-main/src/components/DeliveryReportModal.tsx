@@ -169,6 +169,7 @@ export function DeliveryReportModal({
         }
         const blob = await api.report.downloadEntregaMultiItemPdf({
           assetIds: ids,
+          asunto: customTitle || undefined,
           razonSocial: razonSocial || undefined,
           department: data?.department || prefillDepartment || undefined,
           receiverName: data?.userName || prefillReceiverName || undefined,

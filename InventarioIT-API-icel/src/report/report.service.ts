@@ -562,6 +562,7 @@ export class ReportService {
   async generateEntregaMultiItemPdf(
     assetIds: number[],
     options?: {
+      asunto?: string;
       razonSocial?: string;
       department?: string;
       receiverName?: string;
@@ -573,7 +574,7 @@ export class ReportService {
 
     const outerBody: any[][] = this.buildMultiItemBody(
       dateStr,
-      'ENTREGA DE EQUIPO',
+      (options?.asunto || 'ENTREGA DE EQUIPO').toUpperCase(),
       options?.razonSocial || data.company || 'N/A',
       options?.department || data.department || 'N/A',
       options?.receiverName || data.userName || 'N/A',

@@ -568,6 +568,7 @@ const api = {
     },
     downloadEntregaMultiItemPdf: async (data: {
       assetIds: number[];
+      asunto?: string;
       razonSocial?: string;
       department?: string;
       receiverName?: string;
