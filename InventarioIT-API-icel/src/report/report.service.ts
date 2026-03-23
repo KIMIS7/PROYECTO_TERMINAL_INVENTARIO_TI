@@ -529,15 +529,16 @@ export class ReportService {
       {}, {}, {}, {},
     ]);
 
-    // Signature labels: RESPONSABLE: | RECIBE: (2 columns using colSpan)
+    // Signature labels (symmetric: 2 | 1 blank | 2)
     body.push([
       { text: signatures.leftLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
       {},
-      { text: signatures.rightLabel, bold: true, alignment: 'center', colSpan: 3, margin: CELL_PAD },
-      {}, {},
+      { text: '', margin: CELL_PAD },
+      { text: signatures.rightLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
+      {},
     ]);
 
-    // Empty signature space + name
+    // Empty signature space + name (symmetric)
     body.push([
       {
         stack: [
@@ -548,15 +549,16 @@ export class ReportService {
         margin: CELL_PAD,
       },
       {},
+      { text: '', margin: CELL_PAD },
       {
         stack: [
           { text: '', margin: [0, 35, 0, 0] },
           { text: signatures.rightName, bold: true, alignment: 'center', fontSize: 9 },
         ],
-        colSpan: 3,
+        colSpan: 2,
         margin: CELL_PAD,
       },
-      {}, {},
+      {},
     ]);
 
     return body;
@@ -593,7 +595,7 @@ export class ReportService {
         leftLabel: 'ENTREGA:',
         leftName: 'DEPARTAMENTO DE SISTEMAS',
         rightLabel: 'RECIBE:',
-        rightName: 'DEPARTAMENTO DE SISTEMAS',
+        rightName: 'RESPONSABLE DE TIENDA',
       },
     );
 
