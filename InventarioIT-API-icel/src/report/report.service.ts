@@ -617,16 +617,23 @@ export class ReportService {
       {}, {}, {}, {},
     ]);
 
-    // Signature labels (symmetric: 2 | 1 blank | 2)
+    // Signature labels (2 visual columns using colSpan)
     body.push([
-      { text: signatures.leftLabel, bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10, colSpan: 2, margin: [4, 8, 4, 4] as number[] },
+      {
+        text: signatures.leftLabel, bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10,
+        colSpan: 2, margin: [4, 8, 4, 4] as number[],
+        border: [true, true, false, false],
+      },
       {},
-      { text: '', margin: CELL_PAD },
-      { text: signatures.rightLabel, bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10, colSpan: 2, margin: [4, 8, 4, 4] as number[] },
-      {},
+      {
+        text: signatures.rightLabel, bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10,
+        colSpan: 3, margin: [4, 8, 4, 4] as number[],
+        border: [false, true, true, false],
+      },
+      {}, {},
     ]);
 
-    // Empty signature space + name + line (symmetric)
+    // Empty signature space + name + line (2 visual columns)
     body.push([
       {
         stack: [
@@ -636,19 +643,20 @@ export class ReportService {
         ],
         colSpan: 2,
         margin: CELL_PAD,
+        border: [true, false, false, true],
       },
       {},
-      { text: '', margin: CELL_PAD },
       {
         stack: [
           { text: '', margin: [0, 40, 0, 0] },
           { canvas: [{ type: 'line', x1: 30, y1: 0, x2: 170, y2: 0, lineWidth: 1, lineColor: HEADER_LINE }] },
           { text: signatures.rightName, bold: true, alignment: 'center', fontSize: 9, margin: [0, 4, 0, 0] },
         ],
-        colSpan: 2,
+        colSpan: 3,
         margin: CELL_PAD,
+        border: [false, false, true, true],
       },
-      {},
+      {}, {},
     ]);
 
     return body;
