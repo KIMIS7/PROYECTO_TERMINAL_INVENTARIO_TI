@@ -673,9 +673,9 @@ export class ReportService {
       `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
       {
         leftLabel: 'ENTREGA:',
-        leftName: 'DEPARTAMENTO DE SISTEMAS',
+        leftName: 'RESPONSABLE DE TIENDA',
         rightLabel: 'RECIBE:',
-        rightName: 'RESPONSABLE DE TIENDA',
+        rightName: 'DEPARTAMENTO DE SISTEMAS',
       },
     );
 
@@ -731,9 +731,9 @@ export class ReportService {
       'Recibo del Encargado de tienda la(s) Herramienta(s) arriba mencionada(s) para resguardo, reinstalacion o asignacion del mismo. Sirva el presente documento para el deslinde responsabilidades posteriores.',
       {
         leftLabel: 'ENTREGA:',
-        leftName: 'RESPONSABLE DE TIENDA',
+        leftName: 'DEPARTAMENTO DE SISTEMAS',
         rightLabel: 'RECIBE:',
-        rightName: 'DEPARTAMENTO DE SISTEMAS',
+        rightName: 'RESPONSABLE DE TIENDA',
       },
     );
 
