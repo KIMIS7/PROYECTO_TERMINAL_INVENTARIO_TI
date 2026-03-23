@@ -560,7 +560,6 @@ const api = {
     downloadDeliveryPdf: async (assetID: number, data: {
       softwareStatus?: Record<string, string>;
       notes?: string;
-      deliveryPerson?: string;
     }) => {
       const response = await apiClient.post(`/report/delivery/${assetID}/pdf`, data, {
         responseType: 'blob',
@@ -572,7 +571,6 @@ const api = {
       razonSocial?: string;
       department?: string;
       receiverName?: string;
-      deliveryPerson?: string;
       notes?: string;
     }) => {
       const response = await apiClient.post('/report/entrega-multiitem/pdf', data, {
@@ -585,7 +583,6 @@ const api = {
       razonSocial?: string;
       storeName?: string;
       receiverName?: string;
-      deliveryPerson?: string;
     }) => {
       const response = await apiClient.post('/report/resguardo/pdf', data, {
         responseType: 'blob',

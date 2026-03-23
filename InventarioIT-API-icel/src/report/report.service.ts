@@ -226,7 +226,6 @@ export class ReportService {
     options?: {
       softwareStatus?: Record<string, string>;
       notes?: string;
-      deliveryPerson?: string;
     },
   ): Promise<Buffer> {
     const data = await this.getDeliveryReportData(assetId);
@@ -346,11 +345,12 @@ export class ReportService {
     // Notes row
     outerBody.push([
       {
-        text: options?.notes || 'Se entrega equipo en buenas condiciones sin golpes ni defectos, recien instalado. Detalles de uso.',
+        stack: [
+          { text: 'Notas / Condicion del equipo:', bold: true, fontSize: 9, margin: [0, 0, 0, 4] },
+          { text: options?.notes || 'Se entrega equipo en buenas condiciones sin golpes ni defectos, recien instalado. Detalles de uso.', fontSize: 9 },
+        ],
         colSpan: 2,
-        alignment: 'center',
-        margin: [15, 10, 15, 10],
-        fontSize: 9,
+        margin: [15, 8, 15, 8],
       },
       {},
     ]);
@@ -374,23 +374,12 @@ export class ReportService {
       { text: 'RECIBE:', bold: true, alignment: 'center', margin: CELL_PAD },
     ]);
 
-    // Empty row for signature space
+    // Signature space + name
     outerBody.push([
-      { text: '', margin: [0, 40, 0, 40] },
-      { text: '', margin: [0, 40, 0, 40] },
-    ]);
-
-    // Signature lines
-    outerBody.push([
+      { text: '', margin: [0, 50, 0, 5] },
       {
         stack: [
-          { text: '________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
-        ],
-        margin: CELL_PAD,
-      },
-      {
-        stack: [
-          { text: '________________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
+          { text: '', margin: [0, 35, 0, 0] },
           { text: data.userName || 'N/A', bold: true, alignment: 'center', fontSize: 9 },
         ],
         margin: CELL_PAD,
@@ -432,14 +421,12 @@ export class ReportService {
     deptoTienda: string,
     recibe: string,
     items: { name: string; productType: string; vendor: string; model: string; serialNum: string }[],
+    notes: string,
     legalText: string,
     signatures: {
       leftLabel: string;
-      leftLine1: string;
-      leftLine2: string;
       rightLabel: string;
-      rightLine1: string;
-      rightLine2: string;
+      rightName: string;
     },
   ): any[][] {
     const body: any[][] = [];
@@ -509,7 +496,7 @@ export class ReportService {
     });
 
     // Empty rows to fill page
-    const minRows = 22;
+    const minRows = 20;
     for (let i = items.length; i < minRows; i++) {
       body.push([
         { text: '', fontSize: 9, margin: CELL_PAD },
@@ -520,53 +507,48 @@ export class ReportService {
       ]);
     }
 
+    // Notes / Condición del equipo
+    if (notes) {
+      body.push([
+        {
+          stack: [
+            { text: 'Notas / Condicion del equipo:', bold: true, fontSize: 9, margin: [0, 0, 0, 4] },
+            { text: notes, fontSize: 9 },
+          ],
+          colSpan: 5,
+          margin: [15, 8, 15, 8],
+        },
+        {}, {}, {}, {},
+      ]);
+    }
+
     // Legal text
     body.push([
       { text: legalText, bold: true, fontSize: 9, alignment: 'center', colSpan: 5, margin: [15, 8, 15, 8] },
       {}, {}, {}, {},
     ]);
 
-    // ENTREGA: | RECIBE:
+    // Signature labels: RESPONSABLE: | RECIBE: (2 columns using colSpan)
     body.push([
       { text: signatures.leftLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
       {},
-      { text: '', margin: CELL_PAD },
-      { text: signatures.rightLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
-      {},
+      { text: signatures.rightLabel, bold: true, alignment: 'center', colSpan: 3, margin: CELL_PAD },
+      {}, {},
     ]);
 
-    // Empty signature space
+    // Empty signature space + name
     body.push([
-      { text: '', colSpan: 2, margin: [0, 40, 0, 40] },
+      { text: '', colSpan: 2, margin: [0, 50, 0, 5] },
       {},
-      { text: '', margin: [0, 40, 0, 40] },
-      { text: '', colSpan: 2, margin: [0, 40, 0, 40] },
-      {},
-    ]);
-
-    // Signature names
-    body.push([
       {
         stack: [
-          { text: signatures.leftLine1 ? '________________________' : '________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
-          ...(signatures.leftLine1 ? [{ text: signatures.leftLine1, bold: true, alignment: 'center' as const, fontSize: 9 }] : []),
-          { text: signatures.leftLine2, bold: true, alignment: 'center', fontSize: 9 },
+          { text: '', margin: [0, 35, 0, 0] },
+          { text: signatures.rightName, bold: true, alignment: 'center', fontSize: 9 },
         ],
-        colSpan: 2,
+        colSpan: 3,
         margin: CELL_PAD,
       },
-      {},
-      { text: '', margin: CELL_PAD },
-      {
-        stack: [
-          { text: '________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
-          ...(signatures.rightLine1 ? [{ text: signatures.rightLine1, bold: true, alignment: 'center' as const, fontSize: 9 }] : []),
-          { text: signatures.rightLine2, bold: true, alignment: 'center', fontSize: 9 },
-        ],
-        colSpan: 2,
-        margin: CELL_PAD,
-      },
-      {},
+      {}, {},
     ]);
 
     return body;
@@ -583,7 +565,6 @@ export class ReportService {
       razonSocial?: string;
       department?: string;
       receiverName?: string;
-      deliveryPerson?: string;
       notes?: string;
     },
   ): Promise<Buffer> {
@@ -597,15 +578,12 @@ export class ReportService {
       options?.department || data.department || 'N/A',
       options?.receiverName || data.userName || 'N/A',
       data.items,
+      options?.notes || '',
       `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
-      // Signatures: RESPONSABLE | RECIBE = userName
       {
         leftLabel: 'RESPONSABLE:',
-        leftLine1: '',
-        leftLine2: '',
         rightLabel: 'RECIBE:',
-        rightLine1: '',
-        rightLine2: options?.receiverName || data.userName || 'N/A',
+        rightName: options?.receiverName || data.userName || 'N/A',
       },
     );
 
@@ -644,7 +622,6 @@ export class ReportService {
       razonSocial?: string;
       storeName?: string;
       receiverName?: string;
-      deliveryPerson?: string;
     },
   ): Promise<Buffer> {
     const data = await this.getMultiItemReportData(assetIds);
@@ -657,14 +634,12 @@ export class ReportService {
       options?.storeName || data.site || 'N/A',
       'DEPARTAMENTO DE SISTEMAS',
       data.items,
+      '',
       'Recibo del Encargado de tienda la(s) Herramienta(s) arriba mencionada(s) para resguardo, reinstalacion o asignacion del mismo. Sirva el presente documento para el deslinde responsabilidades posteriores.',
       {
         leftLabel: 'ENTREGA:',
-        leftLine1: '',
-        leftLine2: 'ENCARGADO DE TIENDA',
         rightLabel: 'RECIBE:',
-        rightLine1: '',
-        rightLine2: 'DEPARTAMENTO DE SISTEMAS',
+        rightName: 'DEPARTAMENTO DE SISTEMAS',
       },
     );
 

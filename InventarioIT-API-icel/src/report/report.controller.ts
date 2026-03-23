@@ -39,7 +39,6 @@ export class ReportController {
     body: {
       softwareStatus?: Record<string, string>;
       notes?: string;
-      deliveryPerson?: string;
     },
     @Res() res: Response,
   ) {
@@ -69,7 +68,6 @@ export class ReportController {
       razonSocial?: string;
       department?: string;
       receiverName?: string;
-      deliveryPerson?: string;
       notes?: string;
     },
     @Res() res: Response,
@@ -101,7 +99,6 @@ export class ReportController {
       razonSocial?: string;
       storeName?: string;
       receiverName?: string;
-      deliveryPerson?: string;
     },
     @Res() res: Response,
   ) {
