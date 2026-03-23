@@ -222,9 +222,27 @@ export class MovementService {
       let bulkTargetSiteName: string | null = null;
       let bulkTargetCompanyName: string | null = null;
 
-      if (userID) {
+      // For RESGUARDO/REPARACION: resolve the performing user from email
+      // so we can reassign the asset to them
+      let performingUserID: number | null = null;
+      if ((movementType === 'RESGUARDO' || movementType === 'REPARACION') && userEmail) {
+        const performingUser = await this.prismaShopic.user.findFirst({
+          where: { Email: { contains: userEmail } },
+        });
+        if (performingUser) {
+          performingUserID = performingUser.UserID;
+        }
+      }
+
+      // Determine effective userID: for RESGUARDO/REPARACION use performing user
+      const effectiveUserID = (movementType === 'RESGUARDO' || movementType === 'REPARACION')
+        ? performingUserID
+        : userID;
+
+      const resolveUserID = effectiveUserID || userID;
+      if (resolveUserID) {
         const targetUser = await this.prismaShopic.user.findUnique({
-          where: { UserID: userID },
+          where: { UserID: resolveUserID },
           include: { Depart: true },
         });
         if (targetUser) {
@@ -286,6 +304,12 @@ export class MovementService {
             updateData.CompanyID = null;
             updateData.SiteID = null;
             updateData.DepartID = null;
+          } else if (movementType === 'RESGUARDO' || movementType === 'REPARACION') {
+            // For RESGUARDO/REPARACION: reassign to the performing user
+            if (effectiveUserID) updateData.UserID = effectiveUserID;
+            if (companyID) updateData.CompanyID = companyID;
+            if (siteID) updateData.SiteID = siteID;
+            if (departID) updateData.DepartID = departID;
           } else {
             if (companyID) updateData.CompanyID = companyID;
             if (siteID) updateData.SiteID = siteID;
@@ -311,7 +335,8 @@ export class MovementService {
           });
 
           // Close previous open AssetOwnershipHistory records
-          if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO' || movementType === 'BAJA') {
+          if (movementType === 'REASIGNACION' || movementType === 'RESGUARDO' || movementType === 'REPARACION' || movementType === 'BAJA') {
+            const today = new Date();
             const openRecords = await tx.assetOwnershipHistory.findMany({
               where: {
                 AssetID: asset.AssetID,
@@ -321,17 +346,21 @@ export class MovementService {
             for (const record of openRecords) {
               await tx.assetOwnershipHistory.update({
                 where: { AssetOwnershipHistoryID: record.AssetOwnershipHistoryID },
-                data: { ToDate: new Date(fromDate || new Date()) },
+                data: { ToDate: new Date(fromDate || today) },
               });
             }
 
-            // Create new ownership record if assigning a user
-            if (movementType === 'REASIGNACION' && userID && fromDate) {
+            // Create new ownership record for the new assignee
+            const newOwnerID = (movementType === 'RESGUARDO' || movementType === 'REPARACION')
+              ? effectiveUserID
+              : (movementType === 'REASIGNACION' ? userID : null);
+
+            if (newOwnerID) {
               await tx.assetOwnershipHistory.create({
                 data: {
                   AssetID: asset.AssetID,
-                  UserID: userID,
-                  FromDate: new Date(fromDate),
+                  UserID: newOwnerID,
+                  FromDate: new Date(fromDate || today),
                   ToDate: toDate ? new Date(toDate) : new Date('9999-12-31'),
                 },
               });

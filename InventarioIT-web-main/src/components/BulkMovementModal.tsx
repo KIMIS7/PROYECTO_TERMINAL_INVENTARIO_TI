@@ -281,13 +281,15 @@ export const BulkMovementModal = ({
         siteID: siteID || undefined,
         userID: selectedUser?.userID,
         departID: departID || undefined,
-        fromDate: isReasignacion ? fromDate : undefined,
-        toDate: isReasignacion && toDate ? toDate : undefined,
+        fromDate: fromDate || undefined,
+        toDate: toDate || undefined,
         description: description || undefined,
         responsible: responsible || undefined,
       });
 
       showSuccess(`Movimiento registrado para ${selectedAssetIDs.length} activo(s)`);
+      // For RESGUARDO/REPARACION the performing user becomes the new assignee
+      const isPerformingUserAssignment = movementType === "RESGUARDO" || movementType === "REPARACION";
       const result: MovementResult = {
         movementType: movementType as MovementType,
         assetIDs: [...selectedAssetIDs],
@@ -296,7 +298,7 @@ export const BulkMovementModal = ({
         siteID: siteID || undefined,
         departID: departID || undefined,
         userID: selectedUser?.userID,
-        userName: selectedUser?.name,
+        userName: isPerformingUserAssignment ? userName : selectedUser?.name,
       };
       resetForm();
       onClose();
