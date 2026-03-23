@@ -425,6 +425,7 @@ export class ReportService {
     legalText: string,
     signatures: {
       leftLabel: string;
+      leftName?: string;
       rightLabel: string;
       rightName: string;
     },
@@ -538,7 +539,14 @@ export class ReportService {
 
     // Empty signature space + name
     body.push([
-      { text: '', colSpan: 2, margin: [0, 50, 0, 5] },
+      {
+        stack: [
+          { text: '', margin: [0, 35, 0, 0] },
+          { text: signatures.leftName || '', bold: true, alignment: 'center', fontSize: 9 },
+        ],
+        colSpan: 2,
+        margin: CELL_PAD,
+      },
       {},
       {
         stack: [
@@ -583,8 +591,9 @@ export class ReportService {
       `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
       {
         leftLabel: 'ENTREGA:',
-        rightLabel: 'DEPARTAMENTO DE SISTEMAS',
-        rightName: 'ENCARGADO DE TIENDA',
+        leftName: 'DEPARTAMENTO DE SISTEMAS',
+        rightLabel: 'RECIBE:',
+        rightName: 'DEPARTAMENTO DE SISTEMAS',
       },
     );
 
