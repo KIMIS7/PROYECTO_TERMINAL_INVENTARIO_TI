@@ -36,9 +36,12 @@ const SOFTWARE_CHECKLIST = [
 type ReportFormat = 'entrega_software' | 'entrega_multiitem' | 'resguardo';
 
 // Constantes de layout
-const LINE_COLOR = '#000000';
-const CELL_PAD = [3, 2, 3, 2] as number[];
-const HEADER_BG = '#FFFFFF';
+const LINE_COLOR = '#AAAAAA';
+const HEADER_LINE = '#1B3A5C';
+const CELL_PAD = [4, 3, 4, 3] as number[];
+const COL_HEADER_BG = '#1B3A5C';
+const COL_HEADER_COLOR = '#FFFFFF';
+const INFO_LABEL_COLOR = '#1B3A5C';
 const EMPTY_ROW_HEIGHT = 16;
 
 @Injectable()
@@ -200,10 +203,14 @@ export class ReportService {
 
   private gridLayout() {
     return {
-      hLineWidth: () => 1,
-      vLineWidth: () => 1,
+      hLineWidth: () => 0.75,
+      vLineWidth: () => 0.75,
       hLineColor: () => LINE_COLOR,
       vLineColor: () => LINE_COLOR,
+      paddingLeft: () => 4,
+      paddingRight: () => 4,
+      paddingTop: () => 3,
+      paddingBottom: () => 3,
     };
   }
 
@@ -211,8 +218,35 @@ export class ReportService {
     return {
       hLineWidth: () => 0.5,
       vLineWidth: () => 0.5,
-      hLineColor: () => LINE_COLOR,
-      vLineColor: () => LINE_COLOR,
+      hLineColor: () => '#CCCCCC',
+      vLineColor: () => '#CCCCCC',
+    };
+  }
+
+  private professionalLayout(headerRowIndex: number) {
+    return {
+      hLineWidth: (i: number, node: any) => {
+        if (i === 0 || i === node.table.body.length) return 1.5;
+        if (i === headerRowIndex || i === headerRowIndex + 1) return 1.2;
+        return 0.5;
+      },
+      vLineWidth: (i: number, node: any) => {
+        if (i === 0 || i === node.table.widths.length) return 1.5;
+        return 0.5;
+      },
+      hLineColor: (i: number, node: any) => {
+        if (i === 0 || i === node.table.body.length) return HEADER_LINE;
+        if (i === headerRowIndex || i === headerRowIndex + 1) return HEADER_LINE;
+        return LINE_COLOR;
+      },
+      vLineColor: (i: number, node: any) => {
+        if (i === 0 || i === node.table.widths.length) return HEADER_LINE;
+        return LINE_COLOR;
+      },
+      paddingLeft: () => 5,
+      paddingRight: () => 5,
+      paddingTop: () => 4,
+      paddingBottom: () => 4,
     };
   }
 
@@ -258,15 +292,15 @@ export class ReportService {
       {
         ...this.getLogoForPdf(),
         rowSpan: 2,
-        margin: [5, 5, 5, 5],
+        margin: [8, 8, 8, 8],
       },
       {
         text: [
-          { text: 'FECHA:    ', bold: true },
+          { text: 'FECHA:  ', bold: true, color: INFO_LABEL_COLOR },
           { text: dateStr, decoration: 'underline' },
         ],
         alignment: 'right',
-        margin: [0, 10, 10, 0],
+        margin: [0, 12, 10, 0],
       },
     ]);
 
@@ -280,11 +314,11 @@ export class ReportService {
     outerBody.push([
       {
         text: [
-          { text: 'ASUNTO: ', bold: true },
+          { text: 'ASUNTO: ', bold: true, color: INFO_LABEL_COLOR },
           { text: 'ENTREGA DE EQUIPO', bold: true },
         ],
         colSpan: 2,
-        margin: CELL_PAD,
+        margin: [6, 4, 6, 4],
       },
       {},
     ]);
@@ -293,24 +327,24 @@ export class ReportService {
     outerBody.push([
       {
         text: [
-          { text: 'DEPTO\\TIENDA ', bold: true },
+          { text: 'DEPTO\\TIENDA: ', bold: true, color: INFO_LABEL_COLOR },
           { text: data.department || 'N/A' },
         ],
-        margin: CELL_PAD,
+        margin: [6, 4, 6, 4],
       },
       {
         text: [
-          { text: 'RECIBE: ', bold: true },
+          { text: 'RECIBE: ', bold: true, color: INFO_LABEL_COLOR },
           { text: data.userName || 'N/A' },
         ],
-        margin: CELL_PAD,
+        margin: [6, 4, 6, 4],
       },
     ]);
 
-    // Row 5: CANTIDAD | DESCRIPCION headers
+    // Row 5: CANTIDAD | DESCRIPCION headers (styled)
     outerBody.push([
-      { text: 'CANTIDAD', bold: true, alignment: 'center', margin: CELL_PAD },
-      { text: 'DESCRIPCION', bold: true, alignment: 'center', margin: CELL_PAD },
+      { text: 'CANTIDAD', bold: true, alignment: 'center', color: COL_HEADER_COLOR, fillColor: COL_HEADER_BG, margin: [4, 6, 4, 6] as number[] },
+      { text: 'DESCRIPCION', bold: true, alignment: 'center', color: COL_HEADER_COLOR, fillColor: COL_HEADER_BG, margin: [4, 6, 4, 6] as number[] },
     ]);
 
     // Row 6: 1 | Equipment description + Serial + Software checklist
@@ -346,10 +380,11 @@ export class ReportService {
     outerBody.push([
       {
         stack: [
-          { text: 'Notas / Condicion del equipo:', bold: true, fontSize: 9, margin: [0, 0, 0, 4] },
+          { text: 'Notas / Condicion del equipo:', bold: true, fontSize: 9, color: INFO_LABEL_COLOR, margin: [0, 0, 0, 4] },
           { text: options?.notes || 'Se entrega equipo en buenas condiciones sin golpes ni defectos, recien instalado. Detalles de uso.', fontSize: 9 },
         ],
         colSpan: 2,
+        fillColor: '#F9FAFB',
         margin: [15, 8, 15, 8],
       },
       {},
@@ -360,27 +395,37 @@ export class ReportService {
       {
         text: `Recibo de ${data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
         bold: true,
-        fontSize: 9,
+        fontSize: 8,
+        italics: true,
         alignment: 'center',
         colSpan: 2,
-        margin: [15, 8, 15, 8],
+        fillColor: '#F9FAFB',
+        margin: [15, 10, 15, 10],
       },
       {},
     ]);
 
     // RESPONSABLE: | RECIBE: labels
     outerBody.push([
-      { text: 'RESPONSABLE:', bold: true, alignment: 'center', margin: CELL_PAD },
-      { text: 'RECIBE:', bold: true, alignment: 'center', margin: CELL_PAD },
+      { text: 'RESPONSABLE:', bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10, margin: [4, 8, 4, 4] as number[] },
+      { text: 'RECIBE:', bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10, margin: [4, 8, 4, 4] as number[] },
     ]);
 
-    // Signature space + name
+    // Signature space + name with line
     outerBody.push([
-      { text: '', margin: [0, 50, 0, 5] },
       {
         stack: [
-          { text: '', margin: [0, 35, 0, 0] },
-          { text: data.userName || 'N/A', bold: true, alignment: 'center', fontSize: 9 },
+          { text: '', margin: [0, 40, 0, 0] },
+          { canvas: [{ type: 'line', x1: 30, y1: 0, x2: 130, y2: 0, lineWidth: 1, lineColor: HEADER_LINE }] },
+          { text: 'DEPARTAMENTO DE SISTEMAS', bold: true, alignment: 'center', fontSize: 9, margin: [0, 4, 0, 0] },
+        ],
+        margin: CELL_PAD,
+      },
+      {
+        stack: [
+          { text: '', margin: [0, 40, 0, 0] },
+          { canvas: [{ type: 'line', x1: 60, y1: 0, x2: 300, y2: 0, lineWidth: 1, lineColor: HEADER_LINE }] },
+          { text: data.userName || 'N/A', bold: true, alignment: 'center', fontSize: 9, margin: [0, 4, 0, 0] },
         ],
         margin: CELL_PAD,
       },
@@ -389,20 +434,21 @@ export class ReportService {
     const docDefinition: any = {
       pageSize: 'LETTER',
       pageMargins: [40, 30, 40, 40],
-      defaultStyle: { fontSize: 10 },
+      defaultStyle: { fontSize: 10, font: 'Roboto' },
       content: [
         {
           table: {
             widths: [160, '*'],
             body: outerBody,
           },
-          layout: this.gridLayout(),
+          layout: this.professionalLayout(4),
         },
       ],
       footer: (currentPage: number) => ({
         text: currentPage.toString(),
         alignment: 'center',
-        fontSize: 9,
+        fontSize: 8,
+        color: '#999999',
         margin: [0, 10, 0, 0],
       }),
     };
@@ -437,7 +483,7 @@ export class ReportService {
       {
         ...this.getLogoForPdf(),
         rowSpan: 2,
-        margin: [5, 5, 5, 5],
+        margin: [8, 8, 8, 8],
         colSpan: 2,
       },
       {},
@@ -445,11 +491,11 @@ export class ReportService {
       {},
       {
         text: [
-          { text: 'FECHA:    ', bold: true },
+          { text: 'FECHA:  ', bold: true, color: INFO_LABEL_COLOR },
           { text: dateStr, decoration: 'underline' },
         ],
         alignment: 'right',
-        margin: [0, 10, 5, 0],
+        margin: [0, 12, 8, 0],
       },
     ]);
 
@@ -458,53 +504,84 @@ export class ReportService {
 
     // Row 3: ASUNTO
     body.push([
-      { text: [{ text: 'ASUNTO: ', bold: true }, { text: asunto, bold: true }], colSpan: 5, margin: CELL_PAD },
+      {
+        text: [
+          { text: 'ASUNTO: ', bold: true, color: INFO_LABEL_COLOR },
+          { text: asunto, bold: true },
+        ],
+        colSpan: 5,
+        margin: [6, 4, 6, 4],
+      },
       {}, {}, {}, {},
     ]);
 
     // Row 4: RAZON SOCIAL
     body.push([
-      { text: [{ text: 'RAZON SOCIAL: ', bold: true }, { text: razonSocial }], colSpan: 5, margin: CELL_PAD },
+      {
+        text: [
+          { text: 'RAZON SOCIAL: ', bold: true, color: INFO_LABEL_COLOR },
+          { text: razonSocial },
+        ],
+        colSpan: 5,
+        margin: [6, 4, 6, 4],
+      },
       {}, {}, {}, {},
     ]);
 
     // Row 5: DEPTO\TIENDA + RECIBE
     body.push([
-      { text: [{ text: 'DEPTO\\TIENDA ', bold: true }, { text: deptoTienda }], colSpan: 2, margin: CELL_PAD },
+      {
+        text: [
+          { text: 'DEPTO\\TIENDA: ', bold: true, color: INFO_LABEL_COLOR },
+          { text: deptoTienda },
+        ],
+        colSpan: 2,
+        margin: [6, 4, 6, 4],
+      },
       {},
-      { text: [{ text: 'RECIBE: ', bold: true }, { text: recibe }], colSpan: 3, margin: CELL_PAD },
+      {
+        text: [
+          { text: 'RECIBE: ', bold: true, color: INFO_LABEL_COLOR },
+          { text: recibe },
+        ],
+        colSpan: 3,
+        margin: [6, 4, 6, 4],
+      },
       {}, {},
     ]);
 
-    // Row 6: Table headers
+    // Row 6: Table headers (styled with dark background)
+    const colHeaderStyle = { bold: true, alignment: 'center' as const, fontSize: 9, color: COL_HEADER_COLOR, fillColor: COL_HEADER_BG, margin: [4, 6, 4, 6] as number[] };
     body.push([
-      { text: 'CANTIDAD', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'DESCRIPCION', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'MARCA', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'MODELO', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
-      { text: 'NUMERO DE SERIE', bold: true, alignment: 'center', fontSize: 9, margin: CELL_PAD },
+      { text: 'CANTIDAD', ...colHeaderStyle },
+      { text: 'DESCRIPCION', ...colHeaderStyle },
+      { text: 'MARCA', ...colHeaderStyle },
+      { text: 'MODELO', ...colHeaderStyle },
+      { text: 'NUMERO DE SERIE', ...colHeaderStyle },
     ]);
 
-    // Data rows
-    items.forEach((item) => {
+    // Data rows (alternating background)
+    items.forEach((item, idx) => {
+      const fillColor = idx % 2 === 1 ? '#F5F7FA' : undefined;
       body.push([
-        { text: '1', alignment: 'center', fontSize: 9, margin: CELL_PAD },
-        { text: (item.productType || item.name).toUpperCase(), fontSize: 9, margin: CELL_PAD },
-        { text: item.vendor.toUpperCase(), fontSize: 9, margin: CELL_PAD },
-        { text: item.model, fontSize: 9, margin: CELL_PAD },
-        { text: item.serialNum || 'N/A', fontSize: 9, margin: CELL_PAD },
+        { text: '1', alignment: 'center', fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: (item.productType || item.name).toUpperCase(), fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: item.vendor.toUpperCase(), fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: item.model, fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: item.serialNum || 'N/A', fontSize: 9, margin: CELL_PAD, fillColor },
       ]);
     });
 
-    // Empty rows to fill page
-    const minRows = 20;
+    // Empty rows - just enough to keep the layout clean
+    const minRows = Math.max(items.length + 3, 8);
     for (let i = items.length; i < minRows; i++) {
+      const fillColor = i % 2 === 1 ? '#F5F7FA' : undefined;
       body.push([
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
-        { text: '', fontSize: 9, margin: CELL_PAD },
+        { text: '', fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: '', fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: '', fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: '', fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: '', fontSize: 9, margin: CELL_PAD, fillColor },
       ]);
     }
 
@@ -513,10 +590,11 @@ export class ReportService {
       body.push([
         {
           stack: [
-            { text: 'Notas / Condicion del equipo:', bold: true, fontSize: 9, margin: [0, 0, 0, 4] },
+            { text: 'Notas / Condicion del equipo:', bold: true, fontSize: 9, color: INFO_LABEL_COLOR, margin: [0, 0, 0, 4] },
             { text: notes, fontSize: 9 },
           ],
           colSpan: 5,
+          fillColor: '#F9FAFB',
           margin: [15, 8, 15, 8],
         },
         {}, {}, {}, {},
@@ -525,25 +603,26 @@ export class ReportService {
 
     // Legal text
     body.push([
-      { text: legalText, bold: true, fontSize: 9, alignment: 'center', colSpan: 5, margin: [15, 8, 15, 8] },
+      { text: legalText, bold: true, fontSize: 8, italics: true, alignment: 'center', colSpan: 5, fillColor: '#F9FAFB', margin: [15, 10, 15, 10] },
       {}, {}, {}, {},
     ]);
 
     // Signature labels (symmetric: 2 | 1 blank | 2)
     body.push([
-      { text: signatures.leftLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
+      { text: signatures.leftLabel, bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10, colSpan: 2, margin: [4, 8, 4, 4] as number[] },
       {},
       { text: '', margin: CELL_PAD },
-      { text: signatures.rightLabel, bold: true, alignment: 'center', colSpan: 2, margin: CELL_PAD },
+      { text: signatures.rightLabel, bold: true, alignment: 'center', color: INFO_LABEL_COLOR, fontSize: 10, colSpan: 2, margin: [4, 8, 4, 4] as number[] },
       {},
     ]);
 
-    // Empty signature space + name (symmetric)
+    // Empty signature space + name + line (symmetric)
     body.push([
       {
         stack: [
-          { text: '', margin: [0, 35, 0, 0] },
-          { text: signatures.leftName || '', bold: true, alignment: 'center', fontSize: 9 },
+          { text: '', margin: [0, 40, 0, 0] },
+          { canvas: [{ type: 'line', x1: 30, y1: 0, x2: 170, y2: 0, lineWidth: 1, lineColor: HEADER_LINE }] },
+          { text: signatures.leftName || '', bold: true, alignment: 'center', fontSize: 9, margin: [0, 4, 0, 0] },
         ],
         colSpan: 2,
         margin: CELL_PAD,
@@ -552,8 +631,9 @@ export class ReportService {
       { text: '', margin: CELL_PAD },
       {
         stack: [
-          { text: '', margin: [0, 35, 0, 0] },
-          { text: signatures.rightName, bold: true, alignment: 'center', fontSize: 9 },
+          { text: '', margin: [0, 40, 0, 0] },
+          { canvas: [{ type: 'line', x1: 30, y1: 0, x2: 170, y2: 0, lineWidth: 1, lineColor: HEADER_LINE }] },
+          { text: signatures.rightName, bold: true, alignment: 'center', fontSize: 9, margin: [0, 4, 0, 0] },
         ],
         colSpan: 2,
         margin: CELL_PAD,
@@ -602,20 +682,21 @@ export class ReportService {
     const docDefinition: any = {
       pageSize: 'LETTER',
       pageMargins: [40, 30, 40, 40],
-      defaultStyle: { fontSize: 10 },
+      defaultStyle: { fontSize: 10, font: 'Roboto' },
       content: [
         {
           table: {
             widths: [55, '*', 65, 110, 105],
             body: outerBody,
           },
-          layout: this.gridLayout(),
+          layout: this.professionalLayout(5),
         },
       ],
       footer: (currentPage: number) => ({
         text: currentPage.toString(),
         alignment: 'center',
-        fontSize: 9,
+        fontSize: 8,
+        color: '#999999',
         margin: [0, 10, 0, 0],
       }),
     };
@@ -658,20 +739,21 @@ export class ReportService {
     const docDefinition: any = {
       pageSize: 'LETTER',
       pageMargins: [40, 30, 40, 40],
-      defaultStyle: { fontSize: 10 },
+      defaultStyle: { fontSize: 10, font: 'Roboto' },
       content: [
         {
           table: {
             widths: [55, '*', 65, 110, 105],
             body: outerBody,
           },
-          layout: this.gridLayout(),
+          layout: this.professionalLayout(5),
         },
       ],
       footer: (currentPage: number) => ({
         text: currentPage.toString(),
         alignment: 'center',
-        fontSize: 9,
+        fontSize: 8,
+        color: '#999999',
         margin: [0, 10, 0, 0],
       }),
     };
