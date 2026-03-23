@@ -2,8 +2,9 @@ import { MainLayout } from "@/components/MainLayout";
 import { useEffect, useState, useMemo } from "react";
 import { ProductType, AssetState, Company, Asset } from "@/types";
 import api from "@/lib/api";
-import { BulkMovementModal } from "@/components/BulkMovementModal";
+import { BulkMovementModal, MovementResult } from "@/components/BulkMovementModal";
 import { MovementHistoryTable } from "@/components/MovementHistoryTable";
+import { DeliveryReportModal } from "@/components/DeliveryReportModal";
 import {
   OmniboxFilter,
   type FilterChip,
@@ -57,6 +58,19 @@ export default function Movimientos() {
   // Panel lateral de historial
   const [selectedAssetID, setSelectedAssetID] = useState<number | null>(null);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
+
+  // Report modal after movement
+  const [isReportModalOpen, setIsReportModalOpen] = useState(false);
+  const [reportConfig, setReportConfig] = useState<{
+    assetID?: number;
+    assetIDs?: number[];
+    availableAssets?: { assetID: number; name: string; vendor: string; model: string; serialNum: string }[];
+    format: "entrega_software" | "entrega_multiitem";
+    title: string;
+    prefillDepartment?: string;
+    prefillSite?: string;
+    prefillReceiverName?: string;
+  } | null>(null);
 
   // Cargar catalogos
   useEffect(() => {
@@ -262,10 +276,95 @@ export default function Movimientos() {
     setIsBulkMovementModalOpen(true);
   };
 
-  const handleBulkMovementSuccess = () => {
+  const handleBulkMovementSuccess = (result: MovementResult) => {
     loadAssets();
     setSelectedAssets(new Set());
     setRefreshTrigger((prev) => prev + 1);
+
+    // Determine report format and title based on movement type
+    const { movementType, assetIDs, assets: movedAssets } = result;
+
+    const MOVEMENT_TITLES: Record<string, string> = {
+      REASIGNACION: "Entrega de Equipo",
+      RESGUARDO: "Resguardo de Equipo",
+      REPARACION: "Reparación de Equipo",
+      BAJA: "Baja de Equipo",
+    };
+
+    // Build available assets for multi-item selector
+    const reportAvailableAssets = movedAssets.map((a) => ({
+      assetID: a.assetID,
+      name: a.name,
+      vendor: a.vendor?.name || "",
+      model: a.assetDetail?.model || "",
+      serialNum: a.assetDetail?.serialNum || "",
+    }));
+
+    // Find department and site names for prefill
+    const findDepartmentName = () => {
+      if (result.departID) {
+        for (const a of movedAssets) {
+          if (a.depart?.departID === result.departID) return a.depart.Name;
+        }
+      }
+      return undefined;
+    };
+
+    const findSiteName = () => {
+      if (result.siteID) {
+        for (const a of movedAssets) {
+          if (a.site?.siteID === result.siteID) return a.site.name;
+        }
+      }
+      return undefined;
+    };
+
+    if (movementType === "REASIGNACION") {
+      // Check if single equipment-type asset → entrega_software
+      const isOnlyOneEquipo =
+        assetIDs.length === 1 &&
+        movedAssets.length === 1 &&
+        movedAssets[0].productType?.group === "Equipo";
+
+      if (isOnlyOneEquipo) {
+        setReportConfig({
+          assetID: assetIDs[0],
+          assetIDs,
+          availableAssets: reportAvailableAssets,
+          format: "entrega_software",
+          title: MOVEMENT_TITLES.REASIGNACION,
+          prefillDepartment: findDepartmentName(),
+          prefillSite: findSiteName(),
+          prefillReceiverName: result.userName,
+        });
+      } else {
+        // Multiple items or non-equipment → multi-item
+        setReportConfig({
+          assetID: assetIDs[0],
+          assetIDs,
+          availableAssets: reportAvailableAssets,
+          format: "entrega_multiitem",
+          title: MOVEMENT_TITLES.REASIGNACION,
+          prefillDepartment: findDepartmentName(),
+          prefillSite: findSiteName(),
+          prefillReceiverName: result.userName,
+        });
+      }
+    } else {
+      // RESGUARDO, REPARACION, BAJA → always multi-item
+      setReportConfig({
+        assetID: assetIDs[0],
+        assetIDs,
+        availableAssets: reportAvailableAssets,
+        format: "entrega_multiitem",
+        title: MOVEMENT_TITLES[movementType] || "Reporte de Movimiento",
+        prefillDepartment: findDepartmentName(),
+        prefillSite: findSiteName(),
+        prefillReceiverName: result.userName,
+      });
+    }
+
+    setIsReportModalOpen(true);
   };
 
   const handleViewHistory = (assetID: number) => {
@@ -554,6 +653,25 @@ export default function Movimientos() {
             onClose={() => setIsBulkMovementModalOpen(false)}
             onSuccess={handleBulkMovementSuccess}
           />
+
+          {/* Modal de Reporte automático después del movimiento */}
+          {reportConfig && (
+            <DeliveryReportModal
+              assetID={reportConfig.assetID}
+              assetIDs={reportConfig.assetIDs}
+              availableAssets={reportConfig.availableAssets}
+              format={reportConfig.format}
+              title={reportConfig.title}
+              prefillDepartment={reportConfig.prefillDepartment}
+              prefillSite={reportConfig.prefillSite}
+              prefillReceiverName={reportConfig.prefillReceiverName}
+              isOpen={isReportModalOpen}
+              onClose={() => {
+                setIsReportModalOpen(false);
+                setReportConfig(null);
+              }}
+            />
+          )}
         </div>
       )}
     </MainLayout>

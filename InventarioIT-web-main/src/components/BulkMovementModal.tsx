@@ -43,12 +43,23 @@ interface UserSearchResult {
   rolName: string;
 }
 
+export interface MovementResult {
+  movementType: MovementType;
+  assetIDs: number[];
+  assets: Asset[];
+  companyID?: number;
+  siteID?: number;
+  departID?: number;
+  userID?: number;
+  userName?: string;
+}
+
 interface BulkMovementModalProps {
   assets: Asset[];
   selectedAssetIDs: number[];
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  onSuccess: (result: MovementResult) => void;
 }
 
 const MOVEMENT_TYPE_CONFIG: {
@@ -277,9 +288,19 @@ export const BulkMovementModal = ({
       });
 
       showSuccess(`Movimiento registrado para ${selectedAssetIDs.length} activo(s)`);
+      const result: MovementResult = {
+        movementType: movementType as MovementType,
+        assetIDs: [...selectedAssetIDs],
+        assets: selectedAssets,
+        companyID: companyID || undefined,
+        siteID: siteID || undefined,
+        departID: departID || undefined,
+        userID: selectedUser?.userID,
+        userName: selectedUser?.name,
+      };
       resetForm();
-      onSuccess();
       onClose();
+      onSuccess(result);
     } catch (error: unknown) {
       console.error("Error al registrar movimiento masivo:", error);
       if (error && typeof error === "object" && "response" in error) {
