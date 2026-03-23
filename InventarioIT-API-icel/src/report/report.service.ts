@@ -368,9 +368,9 @@ export class ReportService {
       {},
     ]);
 
-    // ENTREGA: | RECIBE: labels
+    // RESPONSABLE: | RECIBE: labels
     outerBody.push([
-      { text: 'ENTREGA:', bold: true, alignment: 'center', margin: CELL_PAD },
+      { text: 'RESPONSABLE:', bold: true, alignment: 'center', margin: CELL_PAD },
       { text: 'RECIBE:', bold: true, alignment: 'center', margin: CELL_PAD },
     ]);
 
@@ -380,12 +380,11 @@ export class ReportService {
       { text: '', margin: [0, 40, 0, 40] },
     ]);
 
-    // Signature lines + names
+    // Signature lines
     outerBody.push([
       {
         stack: [
           { text: '________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
-          { text: 'Responsable', bold: true, alignment: 'center', fontSize: 9 },
         ],
         margin: CELL_PAD,
       },
@@ -599,10 +598,10 @@ export class ReportService {
       options?.receiverName || data.userName || 'N/A',
       data.items,
       `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
-      // Signatures: ENTREGA = Responsable | RECIBE = userName
+      // Signatures: RESPONSABLE | RECIBE = userName
       {
-        leftLabel: 'ENTREGA:',
-        leftLine1: 'Responsable',
+        leftLabel: 'RESPONSABLE:',
+        leftLine1: '',
         leftLine2: '',
         rightLabel: 'RECIBE:',
         rightLine1: '',

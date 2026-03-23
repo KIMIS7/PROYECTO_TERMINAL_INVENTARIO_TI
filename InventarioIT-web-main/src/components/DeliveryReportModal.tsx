@@ -388,8 +388,7 @@ export function DeliveryReportModal({
               {/* Preview de firmas */}
               <div className="flex gap-8 text-center text-sm">
                 <div className="flex-1 border-t-2 border-gray-300 pt-2">
-                  <p className="font-semibold text-gray-700">ENTREGA:</p>
-                  <p className="text-gray-500 text-xs">Responsable</p>
+                  <p className="font-semibold text-gray-700">RESPONSABLE:</p>
                 </div>
                 <div className="flex-1 border-t-2 border-gray-300 pt-2">
                   <p className="font-semibold text-gray-700">RECIBE:</p>
