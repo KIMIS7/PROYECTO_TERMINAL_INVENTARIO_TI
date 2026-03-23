@@ -293,6 +293,7 @@ export class ReportService {
         ...this.getLogoForPdf(),
         rowSpan: 2,
         margin: [8, 8, 8, 8],
+        border: [true, true, false, false],
       },
       {
         text: [
@@ -301,13 +302,14 @@ export class ReportService {
         ],
         alignment: 'right',
         margin: [0, 12, 10, 0],
+        border: [false, true, true, false],
       },
     ]);
 
     // Row 2: (logo continues) + empty
     outerBody.push([
-      { text: '' },
-      { text: '', margin: CELL_PAD },
+      { text: '', border: [true, false, false, true] },
+      { text: '', margin: CELL_PAD, border: [false, false, true, true] },
     ]);
 
     // Row 3: ASUNTO
@@ -485,9 +487,10 @@ export class ReportService {
         rowSpan: 2,
         margin: [8, 8, 8, 8],
         colSpan: 2,
+        border: [true, true, false, false],
       },
       {},
-      { text: '', colSpan: 2 },
+      { text: '', colSpan: 2, border: [false, true, false, false] },
       {},
       {
         text: [
@@ -496,11 +499,18 @@ export class ReportService {
         ],
         alignment: 'right',
         margin: [0, 12, 8, 0],
+        border: [false, true, true, false],
       },
     ]);
 
     // Row 2: Logo continues
-    body.push([{ text: '' }, {}, { text: '', colSpan: 3 }, {}, {}]);
+    body.push([
+      { text: '', border: [true, false, false, true] },
+      {},
+      { text: '', colSpan: 2, border: [false, false, false, true] },
+      {},
+      { text: '', border: [false, false, true, true] },
+    ]);
 
     // Row 3: ASUNTO
     body.push([
