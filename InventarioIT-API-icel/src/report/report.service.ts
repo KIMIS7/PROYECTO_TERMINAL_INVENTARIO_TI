@@ -385,9 +385,7 @@ export class ReportService {
       {
         stack: [
           { text: '________________________', alignment: 'center', fontSize: 9, margin: [0, 0, 0, 2] },
-          ...(options?.deliveryPerson ? [{ text: options.deliveryPerson, bold: true, alignment: 'center' as const, fontSize: 9 }] : []),
-          { text: 'DEPARTAMENTO DE', bold: true, alignment: 'center', fontSize: 9 },
-          { text: 'SISTEMAS', bold: true, alignment: 'center', fontSize: 9 },
+          { text: 'Responsable', bold: true, alignment: 'center', fontSize: 9 },
         ],
         margin: CELL_PAD,
       },
@@ -601,11 +599,11 @@ export class ReportService {
       options?.receiverName || data.userName || 'N/A',
       data.items,
       `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
-      // Signatures: ENTREGA = deliveryPerson + DEPTO DE SISTEMAS | RECIBE = userName
+      // Signatures: ENTREGA = Responsable | RECIBE = userName
       {
         leftLabel: 'ENTREGA:',
-        leftLine1: options?.deliveryPerson || '',
-        leftLine2: 'DEPTO DE SISTEMAS',
+        leftLine1: 'Responsable',
+        leftLine2: '',
         rightLabel: 'RECIBE:',
         rightLine1: '',
         rightLine2: options?.receiverName || data.userName || 'N/A',

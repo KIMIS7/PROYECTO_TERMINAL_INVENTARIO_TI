@@ -91,7 +91,6 @@ export function DeliveryReportModal({
   const [notes, setNotes] = useState(
     "Se entrega equipo en buenas condiciones sin golpes ni defectos, recien instalado. Detalles de uso."
   );
-  const [deliveryPerson, setDeliveryPerson] = useState("");
   const [razonSocial, setRazonSocial] = useState("");
 
   useEffect(() => {
@@ -156,7 +155,6 @@ export function DeliveryReportModal({
         const blob = await api.report.downloadDeliveryPdf(assetID, {
           softwareStatus,
           notes,
-          deliveryPerson: deliveryPerson || undefined,
         });
         triggerDownload(
           new Blob([blob], { type: "application/pdf" }),
@@ -174,7 +172,6 @@ export function DeliveryReportModal({
           razonSocial: razonSocial || undefined,
           department: data?.department || prefillDepartment || undefined,
           receiverName: data?.userName || prefillReceiverName || undefined,
-          deliveryPerson: deliveryPerson || undefined,
           notes: notes || undefined,
         });
         triggerDownload(
@@ -307,29 +304,15 @@ export function DeliveryReportModal({
               )}
 
               {/* Campos editables comunes */}
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="text-sm font-medium text-gray-600 block mb-1">Razon Social</label>
-                  <input
-                    type="text"
-                    value={razonSocial}
-                    onChange={(e) => setRazonSocial(e.target.value)}
-                    className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Razon social de la empresa"
-                  />
-                </div>
-                <div>
-                  <label className="text-sm font-medium text-gray-600 block mb-1">
-                    Persona que entrega
-                  </label>
-                  <input
-                    type="text"
-                    value={deliveryPerson}
-                    onChange={(e) => setDeliveryPerson(e.target.value)}
-                    className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="Nombre de quien entrega"
-                  />
-                </div>
+              <div>
+                <label className="text-sm font-medium text-gray-600 block mb-1">Razon Social</label>
+                <input
+                  type="text"
+                  value={razonSocial}
+                  onChange={(e) => setRazonSocial(e.target.value)}
+                  className="w-full border rounded-md px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Razon social de la empresa"
+                />
               </div>
 
               {/* Software Checklist - solo para formato entrega_software */}
@@ -406,9 +389,7 @@ export function DeliveryReportModal({
               <div className="flex gap-8 text-center text-sm">
                 <div className="flex-1 border-t-2 border-gray-300 pt-2">
                   <p className="font-semibold text-gray-700">ENTREGA:</p>
-                  <p className="text-gray-500 text-xs">
-                    {`${deliveryPerson || "..."}\nDEPARTAMENTO DE SISTEMAS`}
-                  </p>
+                  <p className="text-gray-500 text-xs">Responsable</p>
                 </div>
                 <div className="flex-1 border-t-2 border-gray-300 pt-2">
                   <p className="font-semibold text-gray-700">RECIBE:</p>
