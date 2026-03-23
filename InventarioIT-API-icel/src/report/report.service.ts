@@ -582,9 +582,9 @@ export class ReportService {
       options?.notes || '',
       `Recibo de ${options?.razonSocial || data.company || 'Hotel Shops S.A. de C.V.'} la(s) Herramienta(s) arriba mencionada(s) para hacer buen uso de ellas. En caso de renuncia o cambio de departamento, sirvase hacer entrega del equipo a su cargo a fin de evitar responsabilidades posteriores en efectivo.`,
       {
-        leftLabel: 'RESPONSABLE:',
-        rightLabel: 'RECIBE:',
-        rightName: options?.receiverName || data.userName || 'N/A',
+        leftLabel: 'ENTREGA:',
+        rightLabel: 'DEPARTAMENTO DE SISTEMAS',
+        rightName: 'ENCARGADO DE TIENDA',
       },
     );
 
