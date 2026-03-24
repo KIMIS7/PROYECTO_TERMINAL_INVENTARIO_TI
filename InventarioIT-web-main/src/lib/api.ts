@@ -624,6 +624,48 @@ const api = {
       return response.data;
     },
   },
+  // Estadísticas del dashboard
+  statistics: {
+    getDashboard: async () => {
+      const response = await apiClient.get<{
+        summary: {
+          totalAssets: number;
+          assignedAssets: number;
+          inactiveAssets: number;
+          obsoleteCount: number;
+          warrantyExpiringCount: number;
+          reassignments: number;
+          activeWarrantyCount: number;
+        };
+        kpis: {
+          utilizationRate: number;
+          inactiveRate: number;
+          obsolescenceRate: number;
+          warrantyCoverageRate: number;
+          warrantyExpiringCount: number;
+          reassignments: number;
+          avgAgeByType: { type: string; avgYears: number; count: number }[];
+        };
+        distributions: {
+          bySite: { site: string; count: number }[];
+          byState: { state: string; count: number }[];
+        };
+        assetsTable: {
+          assetID: number;
+          name: string;
+          state: string;
+          site: string;
+          productType: string;
+          group: string;
+          warrantyExpiry: string | null;
+          acquisitionDate: string | null;
+          hasActiveWarranty: boolean;
+          isObsolete: boolean;
+        }[];
+      }>("/statistics/dashboard");
+      return response.data;
+    },
+  },
   // Jerarquía de aprobaciones
   approvalHierarchy: {
     getHierarchy: async (buyerID: string, company?: string) => {
