@@ -442,7 +442,6 @@ export default function Reportes() {
                         <TableHead className="font-semibold text-gray-700">Departamento</TableHead>
                         <TableHead className="font-semibold text-gray-700">Empresa</TableHead>
                         <TableHead className="font-semibold text-gray-700">Sitio</TableHead>
-                        <TableHead className="font-semibold text-gray-700 w-24">Resguardo</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -463,22 +462,6 @@ export default function Reportes() {
                             <TableCell className="text-gray-700">{asset.depart?.Name || "-"}</TableCell>
                             <TableCell className="text-gray-600 text-sm">{asset.company?.description || "-"}</TableCell>
                             <TableCell className="text-gray-600 text-sm">{asset.site?.name || "-"}</TableCell>
-                            <TableCell>
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                onClick={() => handleExportResguardoPdf(asset.assetID)}
-                                disabled={isExporting === `pdf-${asset.assetID}`}
-                                className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 px-2"
-                                title="Generar PDF de resguardo"
-                              >
-                                {isExporting === `pdf-${asset.assetID}` ? (
-                                  <Loader2 className="h-4 w-4 animate-spin" />
-                                ) : (
-                                  <FileText className="h-4 w-4" />
-                                )}
-                              </Button>
-                            </TableCell>
                           </TableRow>
                         ))
                       )}
@@ -543,7 +526,6 @@ export default function Reportes() {
                         <TableHead className="font-semibold text-gray-700">Fecha de Compra</TableHead>
                         <TableHead className="font-semibold text-gray-700">Vencimiento de Garantía</TableHead>
                         <TableHead className="font-semibold text-gray-700">Estado</TableHead>
-                        <TableHead className="font-semibold text-gray-700 w-24">Resguardo</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -605,22 +587,6 @@ export default function Reportes() {
                                 >
                                   {!warrantyDate ? "N/A" : expired ? "Vencida" : "Vigente"}
                                 </span>
-                              </TableCell>
-                              <TableCell>
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  onClick={() => handleExportResguardoPdf(asset.assetID)}
-                                  disabled={isExporting === `pdf-${asset.assetID}`}
-                                  className="text-green-600 hover:text-green-700 hover:bg-green-50 h-8 px-2"
-                                  title="Generar PDF de resguardo"
-                                >
-                                  {isExporting === `pdf-${asset.assetID}` ? (
-                                    <Loader2 className="h-4 w-4 animate-spin" />
-                                  ) : (
-                                    <FileText className="h-4 w-4" />
-                                  )}
-                                </Button>
                               </TableCell>
                             </TableRow>
                           );
