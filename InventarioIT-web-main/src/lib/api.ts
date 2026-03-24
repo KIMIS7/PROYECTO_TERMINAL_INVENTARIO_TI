@@ -636,6 +636,9 @@ const api = {
           warrantyExpiringCount: number;
           reassignments: number;
           activeWarrantyCount: number;
+          newAssetsThisMonth: number;
+          unassignedCount: number;
+          warrantyExpiringPercent: number;
         };
         kpis: {
           utilizationRate: number;
@@ -650,6 +653,9 @@ const api = {
           bySite: { site: string; count: number }[];
           byState: { state: string; count: number }[];
         };
+        movementsByMonth: { month: string; count: number }[];
+        warrantyAlerts: { name: string; site: string; daysUntilExpiry: number }[];
+        recentMovements: { assetName: string; operation: string; user: string; date: string }[];
         assetsTable: {
           assetID: number;
           name: string;

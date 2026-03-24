@@ -11,6 +11,7 @@ export class StatisticsService {
         assets,
         assetDetails,
         historyRecords,
+        recentMovementsRaw,
         assetStates,
         sites,
         productTypes,
@@ -20,6 +21,7 @@ export class StatisticsService {
             AssetState_Asset_AssetStateToAssetState: true,
             Site: true,
             ProductType: true,
+            User: true,
           },
         }),
         this.prismaShopic.assetDetail.findMany({
@@ -34,6 +36,22 @@ export class StatisticsService {
             Operation: true,
             CreatedTime: true,
           },
+        }),
+        this.prismaShopic.assetHistory.findMany({
+          select: {
+            AssetID: true,
+            Operation: true,
+            Description: true,
+            CreatedTime: true,
+            Asset: {
+              select: {
+                Name: true,
+                User: { select: { Name: true } },
+              },
+            },
+          },
+          orderBy: { CreatedTime: 'desc' },
+          take: 10,
         }),
         this.prismaShopic.assetState.findMany(),
         this.prismaShopic.site.findMany(),
@@ -87,15 +105,32 @@ export class StatisticsService {
       ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
 
       let warrantyExpiringCount = 0;
+      const warrantyAlertsList: {
+        name: string;
+        site: string;
+        daysUntilExpiry: number;
+      }[] = [];
+
       for (const asset of assets) {
         const detail = detailMap.get(asset.AssetID);
         if (detail?.WarrantyExpiryDate) {
           const expiryDate = new Date(detail.WarrantyExpiryDate);
           if (expiryDate > now && expiryDate <= ninetyDaysFromNow) {
             warrantyExpiringCount++;
+            const daysUntilExpiry = Math.ceil(
+              (expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24),
+            );
+            warrantyAlertsList.push({
+              name: asset.Name,
+              site: asset.Site?.Name || 'Sin sede',
+              daysUntilExpiry,
+            });
           }
         }
       }
+
+      // Sort warranty alerts by days ascending (most urgent first)
+      warrantyAlertsList.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
 
       // 5. Antigüedad promedio por tipo de equipo
       const ageByType = new Map<string, { totalYears: number; count: number }>();
@@ -150,6 +185,40 @@ export class StatisticsService {
         ? Math.round((activeWarrantyCount / totalWithWarranty) * 100)
         : 0;
 
+      // ========== NEW: Movements by month (last 6 months) ==========
+      const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+      const movementsByMonth: { month: string; count: number }[] = [];
+
+      for (let i = 5; i >= 0; i--) {
+        const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+        const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
+        const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
+
+        const count = historyRecords.filter((h) => {
+          const created = new Date(h.CreatedTime);
+          return created >= monthStart && created < monthEnd;
+        }).length;
+
+        movementsByMonth.push({
+          month: monthNames[d.getMonth()],
+          count,
+        });
+      }
+
+      // ========== NEW: Assets created this month ==========
+      const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+      const newAssetsThisMonth = historyRecords.filter((h) => {
+        return h.Operation === 'CREATE' && new Date(h.CreatedTime) >= currentMonthStart;
+      }).length;
+
+      // ========== NEW: Recent movements with details ==========
+      const recentMovements = recentMovementsRaw.map((m) => ({
+        assetName: m.Asset?.Name || 'N/A',
+        operation: m.Operation,
+        user: m.Asset?.User?.Name || '—',
+        date: m.CreatedTime,
+      }));
+
       // ========== ASSETS TABLE DATA ==========
       const assetsTableData = assets.map((a) => {
         const detail = detailMap.get(a.AssetID);
@@ -177,6 +246,11 @@ export class StatisticsService {
         .map(([state, count]) => ({ state, count }))
         .sort((a, b) => b.count - a.count);
 
+      // Warranty expiring percentage
+      const warrantyExpiringPercent = totalAssets > 0
+        ? Math.round((warrantyExpiringCount / totalAssets) * 1000) / 10
+        : 0;
+
       return {
         summary: {
           totalAssets,
@@ -186,6 +260,9 @@ export class StatisticsService {
           warrantyExpiringCount,
           reassignments,
           activeWarrantyCount,
+          newAssetsThisMonth,
+          unassignedCount: totalAssets - assignedAssets,
+          warrantyExpiringPercent,
         },
         kpis: {
           utilizationRate,
@@ -200,6 +277,9 @@ export class StatisticsService {
           bySite: distributionBySite,
           byState: distributionByState,
         },
+        movementsByMonth,
+        warrantyAlerts: warrantyAlertsList.slice(0, 10),
+        recentMovements,
         assetsTable: assetsTableData,
       };
     } catch (error) {
