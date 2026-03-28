@@ -9,7 +9,6 @@ export class StatisticsService {
     try {
       const [
         assets,
-        assetDetails,
         historyRecords,
         recentMovementsRaw,
         assetStates,
@@ -22,13 +21,12 @@ export class StatisticsService {
             Site: true,
             ProductType: true,
             User: true,
-          },
-        }),
-        this.prismaShopic.assetDetail.findMany({
-          select: {
-            AssetID: true,
-            WarrantyExpiryDate: true,
-            AssetACQDate: true,
+            AssetDetail: {
+              select: {
+                WarrantyExpiryDate: true,
+                AssetACQDate: true,
+              },
+            },
           },
         }),
         this.prismaShopic.assetHistory.findMany({
@@ -61,10 +59,12 @@ export class StatisticsService {
       const totalAssets = assets.length;
       const now = new Date();
 
-      // Build a map: AssetID → detail
+      // Build a map: AssetID → detail (from included AssetDetail relation)
       const detailMap = new Map<number, { WarrantyExpiryDate: Date | null; AssetACQDate: Date | null }>();
-      for (const d of assetDetails) {
-        detailMap.set(d.AssetID, d);
+      for (const a of assets) {
+        if (a.AssetDetail) {
+          detailMap.set(a.AssetID, a.AssetDetail);
+        }
       }
 
       // ========== UTILIZACIÓN Y DISPONIBILIDAD ==========

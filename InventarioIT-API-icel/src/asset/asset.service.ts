@@ -71,24 +71,11 @@ export class AssetService {
         resolvedSiteID = defaultSite?.SiteID || 1;
       }
 
-      // Crear el activo
-      const newAsset = await this.prismaShopic.asset.create({
-        data: {
-          Name: name,
-          VendorID: vendorID,
-          ProductTypeID: productTypeID,
-          AssetState: resolvedAssetState,
-          CompanyID: resolvedCompanyID,
-          SiteID: resolvedSiteID,
-          UserID: userID || lastUpdateBy,
-        },
-      });
-
-      // Si hay detalles, crearlos
+      // Si hay detalles, crearlos primero para obtener el AssetDetailID
+      let assetDetailID: number | null = null;
       if (detail) {
-        await this.prismaShopic.assetDetail.create({
+        const newDetail = await this.prismaShopic.assetDetail.create({
           data: {
-            AssetID: newAsset.AssetID,
             ProductManuf: detail.productManuf,
             IPAddress: detail.ipAddress,
             MACAddress: detail.macAddress,
@@ -128,7 +115,22 @@ export class AssetService {
             LastUpdateBy: lastUpdateBy,
           },
         });
+        assetDetailID = newDetail.AssetDetailID;
       }
+
+      // Crear el activo con la referencia al detalle
+      const newAsset = await this.prismaShopic.asset.create({
+        data: {
+          Name: name,
+          VendorID: vendorID,
+          ProductTypeID: productTypeID,
+          AssetState: resolvedAssetState,
+          CompanyID: resolvedCompanyID,
+          SiteID: resolvedSiteID,
+          UserID: userID || lastUpdateBy,
+          AssetDetailID: assetDetailID,
+        },
+      });
 
       // Obtener nombre del usuario para el historial
       let creatorName: string | null = null;
@@ -246,26 +248,26 @@ export class AssetService {
               Name: asset.User.Depart.Name,
             }
           : null,
-        assetDetail: asset.AssetDetail[0]
+        assetDetail: asset.AssetDetail
           ? {
-              assetDetailID: asset.AssetDetail[0].AssetDetailID,
-              serialNum: asset.AssetDetail[0].SerialNum,
-              assetTAG: asset.AssetDetail[0].AssetTAG,
-              model: asset.AssetDetail[0].Model,
-              productManuf: asset.AssetDetail[0].ProductManuf,
-              ipAddress: asset.AssetDetail[0].IPAddress,
-              macAddress: asset.AssetDetail[0].MACAddress,
-              processor: asset.AssetDetail[0].Processor,
-              processorInfo: asset.AssetDetail[0].ProcessorInfo,
-              ram: asset.AssetDetail[0].RAM,
-              physicalMemory: asset.AssetDetail[0].PhysicalMemory,
-              hddModel: asset.AssetDetail[0].HDDModel,
-              hddCapacity: asset.AssetDetail[0].HDDCapacity,
-              operatingSystem: asset.AssetDetail[0].OperatingSystem,
-              purchaseDate: asset.AssetDetail[0].PurchaseDate,
-              warrantyExpiryDate: asset.AssetDetail[0].WarrantyExpiryDate,
-              factura: asset.AssetDetail[0].Factura,
-              ticket: asset.AssetDetail[0].Ticket,
+              assetDetailID: asset.AssetDetail.AssetDetailID,
+              serialNum: asset.AssetDetail.SerialNum,
+              assetTAG: asset.AssetDetail.AssetTAG,
+              model: asset.AssetDetail.Model,
+              productManuf: asset.AssetDetail.ProductManuf,
+              ipAddress: asset.AssetDetail.IPAddress,
+              macAddress: asset.AssetDetail.MACAddress,
+              processor: asset.AssetDetail.Processor,
+              processorInfo: asset.AssetDetail.ProcessorInfo,
+              ram: asset.AssetDetail.RAM,
+              physicalMemory: asset.AssetDetail.PhysicalMemory,
+              hddModel: asset.AssetDetail.HDDModel,
+              hddCapacity: asset.AssetDetail.HDDCapacity,
+              operatingSystem: asset.AssetDetail.OperatingSystem,
+              purchaseDate: asset.AssetDetail.PurchaseDate,
+              warrantyExpiryDate: asset.AssetDetail.WarrantyExpiryDate,
+              factura: asset.AssetDetail.Factura,
+              ticket: asset.AssetDetail.Ticket,
             }
           : null,
       }));
@@ -365,47 +367,46 @@ export class AssetService {
               Name: asset.User.Depart.Name,
             }
           : null,
-        assetDetail: asset.AssetDetail[0]
+        assetDetail: asset.AssetDetail
           ? {
-              assetDetailID: asset.AssetDetail[0].AssetDetailID,
-              assetID: asset.AssetDetail[0].AssetID,
-              productManuf: asset.AssetDetail[0].ProductManuf,
-              ipAddress: asset.AssetDetail[0].IPAddress,
-              macAddress: asset.AssetDetail[0].MACAddress,
-              loanable: asset.AssetDetail[0].Loanable,
-              vmPlatform: asset.AssetDetail[0].VMPlatform,
-              virtualHost: asset.AssetDetail[0].VirtualHost,
-              operatingSystem: asset.AssetDetail[0].OperatingSystem,
-              domain: asset.AssetDetail[0].Domain,
-              processorInfo: asset.AssetDetail[0].ProcessorInfo,
-              processor: asset.AssetDetail[0].Processor,
-              physicalMemory: asset.AssetDetail[0].PhysicalMemory,
-              hddModel: asset.AssetDetail[0].HDDModel,
-              hddSerial: asset.AssetDetail[0].HDDSerial,
-              hddCapacity: asset.AssetDetail[0].HDDCapacity,
-              keyboardType: asset.AssetDetail[0].KeyboardType,
-              mouseType: asset.AssetDetail[0].MouseType,
-              numModel: asset.AssetDetail[0].NumModel,
-              model: asset.AssetDetail[0].Model,
-              imei: asset.AssetDetail[0].IMEI,
-              modemFirmwareVersion: asset.AssetDetail[0].ModemFirmwareVersion,
-              platform: asset.AssetDetail[0].Platform,
-              osName: asset.AssetDetail[0].OSName,
-              osVersion: asset.AssetDetail[0].OSVersion,
-              ram: asset.AssetDetail[0].RAM,
-              serialNum: asset.AssetDetail[0].SerialNum,
-              purchaseDate: asset.AssetDetail[0].PurchaseDate,
-              warrantyExpiryDate: asset.AssetDetail[0].WarrantyExpiryDate,
-              assetACQDate: asset.AssetDetail[0].AssetACQDate,
-              assetExpiryDate: asset.AssetDetail[0].AssetExpiryDate,
-              assetTAG: asset.AssetDetail[0].AssetTAG,
-              warrantyExpiry: asset.AssetDetail[0].WarrantyExpiry,
-              barcode: asset.AssetDetail[0].Barcode,
-              factura: asset.AssetDetail[0].Factura,
-              ticket: asset.AssetDetail[0].Ticket,
-              createdTime: asset.AssetDetail[0].CreatedTime,
-              lastUpdateTime: asset.AssetDetail[0].LastUpdateTime,
-              lastUpdateBy: asset.AssetDetail[0].LastUpdateBy,
+              assetDetailID: asset.AssetDetail.AssetDetailID,
+              productManuf: asset.AssetDetail.ProductManuf,
+              ipAddress: asset.AssetDetail.IPAddress,
+              macAddress: asset.AssetDetail.MACAddress,
+              loanable: asset.AssetDetail.Loanable,
+              vmPlatform: asset.AssetDetail.VMPlatform,
+              virtualHost: asset.AssetDetail.VirtualHost,
+              operatingSystem: asset.AssetDetail.OperatingSystem,
+              domain: asset.AssetDetail.Domain,
+              processorInfo: asset.AssetDetail.ProcessorInfo,
+              processor: asset.AssetDetail.Processor,
+              physicalMemory: asset.AssetDetail.PhysicalMemory,
+              hddModel: asset.AssetDetail.HDDModel,
+              hddSerial: asset.AssetDetail.HDDSerial,
+              hddCapacity: asset.AssetDetail.HDDCapacity,
+              keyboardType: asset.AssetDetail.KeyboardType,
+              mouseType: asset.AssetDetail.MouseType,
+              numModel: asset.AssetDetail.NumModel,
+              model: asset.AssetDetail.Model,
+              imei: asset.AssetDetail.IMEI,
+              modemFirmwareVersion: asset.AssetDetail.ModemFirmwareVersion,
+              platform: asset.AssetDetail.Platform,
+              osName: asset.AssetDetail.OSName,
+              osVersion: asset.AssetDetail.OSVersion,
+              ram: asset.AssetDetail.RAM,
+              serialNum: asset.AssetDetail.SerialNum,
+              purchaseDate: asset.AssetDetail.PurchaseDate,
+              warrantyExpiryDate: asset.AssetDetail.WarrantyExpiryDate,
+              assetACQDate: asset.AssetDetail.AssetACQDate,
+              assetExpiryDate: asset.AssetDetail.AssetExpiryDate,
+              assetTAG: asset.AssetDetail.AssetTAG,
+              warrantyExpiry: asset.AssetDetail.WarrantyExpiry,
+              barcode: asset.AssetDetail.Barcode,
+              factura: asset.AssetDetail.Factura,
+              ticket: asset.AssetDetail.Ticket,
+              createdTime: asset.AssetDetail.CreatedTime,
+              lastUpdateTime: asset.AssetDetail.LastUpdateTime,
+              lastUpdateBy: asset.AssetDetail.LastUpdateBy,
             }
           : null,
         parentAsset: asset.Asset
@@ -419,8 +420,8 @@ export class AssetService {
                     group: asset.Asset.ProductType.Group,
                   }
                 : null,
-              model: asset.Asset.AssetDetail?.[0]?.Model || null,
-              serialNum: asset.Asset.AssetDetail?.[0]?.SerialNum || null,
+              model: asset.Asset.AssetDetail?.Model || null,
+              serialNum: asset.Asset.AssetDetail?.SerialNum || null,
             }
           : null,
         childAssets: asset.other_Asset.map((child) => ({
@@ -433,8 +434,8 @@ export class AssetService {
                 group: child.ProductType.Group,
               }
             : null,
-          model: child.AssetDetail?.[0]?.Model || null,
-          serialNum: child.AssetDetail?.[0]?.SerialNum || null,
+          model: child.AssetDetail?.Model || null,
+          serialNum: child.AssetDetail?.SerialNum || null,
         })),
         history: asset.AssetHistory.map((h) => ({
           assetHistoryID: h.AssetHistoryID,
@@ -493,10 +494,6 @@ export class AssetService {
 
       // Actualizar detalles si existen
       if (detail) {
-        const existingDetail = await this.prismaShopic.assetDetail.findFirst({
-          where: { AssetID: id },
-        });
-
         const detailData = {
               ProductManuf: detail.productManuf,
               IPAddress: detail.ipAddress,
@@ -533,20 +530,25 @@ export class AssetService {
               LastUpdateBy: lastUpdateBy,
             };
 
-        if (existingDetail) {
+        if (updatedAsset.AssetDetailID) {
+          // Ya tiene un detalle vinculado, actualizarlo
           await this.prismaShopic.assetDetail.update({
-            where: { AssetDetailID: existingDetail.AssetDetailID },
+            where: { AssetDetailID: updatedAsset.AssetDetailID },
             data: detailData,
           });
         } else {
-          await this.prismaShopic.assetDetail.create({
+          // No tiene detalle, crear uno nuevo y vincularlo al asset
+          const newDetail = await this.prismaShopic.assetDetail.create({
             data: {
-              AssetID: id,
               ...detailData,
               PurchaseDate: detail.purchaseDate ? new Date(detail.purchaseDate) : null,
               WarrantyExpiryDate: detail.warrantyExpiryDate ? new Date(detail.warrantyExpiryDate) : null,
               CreatedTime: new Date(),
             },
+          });
+          await this.prismaShopic.asset.update({
+            where: { AssetID: id },
+            data: { AssetDetailID: newDetail.AssetDetailID },
           });
         }
       }
@@ -598,26 +600,30 @@ export class AssetService {
     }
 
     try {
-      // Eliminar detalles primero
-      await this.prismaShopic.assetDetail.deleteMany({
-        where: { AssetID: id },
-      });
+      // Guardar referencia al detalle antes de eliminar
+      const assetDetailID = asset.AssetDetailID;
 
       // Eliminar historial de propiedad
       await this.prismaShopic.assetOwnershipHistory.deleteMany({
         where: { AssetID: id },
       });
 
-      // Actualizar registros de historial con operación DELETE antes de eliminar
-      // Agregar un registro DELETE y luego eliminar todo el historial junto con el activo
+      // Eliminar historial
       await this.prismaShopic.assetHistory.deleteMany({
         where: { AssetID: id },
       });
 
-      // Eliminar el activo
+      // Eliminar el activo primero (tiene la FK hacia AssetDetail)
       await this.prismaShopic.asset.delete({
         where: { AssetID: id },
       });
+
+      // Eliminar el detalle después (si existía)
+      if (assetDetailID) {
+        await this.prismaShopic.assetDetail.delete({
+          where: { AssetDetailID: assetDetailID },
+        });
+      }
 
       return {
         success: true,
@@ -643,8 +649,8 @@ export class AssetService {
             group: child.ProductType.Group,
           }
         : null,
-      model: child.AssetDetail?.[0]?.Model || null,
-      serialNum: child.AssetDetail?.[0]?.SerialNum || null,
+      model: child.AssetDetail?.Model || null,
+      serialNum: child.AssetDetail?.SerialNum || null,
     };
   }
 
@@ -725,8 +731,8 @@ export class AssetService {
               group: asset.ProductType.Group,
             }
           : null,
-        model: asset.AssetDetail?.[0]?.Model || null,
-        serialNum: asset.AssetDetail?.[0]?.SerialNum || null,
+        model: asset.AssetDetail?.Model || null,
+        serialNum: asset.AssetDetail?.SerialNum || null,
         user: asset.User
           ? { userID: asset.User.UserID, name: asset.User.Name }
           : null,
