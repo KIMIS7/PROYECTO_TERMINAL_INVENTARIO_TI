@@ -18,7 +18,7 @@ model Asset {
   UserID                                  Int?
   ParentAssetID                           Int?
   DepartID                                Int?
-  AssetDetailID                           Int?
+  AssetDetailID                           Int?                    @unique
   AssetState_Asset_AssetStateToAssetState AssetState              @relation("Asset_AssetStateToAssetState", fields: [AssetState], references: [AssetStateID], onUpdate: NoAction, map: "FK_Asset_AssetState")
   Company                                 Company?                @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Asset_Company")
   Depart                                  Depart?                 @relation(fields: [DepartID], references: [DepartID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Department")
