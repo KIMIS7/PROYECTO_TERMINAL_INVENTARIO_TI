@@ -18,23 +18,23 @@ model Asset {
   UserID                                  Int?
   ParentAssetID                           Int?
   DepartID                                Int?
+  AssetDetailID                           Int?
   AssetState_Asset_AssetStateToAssetState AssetState              @relation("Asset_AssetStateToAssetState", fields: [AssetState], references: [AssetStateID], onUpdate: NoAction, map: "FK_Asset_AssetState")
   Company                                 Company?                @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Asset_Company")
   Depart                                  Depart?                 @relation(fields: [DepartID], references: [DepartID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Department")
-  Asset                                   Asset?                  @relation("AssetToAsset", fields: [ParentAssetID], references: [AssetID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Parent")
-  other_Asset                             Asset[]                 @relation("AssetToAsset")
+  AssetDetail                             AssetDetail?            @relation(fields: [AssetDetailID], references: [AssetDetailID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Detail")
   ProductType                             ProductType             @relation(fields: [ProductTypeID], references: [ProductTypeID], onUpdate: NoAction, map: "FK_Asset_ProductType")
-  Site                                    Site?                   @relation(fields: [SiteID], references: [SiteID], onUpdate: NoAction, map: "FK_Asset_Site")
+  Site                                    Site?                   @relation(fields: [SiteID], references: [SiteID], onDelete: NoAction, onUpdate: NoAction, map: "FK_Asset_Site")
   User                                    User?                   @relation(fields: [UserID], references: [UserID], onUpdate: NoAction, map: "FK_Asset_User")
   Vendor                                  Vendor                  @relation(fields: [VendorID], references: [VendorID], onUpdate: NoAction, map: "FK_Asset_Vendor")
-  AssetDetail                             AssetDetail[]
+  Asset                                   Asset?                  @relation("AssetToAsset", fields: [ParentAssetID], references: [AssetID], onDelete: NoAction, onUpdate: NoAction, map: "FK_AssetDetail_Asset")
+  other_Asset                             Asset[]                 @relation("AssetToAsset")
   AssetHistory                            AssetHistory[]
   AssetOwnershipHistory                   AssetOwnershipHistory[]
 }
 
 model AssetDetail {
   AssetDetailID        Int       @id(map: "PK_AssetDetail") @default(autoincrement())
-  AssetID              Int
   ProductManuf         String?   @db.NVarChar(50)
   IPAddress            String?   @db.NVarChar(50)
   MACAddress           String?   @db.NVarChar(50)
@@ -70,12 +70,10 @@ model AssetDetail {
   WarrantyExpiry       DateTime? @db.Date
   AssignedTime         DateTime? @db.DateTime
   Barcode              String?   @db.VarChar(50)
-  Factura              String?   @db.NVarChar(150)
-  Ticket               String?   @db.NVarChar(150)
   LastUpdateBy         Int
   Factura              String?   @db.NVarChar(150)
   Ticket               String?   @db.NVarChar(150)
-  Asset                Asset     @relation(fields: [AssetID], references: [AssetID], onUpdate: NoAction, map: "FK_AssetDetail_Asset")
+  Asset                Asset[]
   User                 User      @relation(fields: [LastUpdateBy], references: [UserID], onUpdate: NoAction, map: "FK_AssetDetail_User")
 }
 
@@ -111,6 +109,22 @@ model Company {
   Site        Site[]
 }
 
+model dashboard_paths {
+  dashboarpathID     Int                  @id(map: "PK__dashboar__1B99B889FA0DFA91") @default(autoincrement())
+  path               String               @unique(map: "UQ__dashboar__8320EE2ABFF93821") @db.NVarChar(100)
+  name               String               @db.NVarChar(100)
+  icon               String?              @db.NVarChar(Max)
+  rol_dashboard_path rol_dashboard_path[]
+}
+
+model Depart {
+  DepartID    Int           @id(map: "PK_Depart") @default(autoincrement())
+  Name        String        @db.NVarChar(255)
+  Asset       Asset[]
+  Site_Depart Site_Depart[]
+  User        User[]
+}
+
 model ProductType {
   ProductTypeID Int     @id(map: "PK_ProductType") @default(autoincrement())
   Name          String  @db.NVarChar(150)
@@ -118,6 +132,22 @@ model ProductType {
   Group         String  @db.NVarChar(150)
   SubCategory   String  @db.NVarChar(150)
   Asset         Asset[]
+}
+
+model rol {
+  rolID              Int                  @id(map: "PK__rol__540236547729CB5E") @default(autoincrement())
+  name               String               @db.NVarChar(100)
+  isActive           Boolean?             @default(true, map: "DF__rol__isActive__7D439ABD")
+  rol_dashboard_path rol_dashboard_path[]
+  User               User[]
+}
+
+model rol_dashboard_path {
+  roldashboardpathID Int             @id(map: "PK__rol_dash__CF2416D3EBA3D73B") @default(autoincrement())
+  rolID              Int
+  dashboarpathID     Int
+  dashboard_paths    dashboard_paths @relation(fields: [dashboarpathID], references: [dashboarpathID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_path")
+  rol                rol             @relation(fields: [rolID], references: [rolID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_rol")
 }
 
 model Site {
@@ -128,6 +158,15 @@ model Site {
   Company     Company       @relation(fields: [CompanyID], references: [CompanyID], onUpdate: NoAction, map: "FK_Site_Company")
   Site_Depart Site_Depart[]
   User        User[]
+}
+
+model Site_Depart {
+  ID_site   Int
+  ID_depart Int
+  Depart    Depart @relation(fields: [ID_depart], references: [DepartID], onDelete: Cascade, onUpdate: NoAction, map: "FK_Site_Depart_Depart")
+  Site      Site   @relation(fields: [ID_site], references: [SiteID], onDelete: Cascade, onUpdate: NoAction, map: "FK_Site_Depart_Site")
+
+  @@id([ID_site, ID_depart], map: "PK__Site_Dep__23DF53D8860EBB7C")
 }
 
 model sysdiagrams {
@@ -164,45 +203,4 @@ model Vendor {
   VendorID Int     @id(map: "PK_Vendor") @default(autoincrement())
   Name     String  @db.NVarChar(150)
   Asset    Asset[]
-}
-
-model dashboard_paths {
-  dashboarpathID     Int                  @id(map: "PK__dashboar__1B99B889FA0DFA91") @default(autoincrement())
-  path               String               @unique(map: "UQ__dashboar__8320EE2ABFF93821") @db.NVarChar(100)
-  name               String               @db.NVarChar(100)
-  icon               String?              @db.NVarChar(Max)
-  rol_dashboard_path rol_dashboard_path[]
-}
-
-model rol {
-  rolID              Int                  @id(map: "PK__rol__540236547729CB5E") @default(autoincrement())
-  name               String               @db.NVarChar(100)
-  isActive           Boolean?             @default(true, map: "DF__rol__isActive__7D439ABD")
-  rol_dashboard_path rol_dashboard_path[]
-  User               User[]
-}
-
-model rol_dashboard_path {
-  roldashboardpathID Int             @id(map: "PK__rol_dash__CF2416D3EBA3D73B") @default(autoincrement())
-  rolID              Int
-  dashboarpathID     Int
-  dashboard_paths    dashboard_paths @relation(fields: [dashboarpathID], references: [dashboarpathID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_path")
-  rol                rol             @relation(fields: [rolID], references: [rolID], onDelete: Cascade, onUpdate: NoAction, map: "FK_rdp_rol")
-}
-
-model Depart {
-  DepartID    Int           @id(map: "PK_Depart") @default(autoincrement())
-  Name        String        @db.NVarChar(255)
-  Asset       Asset[]
-  Site_Depart Site_Depart[]
-  User        User[]
-}
-
-model Site_Depart {
-  ID_site   Int
-  ID_depart Int
-  Depart    Depart @relation(fields: [ID_depart], references: [DepartID], onDelete: Cascade, onUpdate: NoAction, map: "FK_Site_Depart_Depart")
-  Site      Site   @relation(fields: [ID_site], references: [SiteID], onDelete: Cascade, onUpdate: NoAction, map: "FK_Site_Depart_Site")
-
-  @@id([ID_site, ID_depart], map: "PK__Site_Dep__23DF53D8860EBB7C")
 }
