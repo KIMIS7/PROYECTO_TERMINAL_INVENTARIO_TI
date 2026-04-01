@@ -82,7 +82,7 @@ export class ReportService {
       throw new NotFoundException('Activo no encontrado');
     }
 
-    const detail = asset.AssetDetail?.[0];
+    const detail = asset.AssetDetail;
 
     return {
       assetID: asset.AssetID,
@@ -104,9 +104,9 @@ export class ReportService {
       childAssets: asset.other_Asset.map((child) => ({
         name: child.Name,
         productType: child.ProductType?.Name || '',
-        serialNum: child.AssetDetail?.[0]?.SerialNum || '',
-        model: child.AssetDetail?.[0]?.Model || '',
-        vendor: child.Vendor?.Name || child.AssetDetail?.[0]?.ProductManuf || '',
+        serialNum: child.AssetDetail?.SerialNum || '',
+        model: child.AssetDetail?.Model || '',
+        vendor: child.Vendor?.Name || child.AssetDetail?.ProductManuf || '',
       })),
       softwareChecklist: SOFTWARE_CHECKLIST,
     };
@@ -141,7 +141,7 @@ export class ReportService {
       department: first.Depart?.Name || first.User?.Depart?.Name || '',
       userName: first.User?.Name || '',
       items: assets.map((asset) => {
-        const detail = asset.AssetDetail?.[0];
+        const detail = asset.AssetDetail;
         return {
           name: asset.Name,
           productType: asset.ProductType?.Name || '',
@@ -870,7 +870,7 @@ export class ReportService {
       headerRow.alignment = { horizontal: 'center' };
 
       assets.forEach((asset) => {
-        const detail = asset.AssetDetail?.[0];
+        const detail = asset.AssetDetail;
         sheet.addRow({
           id: asset.AssetID,
           name: asset.Name,
@@ -1022,7 +1022,7 @@ export class ReportService {
       ];
 
       const rows = assets.map((asset) => {
-        const detail = asset.AssetDetail?.[0];
+        const detail = asset.AssetDetail;
         return [
           asset.AssetID,
           `"${(asset.Name || '').replace(/"/g, '""')}"`,
@@ -1125,7 +1125,7 @@ export class ReportService {
     });
 
     assets.forEach((asset, index) => {
-      const detail = asset.AssetDetail?.[0];
+      const detail = asset.AssetDetail;
       const row = sheet.getRow(dataStartRow + 1 + index);
       row.getCell(1).value = asset.Name;
       row.getCell(2).value = asset.ProductType?.Name || '';
