@@ -18,11 +18,25 @@ export default function Home() {
     }
   }, [session, router, basePath]);
 
+  const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === "true";
+
+  // Auto-login en modo dev bypass
+  useEffect(() => {
+    if (skipAuth && !session && status !== "loading") {
+      const dashboardPath = basePath ? `${basePath}/dashboard` : "/dashboard";
+      signIn("dev-credentials", { username: "dev@localhost", callbackUrl: dashboardPath });
+    }
+  }, [skipAuth, session, status, basePath]);
+
   // Maneja el inicio de sesión teniendo en cuenta el basePath
   const handleSignIn = () => {
     const dashboardPath = basePath ? `${basePath}/dashboard` : "/dashboard";
     console.log(`[Home] Signing in with callbackUrl: ${dashboardPath}`);
-    signIn("azure-ad", { callbackUrl: dashboardPath });
+    if (skipAuth) {
+      signIn("dev-credentials", { username: "dev@localhost", callbackUrl: dashboardPath });
+    } else {
+      signIn("azure-ad", { callbackUrl: dashboardPath });
+    }
   };
 
   // Si estamos verificando la sesión, mostrar un indicador de carga

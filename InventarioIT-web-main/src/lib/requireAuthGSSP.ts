@@ -3,11 +3,18 @@ import { getServerSession } from "next-auth/next";
 import type { GetServerSideProps, GetServerSidePropsContext } from "next";
 import { authOptions } from "@/pages/api/auth/[...nextauth]";
 
+const skipAuth = process.env.SKIP_AUTH === "true";
+
 export function requireAuthGSSP<
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   P extends { [key: string]: any } = { [key: string]: any }
 >(gssp?: GetServerSideProps<P>): GetServerSideProps<P> {
   return async (ctx: GetServerSidePropsContext) => {
+    if (skipAuth) {
+      if (gssp) return gssp(ctx);
+      return { props: {} as P };
+    }
+
     const session = await getServerSession(ctx.req, ctx.res, authOptions);
 
     if (!session) {

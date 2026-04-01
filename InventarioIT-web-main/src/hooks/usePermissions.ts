@@ -9,10 +9,12 @@ export interface Permission {
   icon?: string;
 }
 
+const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === "true";
+
 export function usePermissions() {
   const { data: session, status } = useSession();
   const [permissions, setPermissions] = useState<Permission[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!skipAuth);
   const [error, setError] = useState<string | null>(null);
   const fetchAttemptedRef = useRef(false);
 
@@ -136,6 +138,9 @@ export function usePermissions() {
   }, [permissions, loading, error]);
 
   const canAccessRoute = useCallback((path: string): boolean => {
+    // Dev bypass: allow all routes
+    if (skipAuth) return true;
+
     // Rutas públicas que no requieren permisos
     const publicRoutes = ['/', '/login', '/dashboard'];
     

@@ -8,18 +8,21 @@ interface UserVerificationProps {
   children: React.ReactNode;
 }
 
+const skipAuth = process.env.NEXT_PUBLIC_SKIP_AUTH === "true";
+
 export default function UserVerification({ children }: UserVerificationProps) {
   const { data: session, status } = useSession();
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { permissions, loading: permissionsLoading, error: permissionsError } = usePermissions();
-  const [isVerified, setIsVerified] = useState(false);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isVerified, setIsVerified] = useState(skipAuth);
+  const [isLoading, setIsLoading] = useState(!skipAuth);
   const [error, setError] = useState<string | null>(null);
   const [timeoutReached, setTimeoutReached] = useState(false);
 
   // Función para verificar al usuario
   useEffect(() => {
     const verifyUser = async () => {
+      if (skipAuth) { setIsVerified(true); setIsLoading(false); return; }
       if (status === 'loading') return;
       
       console.log('[UserVerification] Session status:', status);

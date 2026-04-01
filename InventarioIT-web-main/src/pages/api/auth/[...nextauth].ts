@@ -1,23 +1,45 @@
 import NextAuth, { type NextAuthOptions } from "next-auth";
 import AzureADProvider from "next-auth/providers/azure-ad";
+import CredentialsProvider from "next-auth/providers/credentials";
 
 const env = process.env.NODE_ENV;
 const nextBasePath = process.env.NEXT_BASE_PATH;
 const basePath = env === "production" ? nextBasePath || "/inventarioit" : nextBasePath || "";
+const skipAuth = process.env.SKIP_AUTH === "true";
+
+// Dev-only credentials provider to bypass Azure AD when SKIP_AUTH=true
+const devProvider = CredentialsProvider({
+  id: "dev-credentials",
+  name: "Dev Login",
+  credentials: {
+    username: { label: "Email", type: "text", placeholder: "dev@localhost" },
+  },
+  async authorize(credentials) {
+    if (!skipAuth) return null;
+    return {
+      id: "dev-user-id",
+      name: "Dev User",
+      email: credentials?.username || "dev@localhost",
+      preferred_username: credentials?.username || "dev@localhost",
+    };
+  },
+});
+
+const azureProvider = AzureADProvider({
+  clientId: process.env.AZURE_AD_CLIENT_ID as string,
+  clientSecret: process.env.AZURE_AD_CLIENT_SECRET as string,
+  tenantId: process.env.AZURE_AD_TENANT_ID as string,
+  authorization: {
+    params: {
+      scope: "openid email profile User.Read",
+    },
+  },
+});
+
+const providers = skipAuth ? [devProvider] : [azureProvider];
 
 export const authOptions: NextAuthOptions = {
-  providers: [
-    AzureADProvider({
-      clientId: process.env.AZURE_AD_CLIENT_ID as string,
-      clientSecret: process.env.AZURE_AD_CLIENT_SECRET as string,
-      tenantId: process.env.AZURE_AD_TENANT_ID as string,
-      authorization: {
-        params: {
-          scope: "openid email profile User.Read",
-        },
-      },
-    }),
-  ],
+  providers,
   debug: process.env.NODE_ENV === "development",
   session: {
     strategy: "jwt",
@@ -52,7 +74,16 @@ export const authOptions: NextAuthOptions = {
         return false;
       }
     },
-    async jwt({ token, account, profile }: any) {
+    async jwt({ token, account, profile, user }: any) {
+      // Dev bypass: populate token from credentials user
+      if (skipAuth && user) {
+        token.sub = user.id;
+        token.name = user.name;
+        token.preferred_username = user.preferred_username || user.email;
+        token.id_token = "dev-token";
+        return token;
+      }
+
       if (profile?.oid) token.sub = profile.oid as string;
 
       if (profile?.name) token.name = profile.name as string;
