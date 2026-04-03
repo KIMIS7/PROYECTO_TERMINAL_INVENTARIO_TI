@@ -9,6 +9,7 @@ import * as fs from 'fs';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PdfPrinter = require('pdfmake/src/printer');
 import * as ExcelJS from 'exceljs';
+import { parse } from 'csv-parse/sync';
 
 const ASSETS_DIR = path.join(__dirname, '..', '..', 'assets');
 const FONTS_DIR = path.join(ASSETS_DIR, 'fonts');
@@ -1158,5 +1159,214 @@ export class ReportService {
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
+  }
+
+  // ============================
+  // CSV Import
+  // ============================
+
+  async importCsv(fileBuffer: Buffer, userEmail?: string) {
+    const csvString = fileBuffer.toString('utf-8').replace(/^\uFEFF/, '');
+
+    const records: Record<string, string>[] = parse(csvString, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+
+    if (!records.length) {
+      throw new InternalServerErrorException('El archivo CSV está vacío');
+    }
+
+    // Resolve the user performing the import
+    let lastUpdateBy = 1;
+    if (userEmail) {
+      const user = await this.prismaShopic.user.findFirst({
+        where: { Email: userEmail },
+      });
+      if (user) lastUpdateBy = user.UserID;
+    }
+
+    // Caches for lookup tables to avoid repeated queries
+    const vendorCache = new Map<string, number>();
+    const productTypeCache = new Map<string, number>();
+    const assetStateCache = new Map<string, number>();
+    const siteCache = new Map<string, number>();
+    const departCache = new Map<string, number>();
+    const companyCache = new Map<string, number>();
+
+    let created = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < records.length; i++) {
+      const row = records[i];
+      const rowNum = i + 2; // +2 because header is row 1
+
+      try {
+        const assetName = row['Asset Name']?.trim();
+        if (!assetName) {
+          skipped++;
+          continue;
+        }
+
+        // --- Resolve Vendor ---
+        const vendorName = row['Vendor']?.trim() || 'Sin Proveedor';
+        let vendorID = vendorCache.get(vendorName);
+        if (!vendorID) {
+          let vendor = await this.prismaShopic.vendor.findFirst({
+            where: { Name: vendorName },
+          });
+          if (!vendor) {
+            vendor = await this.prismaShopic.vendor.create({
+              data: { Name: vendorName },
+            });
+          }
+          vendorID = vendor.VendorID;
+          vendorCache.set(vendorName, vendorID);
+        }
+
+        // --- Resolve ProductType ---
+        const productTypeName = row['Product Type']?.trim() || 'Otro';
+        const productName = row['Product']?.trim() || 'Sin Producto';
+        const ptKey = `${productTypeName}||${productName}`;
+        let productTypeID = productTypeCache.get(ptKey);
+        if (!productTypeID) {
+          let pt = await this.prismaShopic.productType.findFirst({
+            where: { Name: productTypeName, Category: productName },
+          });
+          if (!pt) {
+            pt = await this.prismaShopic.productType.create({
+              data: {
+                Name: productTypeName,
+                Category: productName,
+                Group: productTypeName,
+                SubCategory: '',
+              },
+            });
+          }
+          productTypeID = pt.ProductTypeID;
+          productTypeCache.set(ptKey, productTypeID);
+        }
+
+        // --- Resolve AssetState ---
+        const stateName = row['Asset State']?.trim() || 'In Shop';
+        let assetStateID = assetStateCache.get(stateName);
+        if (!assetStateID) {
+          let state = await this.prismaShopic.assetState.findFirst({
+            where: { Name: stateName },
+          });
+          if (!state) {
+            state = await this.prismaShopic.assetState.create({
+              data: { Name: stateName },
+            });
+          }
+          assetStateID = state.AssetStateID;
+          assetStateCache.set(stateName, assetStateID);
+        }
+
+        // --- Resolve Company (from Site) ---
+        const siteName = row['Site']?.trim() || 'Base Site';
+        let companyID = companyCache.get(siteName);
+        let siteID = siteCache.get(siteName);
+
+        if (!siteID) {
+          let site = await this.prismaShopic.site.findFirst({
+            where: { Name: siteName },
+            include: { Company: true },
+          });
+          if (!site) {
+            // Find or create a default company
+            let company = await this.prismaShopic.company.findFirst();
+            if (!company) {
+              company = await this.prismaShopic.company.create({
+                data: { Description: 'Hotel Shops' },
+              });
+            }
+            site = await this.prismaShopic.site.create({
+              data: { Name: siteName, CompanyID: company.CompanyID },
+              include: { Company: true },
+            });
+          }
+          siteID = site.SiteID;
+          companyID = site.CompanyID;
+          siteCache.set(siteName, siteID);
+          companyCache.set(siteName, companyID);
+        }
+
+        // --- Resolve Department ---
+        const departName = row['Assign to Department']?.trim();
+        let departID: number | undefined;
+        if (departName) {
+          departID = departCache.get(departName);
+          if (!departID) {
+            let depart = await this.prismaShopic.depart.findFirst({
+              where: { Name: departName },
+            });
+            if (!depart) {
+              depart = await this.prismaShopic.depart.create({
+                data: { Name: departName },
+              });
+            }
+            departID = depart.DepartID;
+            departCache.set(departName, departID);
+          }
+        }
+
+        // --- Parse dates ---
+        const parseDate = (val?: string): Date | null => {
+          if (!val || val === 'null') return null;
+          const d = new Date(val);
+          return isNaN(d.getTime()) ? null : d;
+        };
+
+        // --- Create AssetDetail ---
+        const newDetail = await this.prismaShopic.assetDetail.create({
+          data: {
+            ProductManuf: row['Product Manufacturer']?.trim() || null,
+            IPAddress: row['IP Address']?.trim() || null,
+            MACAddress: row['MAC Address']?.trim() || null,
+            Loanable: row['Loanable']?.trim() || null,
+            SerialNum: row['Serial Number']?.trim() || null,
+            AssetTAG: row['Asset Tag']?.trim() || null,
+            Barcode: row['Barcode / QR code']?.trim() || null,
+            AssetACQDate: parseDate(row['Acquisition Date']),
+            WarrantyExpiryDate: parseDate(row['Warranty Expiry Date']),
+            AssetExpiryDate: parseDate(row['Expiry Date']),
+            CreatedTime: parseDate(row['Created Time']) || new Date(),
+            LastUpdateTime: parseDate(row['Last Updated Time']) || new Date(),
+            LastUpdateBy: lastUpdateBy,
+          },
+        });
+
+        // --- Create Asset ---
+        await this.prismaShopic.asset.create({
+          data: {
+            Name: assetName,
+            VendorID: vendorID,
+            ProductTypeID: productTypeID,
+            AssetState: assetStateID,
+            CompanyID: companyID,
+            SiteID: siteID,
+            DepartID: departID || null,
+            AssetDetailID: newDetail.AssetDetailID,
+          },
+        });
+
+        created++;
+      } catch (err) {
+        errors.push(`Fila ${rowNum}: ${err.message}`);
+        skipped++;
+      }
+    }
+
+    return {
+      success: true,
+      message: `Importación completada: ${created} creados, ${skipped} omitidos`,
+      created,
+      skipped,
+      total: records.length,
+      errors: errors.slice(0, 20),
+    };
   }
 }

@@ -6,7 +6,12 @@ import {
   Param,
   Query,
   Res,
+  UseInterceptors,
+  UploadedFile,
+  BadRequestException,
+  Headers,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { ReportService } from './report.service';
 import { Response } from 'express';
 
@@ -116,6 +121,22 @@ export class ReportController {
     });
 
     res.end(pdfBuffer);
+  }
+
+  // ==========================================
+  // CSV Import
+  // ==========================================
+
+  @Post('import/csv')
+  @UseInterceptors(FileInterceptor('file'))
+  async importCsv(
+    @UploadedFile() file: Express.Multer.File,
+    @Headers('user-email') userEmail: string,
+  ) {
+    if (!file) {
+      throw new BadRequestException('No se proporcionó un archivo CSV');
+    }
+    return this.reportService.importCsv(file.buffer, userEmail);
   }
 
   // ==========================================

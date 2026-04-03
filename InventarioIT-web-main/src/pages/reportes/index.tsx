@@ -19,6 +19,7 @@ import {
 import {
   FileSpreadsheet,
   FileText,
+  Upload,
   Loader2,
   Package,
   Warehouse,
@@ -29,6 +30,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useRef } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +57,8 @@ export default function Reportes() {
   const [assetStates, setAssetStates] = useState<AssetState[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Omnibox filter state
   const [chips, setChips] = useState<FilterChip[]>([]);
@@ -223,6 +227,27 @@ export default function Reportes() {
     const start = (currentPage - 1) * PAGE_SIZE;
     return filteredAssets.slice(start, start + PAGE_SIZE);
   }, [filteredAssets, currentPage]);
+
+  // Import handler
+  const handleImportCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsImporting(true);
+      const result = await api.report.importCsv(file);
+      toast.success(result.message);
+      if (result.errors?.length > 0) {
+        toast.warning(`${result.errors.length} errores encontrados`);
+      }
+      loadData();
+    } catch (error: any) {
+      console.error("Error:", error);
+      toast.error(error?.response?.data?.message || "Error al importar CSV");
+    } finally {
+      setIsImporting(false);
+      if (csvInputRef.current) csvInputRef.current.value = "";
+    }
+  };
 
   // Export handlers
   const handleExportExcel = async () => {
@@ -398,6 +423,27 @@ export default function Reportes() {
             </div>
 
             <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept=".csv"
+                ref={csvInputRef}
+                onChange={handleImportCsv}
+                className="hidden"
+              />
+              <Button
+                onClick={() => csvInputRef.current?.click()}
+                disabled={isImporting}
+                size="sm"
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                {isImporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Importar CSV
+              </Button>
               <Button
                 onClick={handleExportExcel}
                 disabled={isExporting !== null}

@@ -590,6 +590,21 @@ const api = {
       });
       return response.data;
     },
+    importCsv: async (file: File) => {
+      const formData = new FormData();
+      formData.append('file', file);
+      const response = await apiClient.post<{
+        success: boolean;
+        message: string;
+        created: number;
+        skipped: number;
+        total: number;
+        errors: string[];
+      }>('/report/import/csv', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    },
     downloadAssetsExcel: async (filters?: { group?: string; companyID?: number; assetState?: number }) => {
       const params = new URLSearchParams();
       if (filters?.group) params.append('group', filters.group);
