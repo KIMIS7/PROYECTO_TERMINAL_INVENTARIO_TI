@@ -250,6 +250,29 @@ export default function Reportes() {
   };
 
   // Export handlers
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting("csv");
+      const filters: { group?: string; companyID?: number; assetState?: number } = {};
+      const companyChips = chips.filter((c) => c.facet === "empresa");
+      if (companyChips.length === 1) {
+        filters.companyID = parseInt(companyChips[0].value);
+      }
+      const blob = await api.report.downloadAssetsCsv(filters);
+      const dateStr = new Date().toISOString().split("T")[0];
+      triggerDownload(
+        new Blob([blob], { type: "text/csv; charset=utf-8" }),
+        `inventario_${dateStr}.csv`
+      );
+      toast.success("Reporte exportado a CSV exitosamente");
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Error al exportar el reporte");
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
   const handleExportExcel = async () => {
     try {
       setIsExporting("excel");
@@ -443,6 +466,20 @@ export default function Reportes() {
                   <Upload className="h-4 w-4 mr-2" />
                 )}
                 Importar CSV
+              </Button>
+              <Button
+                onClick={handleExportCsv}
+                disabled={isExporting !== null}
+                size="sm"
+                variant="outline"
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              >
+                {isExporting === "csv" ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                Exportar CSV
               </Button>
               <Button
                 onClick={handleExportExcel}

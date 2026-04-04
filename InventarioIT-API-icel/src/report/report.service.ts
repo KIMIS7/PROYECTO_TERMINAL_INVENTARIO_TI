@@ -1016,34 +1016,61 @@ export class ReportService {
       });
 
       const headers = [
-        'ID', 'Nombre', 'Grupo', 'Tipo', 'Marca', 'Modelo',
-        'No. Serie', 'Estado', 'Empresa', 'Sitio', 'Departamento',
-        'Usuario', 'Email', 'Procesador', 'RAM', 'Disco', 'S.O.',
-        'IP', 'Factura',
+        'Product Type',
+        'Product',
+        'Product Manufacturer',
+        'Asset Name',
+        'Asset Tag',
+        'Serial Number',
+        'Barcode / QR code',
+        'Vendor',
+        'IP Address',
+        'MAC Address',
+        'Asset State',
+        'Assign to User',
+        'Assign to Department',
+        'Site',
+        'Loanable',
+        'Acquisition Date',
+        'Warranty Expiry Date',
+        'Expiry Date',
+        'Created Time',
+        'Last Updated Time',
       ];
 
+      const esc = (val?: string | null) =>
+        val ? `"${val.replace(/"/g, '""')}"` : '';
+
+      const fmtDate = (val?: Date | string | null) => {
+        if (!val) return '';
+        const d = val instanceof Date ? val : new Date(val);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().replace('T', ' ').substring(0, 19);
+      };
+
       const rows = assets.map((asset) => {
-        const detail = asset.AssetDetail;
+        const d = asset.AssetDetail;
         return [
-          asset.AssetID,
-          `"${(asset.Name || '').replace(/"/g, '""')}"`,
-          asset.ProductType?.Group || '',
-          `"${(asset.ProductType?.Name || '').replace(/"/g, '""')}"`,
-          `"${(asset.Vendor?.Name || '').replace(/"/g, '""')}"`,
-          `"${(detail?.Model || '').replace(/"/g, '""')}"`,
-          detail?.SerialNum || '',
-          asset.AssetState_Asset_AssetStateToAssetState?.Name || '',
-          `"${(asset.Company?.Description || '').replace(/"/g, '""')}"`,
-          `"${(asset.Site?.Name || '').replace(/"/g, '""')}"`,
-          `"${(asset.Depart?.Name || asset.User?.Depart?.Name || '').replace(/"/g, '""')}"`,
-          `"${(asset.User?.Name || '').replace(/"/g, '""')}"`,
-          asset.User?.Email || '',
-          `"${(detail?.Processor || detail?.ProcessorInfo || '').replace(/"/g, '""')}"`,
-          detail?.RAM || detail?.PhysicalMemory || '',
-          detail?.HDDCapacity || '',
-          `"${(detail?.OperatingSystem || '').replace(/"/g, '""')}"`,
-          detail?.IPAddress || '',
-          detail?.Factura || '',
+          esc(asset.ProductType?.Name),
+          esc(asset.ProductType?.Category),
+          esc(d?.ProductManuf),
+          esc(asset.Name),
+          esc(d?.AssetTAG),
+          esc(d?.SerialNum),
+          esc(d?.Barcode),
+          esc(asset.Vendor?.Name),
+          esc(d?.IPAddress),
+          esc(d?.MACAddress),
+          esc(asset.AssetState_Asset_AssetStateToAssetState?.Name),
+          esc(asset.User?.Name),
+          esc(asset.Depart?.Name || asset.User?.Depart?.Name),
+          esc(asset.Site?.Name),
+          d?.Loanable || '',
+          fmtDate(d?.AssetACQDate),
+          fmtDate(d?.WarrantyExpiryDate),
+          fmtDate(d?.AssetExpiryDate),
+          fmtDate(d?.CreatedTime),
+          fmtDate(d?.LastUpdateTime),
         ].join(',');
       });
 
