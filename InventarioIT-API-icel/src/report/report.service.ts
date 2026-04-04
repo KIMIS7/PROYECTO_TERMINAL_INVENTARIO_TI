@@ -836,29 +836,26 @@ export class ReportService {
       const sheet = workbook.addWorksheet('Inventario de Activos');
 
       sheet.columns = [
-        { header: 'ID', key: 'id', width: 8 },
-        { header: 'Nombre', key: 'name', width: 30 },
-        { header: 'Grupo', key: 'group', width: 15 },
-        { header: 'Tipo', key: 'type', width: 20 },
-        { header: 'Marca', key: 'vendor', width: 15 },
-        { header: 'Modelo', key: 'model', width: 20 },
-        { header: 'No. Serie', key: 'serial', width: 20 },
-        { header: 'Asset TAG', key: 'tag', width: 15 },
-        { header: 'Estado', key: 'state', width: 12 },
-        { header: 'Empresa', key: 'company', width: 20 },
-        { header: 'Sitio', key: 'site', width: 15 },
-        { header: 'Departamento', key: 'department', width: 20 },
-        { header: 'Usuario Asignado', key: 'user', width: 25 },
-        { header: 'Email Usuario', key: 'email', width: 30 },
-        { header: 'Procesador', key: 'processor', width: 20 },
-        { header: 'RAM', key: 'ram', width: 10 },
-        { header: 'Disco', key: 'hdd', width: 15 },
-        { header: 'S.O.', key: 'os', width: 20 },
-        { header: 'IP', key: 'ip', width: 15 },
-        { header: 'MAC', key: 'mac', width: 18 },
-        { header: 'Factura', key: 'invoice', width: 15 },
-        { header: 'Fecha Compra', key: 'purchaseDate', width: 15 },
-        { header: 'Garantia Hasta', key: 'warranty', width: 15 },
+        { header: 'Product Type', key: 'productType', width: 20 },
+        { header: 'Product', key: 'product', width: 30 },
+        { header: 'Product Manufacturer', key: 'productManuf', width: 20 },
+        { header: 'Asset Name', key: 'assetName', width: 30 },
+        { header: 'Asset Tag', key: 'assetTag', width: 15 },
+        { header: 'Serial Number', key: 'serialNum', width: 22 },
+        { header: 'Barcode / QR code', key: 'barcode', width: 18 },
+        { header: 'Vendor', key: 'vendor', width: 20 },
+        { header: 'IP Address', key: 'ipAddress', width: 18 },
+        { header: 'MAC Address', key: 'macAddress', width: 20 },
+        { header: 'Asset State', key: 'assetState', width: 12 },
+        { header: 'Assign to User', key: 'assignUser', width: 25 },
+        { header: 'Assign to Department', key: 'assignDept', width: 22 },
+        { header: 'Site', key: 'site', width: 22 },
+        { header: 'Loanable', key: 'loanable', width: 10 },
+        { header: 'Acquisition Date', key: 'acqDate', width: 20 },
+        { header: 'Warranty Expiry Date', key: 'warrantyDate', width: 20 },
+        { header: 'Expiry Date', key: 'expiryDate', width: 20 },
+        { header: 'Created Time', key: 'createdTime', width: 20 },
+        { header: 'Last Updated Time', key: 'lastUpdated', width: 20 },
       ];
 
       const headerRow = sheet.getRow(1);
@@ -870,36 +867,36 @@ export class ReportService {
       };
       headerRow.alignment = { horizontal: 'center' };
 
+      const fmtDate = (val?: Date | string | null) => {
+        if (!val) return '';
+        const d = val instanceof Date ? val : new Date(val);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().replace('T', ' ').substring(0, 19);
+      };
+
       assets.forEach((asset) => {
-        const detail = asset.AssetDetail;
+        const d = asset.AssetDetail;
         sheet.addRow({
-          id: asset.AssetID,
-          name: asset.Name,
-          group: asset.ProductType?.Group || '',
-          type: asset.ProductType?.Name || '',
+          productType: asset.ProductType?.Name || '',
+          product: asset.ProductType?.Category || '',
+          productManuf: d?.ProductManuf || '',
+          assetName: asset.Name || '',
+          assetTag: d?.AssetTAG || '',
+          serialNum: d?.SerialNum || '',
+          barcode: d?.Barcode || '',
           vendor: asset.Vendor?.Name || '',
-          model: detail?.Model || '',
-          serial: detail?.SerialNum || '',
-          tag: detail?.AssetTAG || '',
-          state: asset.AssetState_Asset_AssetStateToAssetState?.Name || '',
-          company: asset.Company?.Description || '',
+          ipAddress: d?.IPAddress || '',
+          macAddress: d?.MACAddress || '',
+          assetState: asset.AssetState_Asset_AssetStateToAssetState?.Name || '',
+          assignUser: asset.User?.Name || '',
+          assignDept: asset.Depart?.Name || asset.User?.Depart?.Name || '',
           site: asset.Site?.Name || '',
-          department: asset.Depart?.Name || asset.User?.Depart?.Name || '',
-          user: asset.User?.Name || '',
-          email: asset.User?.Email || '',
-          processor: detail?.Processor || detail?.ProcessorInfo || '',
-          ram: detail?.RAM || detail?.PhysicalMemory || '',
-          hdd: detail?.HDDCapacity || '',
-          os: detail?.OperatingSystem || '',
-          ip: detail?.IPAddress || '',
-          mac: detail?.MACAddress || '',
-          invoice: detail?.Factura || '',
-          purchaseDate: detail?.PurchaseDate
-            ? new Date(detail.PurchaseDate).toLocaleDateString('es-MX')
-            : '',
-          warranty: detail?.WarrantyExpiryDate
-            ? new Date(detail.WarrantyExpiryDate).toLocaleDateString('es-MX')
-            : '',
+          loanable: d?.Loanable || '',
+          acqDate: fmtDate(d?.AssetACQDate),
+          warrantyDate: fmtDate(d?.WarrantyExpiryDate),
+          expiryDate: fmtDate(d?.AssetExpiryDate),
+          createdTime: fmtDate(d?.CreatedTime),
+          lastUpdated: fmtDate(d?.LastUpdateTime),
         });
       });
 
