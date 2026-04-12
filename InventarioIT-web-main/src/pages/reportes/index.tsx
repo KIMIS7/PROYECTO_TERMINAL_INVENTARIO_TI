@@ -19,6 +19,7 @@ import {
 import {
   FileSpreadsheet,
   FileText,
+  Upload,
   Loader2,
   Package,
   Warehouse,
@@ -29,6 +30,7 @@ import {
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
+import { useRef } from "react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -55,6 +57,8 @@ export default function Reportes() {
   const [assetStates, setAssetStates] = useState<AssetState[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   // Omnibox filter state
   const [chips, setChips] = useState<FilterChip[]>([]);
@@ -224,7 +228,51 @@ export default function Reportes() {
     return filteredAssets.slice(start, start + PAGE_SIZE);
   }, [filteredAssets, currentPage]);
 
+  // Import handler
+  const handleImportCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    try {
+      setIsImporting(true);
+      const result = await api.report.importCsv(file);
+      toast.success(result.message);
+      if (result.errors?.length > 0) {
+        toast.warning(`${result.errors.length} errores encontrados`);
+      }
+      loadData();
+    } catch (error: any) {
+      console.error("Error:", error);
+      toast.error(error?.response?.data?.message || "Error al importar CSV");
+    } finally {
+      setIsImporting(false);
+      if (csvInputRef.current) csvInputRef.current.value = "";
+    }
+  };
+
   // Export handlers
+  const handleExportCsv = async () => {
+    try {
+      setIsExporting("csv");
+      const filters: { group?: string; companyID?: number; assetState?: number } = {};
+      const companyChips = chips.filter((c) => c.facet === "empresa");
+      if (companyChips.length === 1) {
+        filters.companyID = parseInt(companyChips[0].value);
+      }
+      const blob = await api.report.downloadAssetsCsv(filters);
+      const dateStr = new Date().toISOString().split("T")[0];
+      triggerDownload(
+        new Blob([blob], { type: "text/csv; charset=utf-8" }),
+        `inventario_${dateStr}.csv`
+      );
+      toast.success("Reporte exportado a CSV exitosamente");
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Error al exportar el reporte");
+    } finally {
+      setIsExporting(null);
+    }
+  };
+
   const handleExportExcel = async () => {
     try {
       setIsExporting("excel");
@@ -398,6 +446,41 @@ export default function Reportes() {
             </div>
 
             <div className="flex items-center gap-2">
+              <input
+                type="file"
+                accept=".csv"
+                ref={csvInputRef}
+                onChange={handleImportCsv}
+                className="hidden"
+              />
+              <Button
+                onClick={() => csvInputRef.current?.click()}
+                disabled={isImporting}
+                size="sm"
+                variant="outline"
+                className="border-blue-300 text-blue-700 hover:bg-blue-50"
+              >
+                {isImporting ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <Upload className="h-4 w-4 mr-2" />
+                )}
+                Importar CSV
+              </Button>
+              <Button
+                onClick={handleExportCsv}
+                disabled={isExporting !== null}
+                size="sm"
+                variant="outline"
+                className="border-emerald-300 text-emerald-700 hover:bg-emerald-50"
+              >
+                {isExporting === "csv" ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <FileText className="h-4 w-4 mr-2" />
+                )}
+                Exportar CSV
+              </Button>
               <Button
                 onClick={handleExportExcel}
                 disabled={isExporting !== null}

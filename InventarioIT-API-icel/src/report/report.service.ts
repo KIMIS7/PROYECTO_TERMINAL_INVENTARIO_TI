@@ -9,6 +9,7 @@ import * as fs from 'fs';
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const PdfPrinter = require('pdfmake/src/printer');
 import * as ExcelJS from 'exceljs';
+import { parse } from 'csv-parse/sync';
 
 const ASSETS_DIR = path.join(__dirname, '..', '..', 'assets');
 const FONTS_DIR = path.join(ASSETS_DIR, 'fonts');
@@ -835,29 +836,26 @@ export class ReportService {
       const sheet = workbook.addWorksheet('Inventario de Activos');
 
       sheet.columns = [
-        { header: 'ID', key: 'id', width: 8 },
-        { header: 'Nombre', key: 'name', width: 30 },
-        { header: 'Grupo', key: 'group', width: 15 },
-        { header: 'Tipo', key: 'type', width: 20 },
-        { header: 'Marca', key: 'vendor', width: 15 },
-        { header: 'Modelo', key: 'model', width: 20 },
-        { header: 'No. Serie', key: 'serial', width: 20 },
-        { header: 'Asset TAG', key: 'tag', width: 15 },
-        { header: 'Estado', key: 'state', width: 12 },
-        { header: 'Empresa', key: 'company', width: 20 },
-        { header: 'Sitio', key: 'site', width: 15 },
-        { header: 'Departamento', key: 'department', width: 20 },
-        { header: 'Usuario Asignado', key: 'user', width: 25 },
-        { header: 'Email Usuario', key: 'email', width: 30 },
-        { header: 'Procesador', key: 'processor', width: 20 },
-        { header: 'RAM', key: 'ram', width: 10 },
-        { header: 'Disco', key: 'hdd', width: 15 },
-        { header: 'S.O.', key: 'os', width: 20 },
-        { header: 'IP', key: 'ip', width: 15 },
-        { header: 'MAC', key: 'mac', width: 18 },
-        { header: 'Factura', key: 'invoice', width: 15 },
-        { header: 'Fecha Compra', key: 'purchaseDate', width: 15 },
-        { header: 'Garantia Hasta', key: 'warranty', width: 15 },
+        { header: 'Product Type', key: 'productType', width: 20 },
+        { header: 'Product', key: 'product', width: 30 },
+        { header: 'Product Manufacturer', key: 'productManuf', width: 20 },
+        { header: 'Asset Name', key: 'assetName', width: 30 },
+        { header: 'Asset Tag', key: 'assetTag', width: 15 },
+        { header: 'Serial Number', key: 'serialNum', width: 22 },
+        { header: 'Barcode / QR code', key: 'barcode', width: 18 },
+        { header: 'Vendor', key: 'vendor', width: 20 },
+        { header: 'IP Address', key: 'ipAddress', width: 18 },
+        { header: 'MAC Address', key: 'macAddress', width: 20 },
+        { header: 'Asset State', key: 'assetState', width: 12 },
+        { header: 'Assign to User', key: 'assignUser', width: 25 },
+        { header: 'Assign to Department', key: 'assignDept', width: 22 },
+        { header: 'Site', key: 'site', width: 22 },
+        { header: 'Loanable', key: 'loanable', width: 10 },
+        { header: 'Acquisition Date', key: 'acqDate', width: 20 },
+        { header: 'Warranty Expiry Date', key: 'warrantyDate', width: 20 },
+        { header: 'Expiry Date', key: 'expiryDate', width: 20 },
+        { header: 'Created Time', key: 'createdTime', width: 20 },
+        { header: 'Last Updated Time', key: 'lastUpdated', width: 20 },
       ];
 
       const headerRow = sheet.getRow(1);
@@ -869,36 +867,36 @@ export class ReportService {
       };
       headerRow.alignment = { horizontal: 'center' };
 
+      const fmtDate = (val?: Date | string | null) => {
+        if (!val) return '';
+        const d = val instanceof Date ? val : new Date(val);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().replace('T', ' ').substring(0, 19);
+      };
+
       assets.forEach((asset) => {
-        const detail = asset.AssetDetail;
+        const d = asset.AssetDetail;
         sheet.addRow({
-          id: asset.AssetID,
-          name: asset.Name,
-          group: asset.ProductType?.Group || '',
-          type: asset.ProductType?.Name || '',
+          productType: asset.ProductType?.Name || '',
+          product: asset.ProductType?.Category || '',
+          productManuf: d?.ProductManuf || '',
+          assetName: asset.Name || '',
+          assetTag: d?.AssetTAG || '',
+          serialNum: d?.SerialNum || '',
+          barcode: d?.Barcode || '',
           vendor: asset.Vendor?.Name || '',
-          model: detail?.Model || '',
-          serial: detail?.SerialNum || '',
-          tag: detail?.AssetTAG || '',
-          state: asset.AssetState_Asset_AssetStateToAssetState?.Name || '',
-          company: asset.Company?.Description || '',
+          ipAddress: d?.IPAddress || '',
+          macAddress: d?.MACAddress || '',
+          assetState: asset.AssetState_Asset_AssetStateToAssetState?.Name || '',
+          assignUser: asset.User?.Name || '',
+          assignDept: asset.Depart?.Name || asset.User?.Depart?.Name || '',
           site: asset.Site?.Name || '',
-          department: asset.Depart?.Name || asset.User?.Depart?.Name || '',
-          user: asset.User?.Name || '',
-          email: asset.User?.Email || '',
-          processor: detail?.Processor || detail?.ProcessorInfo || '',
-          ram: detail?.RAM || detail?.PhysicalMemory || '',
-          hdd: detail?.HDDCapacity || '',
-          os: detail?.OperatingSystem || '',
-          ip: detail?.IPAddress || '',
-          mac: detail?.MACAddress || '',
-          invoice: detail?.Factura || '',
-          purchaseDate: detail?.PurchaseDate
-            ? new Date(detail.PurchaseDate).toLocaleDateString('es-MX')
-            : '',
-          warranty: detail?.WarrantyExpiryDate
-            ? new Date(detail.WarrantyExpiryDate).toLocaleDateString('es-MX')
-            : '',
+          loanable: d?.Loanable || '',
+          acqDate: fmtDate(d?.AssetACQDate),
+          warrantyDate: fmtDate(d?.WarrantyExpiryDate),
+          expiryDate: fmtDate(d?.AssetExpiryDate),
+          createdTime: fmtDate(d?.CreatedTime),
+          lastUpdated: fmtDate(d?.LastUpdateTime),
         });
       });
 
@@ -1015,34 +1013,61 @@ export class ReportService {
       });
 
       const headers = [
-        'ID', 'Nombre', 'Grupo', 'Tipo', 'Marca', 'Modelo',
-        'No. Serie', 'Estado', 'Empresa', 'Sitio', 'Departamento',
-        'Usuario', 'Email', 'Procesador', 'RAM', 'Disco', 'S.O.',
-        'IP', 'Factura',
+        'Product Type',
+        'Product',
+        'Product Manufacturer',
+        'Asset Name',
+        'Asset Tag',
+        'Serial Number',
+        'Barcode / QR code',
+        'Vendor',
+        'IP Address',
+        'MAC Address',
+        'Asset State',
+        'Assign to User',
+        'Assign to Department',
+        'Site',
+        'Loanable',
+        'Acquisition Date',
+        'Warranty Expiry Date',
+        'Expiry Date',
+        'Created Time',
+        'Last Updated Time',
       ];
 
+      const esc = (val?: string | null) =>
+        val ? `"${val.replace(/"/g, '""')}"` : '';
+
+      const fmtDate = (val?: Date | string | null) => {
+        if (!val) return '';
+        const d = val instanceof Date ? val : new Date(val);
+        if (isNaN(d.getTime())) return '';
+        return d.toISOString().replace('T', ' ').substring(0, 19);
+      };
+
       const rows = assets.map((asset) => {
-        const detail = asset.AssetDetail;
+        const d = asset.AssetDetail;
         return [
-          asset.AssetID,
-          `"${(asset.Name || '').replace(/"/g, '""')}"`,
-          asset.ProductType?.Group || '',
-          `"${(asset.ProductType?.Name || '').replace(/"/g, '""')}"`,
-          `"${(asset.Vendor?.Name || '').replace(/"/g, '""')}"`,
-          `"${(detail?.Model || '').replace(/"/g, '""')}"`,
-          detail?.SerialNum || '',
-          asset.AssetState_Asset_AssetStateToAssetState?.Name || '',
-          `"${(asset.Company?.Description || '').replace(/"/g, '""')}"`,
-          `"${(asset.Site?.Name || '').replace(/"/g, '""')}"`,
-          `"${(asset.Depart?.Name || asset.User?.Depart?.Name || '').replace(/"/g, '""')}"`,
-          `"${(asset.User?.Name || '').replace(/"/g, '""')}"`,
-          asset.User?.Email || '',
-          `"${(detail?.Processor || detail?.ProcessorInfo || '').replace(/"/g, '""')}"`,
-          detail?.RAM || detail?.PhysicalMemory || '',
-          detail?.HDDCapacity || '',
-          `"${(detail?.OperatingSystem || '').replace(/"/g, '""')}"`,
-          detail?.IPAddress || '',
-          detail?.Factura || '',
+          esc(asset.ProductType?.Name),
+          esc(asset.ProductType?.Category),
+          esc(d?.ProductManuf),
+          esc(asset.Name),
+          esc(d?.AssetTAG),
+          esc(d?.SerialNum),
+          esc(d?.Barcode),
+          esc(asset.Vendor?.Name),
+          esc(d?.IPAddress),
+          esc(d?.MACAddress),
+          esc(asset.AssetState_Asset_AssetStateToAssetState?.Name),
+          esc(asset.User?.Name),
+          esc(asset.Depart?.Name || asset.User?.Depart?.Name),
+          esc(asset.Site?.Name),
+          d?.Loanable || '',
+          fmtDate(d?.AssetACQDate),
+          fmtDate(d?.WarrantyExpiryDate),
+          fmtDate(d?.AssetExpiryDate),
+          fmtDate(d?.CreatedTime),
+          fmtDate(d?.LastUpdateTime),
         ].join(',');
       });
 
@@ -1158,5 +1183,214 @@ export class ReportService {
 
     const buffer = await workbook.xlsx.writeBuffer();
     return Buffer.from(buffer);
+  }
+
+  // ============================
+  // CSV Import
+  // ============================
+
+  async importCsv(fileBuffer: Buffer, userEmail?: string) {
+    const csvString = fileBuffer.toString('utf-8').replace(/^\uFEFF/, '');
+
+    const records: Record<string, string>[] = parse(csvString, {
+      columns: true,
+      skip_empty_lines: true,
+      trim: true,
+    });
+
+    if (!records.length) {
+      throw new InternalServerErrorException('El archivo CSV está vacío');
+    }
+
+    // Resolve the user performing the import
+    let lastUpdateBy = 1;
+    if (userEmail) {
+      const user = await this.prismaShopic.user.findFirst({
+        where: { Email: userEmail },
+      });
+      if (user) lastUpdateBy = user.UserID;
+    }
+
+    // Caches for lookup tables to avoid repeated queries
+    const vendorCache = new Map<string, number>();
+    const productTypeCache = new Map<string, number>();
+    const assetStateCache = new Map<string, number>();
+    const siteCache = new Map<string, number>();
+    const departCache = new Map<string, number>();
+    const companyCache = new Map<string, number>();
+
+    let created = 0;
+    let skipped = 0;
+    const errors: string[] = [];
+
+    for (let i = 0; i < records.length; i++) {
+      const row = records[i];
+      const rowNum = i + 2; // +2 because header is row 1
+
+      try {
+        const assetName = row['Asset Name']?.trim();
+        if (!assetName) {
+          skipped++;
+          continue;
+        }
+
+        // --- Resolve Vendor ---
+        const vendorName = row['Vendor']?.trim() || 'Sin Proveedor';
+        let vendorID = vendorCache.get(vendorName);
+        if (!vendorID) {
+          let vendor = await this.prismaShopic.vendor.findFirst({
+            where: { Name: vendorName },
+          });
+          if (!vendor) {
+            vendor = await this.prismaShopic.vendor.create({
+              data: { Name: vendorName },
+            });
+          }
+          vendorID = vendor.VendorID;
+          vendorCache.set(vendorName, vendorID);
+        }
+
+        // --- Resolve ProductType ---
+        const productTypeName = row['Product Type']?.trim() || 'Otro';
+        const productName = row['Product']?.trim() || 'Sin Producto';
+        const ptKey = `${productTypeName}||${productName}`;
+        let productTypeID = productTypeCache.get(ptKey);
+        if (!productTypeID) {
+          let pt = await this.prismaShopic.productType.findFirst({
+            where: { Name: productTypeName, Category: productName },
+          });
+          if (!pt) {
+            pt = await this.prismaShopic.productType.create({
+              data: {
+                Name: productTypeName,
+                Category: productName,
+                Group: productTypeName,
+                SubCategory: '',
+              },
+            });
+          }
+          productTypeID = pt.ProductTypeID;
+          productTypeCache.set(ptKey, productTypeID);
+        }
+
+        // --- Resolve AssetState ---
+        const stateName = row['Asset State']?.trim() || 'In Shop';
+        let assetStateID = assetStateCache.get(stateName);
+        if (!assetStateID) {
+          let state = await this.prismaShopic.assetState.findFirst({
+            where: { Name: stateName },
+          });
+          if (!state) {
+            state = await this.prismaShopic.assetState.create({
+              data: { Name: stateName },
+            });
+          }
+          assetStateID = state.AssetStateID;
+          assetStateCache.set(stateName, assetStateID);
+        }
+
+        // --- Resolve Company (from Site) ---
+        const siteName = row['Site']?.trim() || 'Base Site';
+        let companyID = companyCache.get(siteName);
+        let siteID = siteCache.get(siteName);
+
+        if (!siteID) {
+          let site = await this.prismaShopic.site.findFirst({
+            where: { Name: siteName },
+            include: { Company: true },
+          });
+          if (!site) {
+            // Find or create a default company
+            let company = await this.prismaShopic.company.findFirst();
+            if (!company) {
+              company = await this.prismaShopic.company.create({
+                data: { Description: 'Hotel Shops' },
+              });
+            }
+            site = await this.prismaShopic.site.create({
+              data: { Name: siteName, CompanyID: company.CompanyID },
+              include: { Company: true },
+            });
+          }
+          siteID = site.SiteID;
+          companyID = site.CompanyID;
+          siteCache.set(siteName, siteID);
+          companyCache.set(siteName, companyID);
+        }
+
+        // --- Resolve Department ---
+        const departName = row['Assign to Department']?.trim();
+        let departID: number | undefined;
+        if (departName) {
+          departID = departCache.get(departName);
+          if (!departID) {
+            let depart = await this.prismaShopic.depart.findFirst({
+              where: { Name: departName },
+            });
+            if (!depart) {
+              depart = await this.prismaShopic.depart.create({
+                data: { Name: departName },
+              });
+            }
+            departID = depart.DepartID;
+            departCache.set(departName, departID);
+          }
+        }
+
+        // --- Parse dates ---
+        const parseDate = (val?: string): Date | null => {
+          if (!val || val === 'null') return null;
+          const d = new Date(val);
+          return isNaN(d.getTime()) ? null : d;
+        };
+
+        // --- Create AssetDetail ---
+        const newDetail = await this.prismaShopic.assetDetail.create({
+          data: {
+            ProductManuf: row['Product Manufacturer']?.trim() || null,
+            IPAddress: row['IP Address']?.trim() || null,
+            MACAddress: row['MAC Address']?.trim() || null,
+            Loanable: row['Loanable']?.trim() || null,
+            SerialNum: row['Serial Number']?.trim() || null,
+            AssetTAG: row['Asset Tag']?.trim() || null,
+            Barcode: row['Barcode / QR code']?.trim() || null,
+            AssetACQDate: parseDate(row['Acquisition Date']),
+            WarrantyExpiryDate: parseDate(row['Warranty Expiry Date']),
+            AssetExpiryDate: parseDate(row['Expiry Date']),
+            CreatedTime: parseDate(row['Created Time']) || new Date(),
+            LastUpdateTime: parseDate(row['Last Updated Time']) || new Date(),
+            LastUpdateBy: lastUpdateBy,
+          },
+        });
+
+        // --- Create Asset ---
+        await this.prismaShopic.asset.create({
+          data: {
+            Name: assetName,
+            VendorID: vendorID,
+            ProductTypeID: productTypeID,
+            AssetState: assetStateID,
+            CompanyID: companyID,
+            SiteID: siteID,
+            DepartID: departID || null,
+            AssetDetailID: newDetail.AssetDetailID,
+          },
+        });
+
+        created++;
+      } catch (err) {
+        errors.push(`Fila ${rowNum}: ${err.message}`);
+        skipped++;
+      }
+    }
+
+    return {
+      success: true,
+      message: `Importación completada: ${created} creados, ${skipped} omitidos`,
+      created,
+      skipped,
+      total: records.length,
+      errors: errors.slice(0, 20),
+    };
   }
 }
