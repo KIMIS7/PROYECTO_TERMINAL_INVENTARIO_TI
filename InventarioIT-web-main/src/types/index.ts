@@ -74,7 +74,7 @@ export interface AssetUser {
   userID: number;
   name: string;
   email: string;
-  department: string;
+  departmentID?: number;
   firstName?: string;
   lastName?: string;
 }
