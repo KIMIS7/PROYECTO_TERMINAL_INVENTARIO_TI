@@ -1,5 +1,5 @@
 import { MainLayout } from "@/components/MainLayout";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback, useRef } from "react";
 import { ProductType, Vendor, AssetState, Company, Site, Asset } from "@/types";
 import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
@@ -21,14 +21,6 @@ import {
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -41,6 +33,24 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 
 const ASSET_GROUPS = ["Equipo", "Accesorio", "Componente", "Otro"] as const;
+
+const PAGE_SIZE_OPTIONS = [20, 50, 100] as const;
+
+// Column definitions for resizable table
+const INITIAL_COLUMNS = [
+  { key: "checkbox", label: "", width: 36, minWidth: 36 },
+  { key: "edit", label: "", width: 36, minWidth: 36 },
+  { key: "name", label: "NOMBRE", width: 200, minWidth: 100 },
+  { key: "company", label: "COMPAÑIA", width: 150, minWidth: 80 },
+  { key: "site", label: "SITE", width: 150, minWidth: 80 },
+  { key: "department", label: "DEPARTAMENTO", width: 160, minWidth: 80 },
+  { key: "user", label: "USUARIO", width: 160, minWidth: 80 },
+  { key: "type", label: "TIPO", width: 140, minWidth: 80 },
+  { key: "brand", label: "MARCA", width: 130, minWidth: 80 },
+  { key: "model", label: "MODELO", width: 140, minWidth: 80 },
+  { key: "serial", label: "SERIE", width: 150, minWidth: 80 },
+  { key: "state", label: "ESTADO", width: 120, minWidth: 70 },
+] as const;
 
 export default function Altas() {
   // Estados para los catálogos
@@ -73,7 +83,61 @@ export default function Altas() {
 
   // Estados para paginación y vista
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState<number>(20);
+
+  // Column resize state
+  const [columnWidths, setColumnWidths] = useState<number[]>(
+    INITIAL_COLUMNS.map((c) => c.width)
+  );
+  const resizingRef = useRef<{
+    colIndex: number;
+    startX: number;
+    startWidth: number;
+  } | null>(null);
+
+  const handleResizeStart = useCallback(
+    (colIndex: number, e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const startX = e.clientX;
+      const startWidth = columnWidths[colIndex];
+
+      resizingRef.current = { colIndex, startX, startWidth };
+
+      const handleMouseMove = (moveEvent: MouseEvent) => {
+        if (!resizingRef.current) return;
+        const diff = moveEvent.clientX - resizingRef.current.startX;
+        const newWidth = Math.max(
+          INITIAL_COLUMNS[resizingRef.current.colIndex].minWidth,
+          resizingRef.current.startWidth + diff
+        );
+        setColumnWidths((prev) => {
+          const next = [...prev];
+          next[resizingRef.current!.colIndex] = newWidth;
+          return next;
+        });
+      };
+
+      const handleMouseUp = () => {
+        resizingRef.current = null;
+        document.removeEventListener("mousemove", handleMouseMove);
+        document.removeEventListener("mouseup", handleMouseUp);
+        document.body.style.cursor = "";
+        document.body.style.userSelect = "";
+      };
+
+      document.body.style.cursor = "col-resize";
+      document.body.style.userSelect = "none";
+      document.addEventListener("mousemove", handleMouseMove);
+      document.addEventListener("mouseup", handleMouseUp);
+    },
+    [columnWidths]
+  );
+
+  const totalTableWidth = useMemo(
+    () => columnWidths.reduce((sum, w) => sum + w, 0),
+    [columnWidths]
+  );
 
   // Cargar catálogos al montar el componente
   useEffect(() => {
@@ -666,6 +730,20 @@ export default function Altas() {
 
             {/* Paginación */}
             <div className="flex items-center gap-1.5 text-sm text-gray-600 shrink-0">
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="h-7 rounded-md border border-input bg-background px-2 py-0.5 text-sm"
+              >
+                {PAGE_SIZE_OPTIONS.map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
               <span className="whitespace-nowrap">
                 {startItem}-{endItem} de {filteredAssets.length}
               </span>
@@ -697,48 +775,58 @@ export default function Altas() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : (
-              <Table className = "table-fixed w-full">
-                <TableHeader className="bg-gray-50 sticky top-0">
-                  <TableRow>
-                    <TableHead className="w-5"></TableHead>
-                    <TableHead className="w-5"></TableHead>
-                    <TableHead className="w-18 font-semibold text-gray-700">NOMBRE</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">COMPAÑIA</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">SITE</TableHead>
-                    <TableHead className="w-25 font-semibold text-gray-700">Departamento</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">USUARIO</TableHead>
-                    <TableHead className="w-18 font-semibold text-gray-700">TIPO</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">MARCA</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">MODELO</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">SERIE</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">ESTADO</TableHead>
-                  </TableRow>
-                  
-                </TableHeader>
+              <table
+                className="table-fixed border-collapse"
+                style={{ width: `${totalTableWidth}px`, minWidth: "100%" }}
+              >
+                <colgroup>
+                  {columnWidths.map((w, i) => (
+                    <col key={i} style={{ width: `${w}px` }} />
+                  ))}
+                </colgroup>
+                <thead className="bg-gray-50 sticky top-0 z-10">
+                  <tr className="border-b">
+                    {INITIAL_COLUMNS.map((col, colIndex) => (
+                      <th
+                        key={col.key}
+                        className="relative h-10 px-2 text-left align-middle text-xs font-semibold text-gray-700 whitespace-nowrap select-none"
+                        style={{ width: `${columnWidths[colIndex]}px` }}
+                      >
+                        <span className="truncate block">{col.label}</span>
+                        {/* Resize handle */}
+                        {colIndex >= 2 && (
+                          <div
+                            className="absolute right-0 top-0 bottom-0 w-2 cursor-col-resize hover:bg-blue-400/40 active:bg-blue-500/50 z-20"
+                            onMouseDown={(e) => handleResizeStart(colIndex, e)}
+                          />
+                        )}
+                      </th>
+                    ))}
+                  </tr>
+                </thead>
 
-                <TableBody>
+                <tbody>
                   {paginatedAssets.length === 0 ? (
-                    <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-gray-500">
+                    <tr>
+                      <td colSpan={INITIAL_COLUMNS.length} className="h-24 text-center text-gray-500">
                         No se encontraron activos
-                      </TableCell>
-                    </TableRow>
+                      </td>
+                    </tr>
                   ) : (
                     paginatedAssets.map((asset) => {
                       const isBaja = asset.assetStateInfo?.name === "Baja";
                       return (
-                      <TableRow
+                      <tr
                         key={asset.assetID}
                         className={cn(
-                          "hover:bg-gray-50",
+                          "border-b transition-colors hover:bg-gray-50",
                           selectedAssets.has(asset.assetID) && "bg-blue-50",
                           isBaja && "opacity-60 bg-red-50/50"
                         )}
                       >
-                        <TableCell>
-    
-                        </TableCell>
-                        <TableCell>
+                        <td className="p-2 align-middle">
+                        </td>
+                        <td className="p-2 align-middle">
                           <div className="flex items-center gap-1">
                             <button
                               className={cn(
@@ -755,11 +843,11 @@ export default function Altas() {
                               <Pencil className={cn("h-4 w-4", isBaja ? "text-gray-300" : "text-gray-400 hover:text-amber-600")} />
                             </button>
                           </div>
-                        </TableCell>
-                        <TableCell>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden">
                           <button
-                            className="font-medium text-blue-600 hover:underline truncate block text-left max-w-full"
-                            title="Ver ficha tecnica"
+                            className="font-medium text-blue-600 hover:underline truncate block text-left w-full text-sm"
+                            title={asset.name}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenDetail(asset.assetID);
@@ -767,42 +855,58 @@ export default function Altas() {
                           >
                             {asset.name}
                           </button>
-                        </TableCell>
-                        <TableCell>
-                          {asset.company?.description || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {asset.site?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {asset.depart?.Name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {asset.user?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {asset.productType?.name || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {asset.assetDetail?.productManuf || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {asset.assetDetail?.model || "-"}
-                        </TableCell>
-                        <TableCell>
-                          {asset.assetDetail?.serialNum || "-"}
-                        </TableCell>
-                        <TableCell>
-                          <span className={cn(isBaja && "text-red-600 font-semibold")}>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.company?.description || "-"}>
+                            {asset.company?.description || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.site?.name || "-"}>
+                            {asset.site?.name || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.depart?.Name || "-"}>
+                            {asset.depart?.Name || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.user?.name || "-"}>
+                            {asset.user?.name || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.productType?.name || "-"}>
+                            {asset.productType?.name || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.assetDetail?.productManuf || "-"}>
+                            {asset.assetDetail?.productManuf || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.assetDetail?.model || "-"}>
+                            {asset.assetDetail?.model || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className="truncate block" title={asset.assetDetail?.serialNum || "-"}>
+                            {asset.assetDetail?.serialNum || "-"}
+                          </span>
+                        </td>
+                        <td className="p-2 align-middle overflow-hidden text-sm">
+                          <span className={cn("truncate block", isBaja && "text-red-600 font-semibold")}>
                             {asset.assetStateInfo?.name || "-"}
                           </span>
-                        </TableCell>
-                      </TableRow>
+                        </td>
+                      </tr>
                       );
                     })
                   )}
-                </TableBody>
-              </Table>
+                </tbody>
+              </table>
             )}
           </div>
 

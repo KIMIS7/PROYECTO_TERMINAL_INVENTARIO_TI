@@ -191,6 +191,7 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
+          Depart: true,
           User: {
             include: {
               Depart: true,
@@ -199,7 +200,11 @@ export class AssetService {
         },
       });
 
-      return assets.map((asset) => ({
+      return assets.map((asset) => {
+        // Prefer Asset's own Depart, fall back to User's Depart
+        const resolvedDepart = asset.Depart || asset.User?.Depart;
+
+        return {
         assetID: asset.AssetID,
         name: asset.Name,
         vendorID: asset.VendorID,
@@ -208,6 +213,7 @@ export class AssetService {
         companyID: asset.CompanyID,
         siteID: asset.SiteID,
         userID: asset.UserID,
+        departID: asset.DepartID,
         vendor: asset.Vendor
           ? { vendorID: asset.Vendor.VendorID, name: asset.Vendor.Name }
           : null,
@@ -242,10 +248,10 @@ export class AssetService {
               lastName: asset.User.LastName,
             }
           : null,
-        depart: asset.User?.Depart
+        depart: resolvedDepart
           ? {
-              departID: asset.User.Depart.DepartID,
-              Name: asset.User.Depart.Name,
+              departID: resolvedDepart.DepartID,
+              Name: resolvedDepart.Name,
             }
           : null,
         assetDetail: asset.AssetDetail
@@ -270,7 +276,8 @@ export class AssetService {
               ticket: asset.AssetDetail.Ticket,
             }
           : null,
-      }));
+      };
+      });
     } catch (error) {
       throw new InternalServerErrorException({
         message: error.message || 'Error al obtener los activos',
@@ -289,6 +296,7 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
+          Depart: true,
           User: {
             include: {
               Depart: true,
@@ -317,6 +325,9 @@ export class AssetService {
         throw new NotFoundException('Activo no encontrado');
       }
 
+      // Prefer Asset's own Depart, fall back to User's Depart
+      const resolvedDepart = asset.Depart || asset.User?.Depart;
+
       return {
         assetID: asset.AssetID,
         name: asset.Name,
@@ -327,6 +338,7 @@ export class AssetService {
         siteID: asset.SiteID,
         userID: asset.UserID,
         parentAssetID: asset.ParentAssetID,
+        departID: asset.DepartID,
         vendor: asset.Vendor
           ? { vendorID: asset.Vendor.VendorID, name: asset.Vendor.Name }
           : null,
@@ -361,10 +373,10 @@ export class AssetService {
               lastName: asset.User.LastName,
             }
           : null,
-        depart: asset.User?.Depart
+        depart: resolvedDepart
           ? {
-              departID: asset.User.Depart.DepartID,
-              Name: asset.User.Depart.Name,
+              departID: resolvedDepart.DepartID,
+              Name: resolvedDepart.Name,
             }
           : null,
         assetDetail: asset.AssetDetail
