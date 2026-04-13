@@ -106,7 +106,7 @@ export default function Altas() {
       const onMouseMove = (ev: MouseEvent) => {
         if (!resizingCol.current) return;
         const diff = ev.clientX - resizeStartX.current;
-        const newW = Math.max(50, resizeStartW.current + diff);
+        const newW = Math.min(600, Math.max(50, resizeStartW.current + diff));
         setColWidths((prev) => ({ ...prev, [resizingCol.current!]: newW }));
       };
 

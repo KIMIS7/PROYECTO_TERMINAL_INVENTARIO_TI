@@ -243,15 +243,15 @@ export class AssetService {
               lastName: asset.User.LastName,
             }
           : null,
-        depart: asset.Depart
+        depart: asset.User?.Depart
           ? {
-              departID: asset.Depart.DepartID,
-              Name: asset.Depart.Name,
+              departID: asset.User.Depart.DepartID,
+              Name: asset.User.Depart.Name,
             }
-          : asset.User?.Depart
+          : asset.Depart
             ? {
-                departID: asset.User.Depart.DepartID,
-                Name: asset.User.Depart.Name,
+                departID: asset.Depart.DepartID,
+                Name: asset.Depart.Name,
               }
             : null,
         assetDetail: asset.AssetDetail
@@ -368,15 +368,15 @@ export class AssetService {
               lastName: asset.User.LastName,
             }
           : null,
-        depart: asset.Depart
+        depart: asset.User?.Depart
           ? {
-              departID: asset.Depart.DepartID,
-              Name: asset.Depart.Name,
+              departID: asset.User.Depart.DepartID,
+              Name: asset.User.Depart.Name,
             }
-          : asset.User?.Depart
+          : asset.Depart
             ? {
-                departID: asset.User.Depart.DepartID,
-                Name: asset.User.Depart.Name,
+                departID: asset.Depart.DepartID,
+                Name: asset.Depart.Name,
               }
             : null,
         assetDetail: asset.AssetDetail
