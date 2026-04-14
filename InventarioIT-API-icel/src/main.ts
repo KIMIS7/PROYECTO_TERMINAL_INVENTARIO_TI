@@ -1,6 +1,7 @@
-import { NestFactory } from '@nestjs/core';
+import { NestFactory, Reflector } from '@nestjs/core';
 import { ValidationPipe } from '@nestjs/common';
 import { AppModule } from './app.module';
+import { AzureAuthGuard } from './azure-auth/azure-auth.guard';
 
 // Global BigInt serialization fix
 (BigInt.prototype as any).toJSON = function () {
@@ -23,9 +24,8 @@ async function bootstrap() {
     app.setGlobalPrefix(process.env.API_PREFIX);
   }
 
-  // El guard de autenticación (AzureAuthGuard) se registra globalmente
-  // via APP_GUARD en app.module.ts. Todos los endpoints están protegidos
-  // excepto los marcados con @Public().
+  const reflector = app.get(Reflector);
+  //app.useGlobalGuards(new AzureAuthGuard(reflector));
 
   await app.listen(process.env.API_PORT ?? 3001);
 }
