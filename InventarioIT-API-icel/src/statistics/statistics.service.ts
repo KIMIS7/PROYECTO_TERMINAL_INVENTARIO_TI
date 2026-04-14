@@ -285,6 +285,67 @@ export class StatisticsService {
         ? Math.round((warrantyExpiringCount / totalAssets) * 1000) / 10
         : 0;
 
+      // ========== DATA COMPLETENESS ==========
+      const noSiteCount = assets.filter((a) => !a.SiteID).length;
+      const noUserCount = assets.filter((a) => !a.UserID).length;
+      const noAcqDateCount = assets.filter((a) => !detailMap.get(a.AssetID)?.AssetACQDate).length;
+      const noWarrantyCount = assets.filter((a) => !detailMap.get(a.AssetID)?.WarrantyExpiryDate).length;
+      const dataCompleteness = {
+        noSiteCount,
+        noUserCount,
+        noAcqDateCount,
+        noWarrantyCount,
+        completenessPercent: totalAssets > 0
+          ? Math.round(((totalAssets - noAcqDateCount) / totalAssets) * 100)
+          : 0,
+      };
+
+      // ========== SITE RISK RANKING (semáforo por hotel) ==========
+      const siteRiskMap = new Map<string, { siteID: number; name: string; total: number; obsolete: number; noWarranty: number; noUser: number }>();
+      for (const asset of assets) {
+        const siteName = asset.Site?.Name || 'Sin sede';
+        const siteID = asset.SiteID || 0;
+        if (!siteRiskMap.has(siteName)) {
+          siteRiskMap.set(siteName, { siteID, name: siteName, total: 0, obsolete: 0, noWarranty: 0, noUser: 0 });
+        }
+        const entry = siteRiskMap.get(siteName)!;
+        entry.total++;
+        const detail = detailMap.get(asset.AssetID);
+        if (detail?.AssetACQDate && new Date(detail.AssetACQDate) < fourYearsAgo) entry.obsolete++;
+        if (!detail?.WarrantyExpiryDate || new Date(detail.WarrantyExpiryDate) < now) entry.noWarranty++;
+        if (!asset.UserID) entry.noUser++;
+      }
+      const siteRiskRanking = Array.from(siteRiskMap.values())
+        .map((s) => {
+          const riskScore = s.total > 0
+            ? Math.round(((s.obsolete + s.noWarranty + s.noUser) / (s.total * 3)) * 100)
+            : 0;
+          const level: 'green' | 'yellow' | 'red' = riskScore <= 30 ? 'green' : riskScore <= 60 ? 'yellow' : 'red';
+          return { ...s, riskScore, level };
+        })
+        .sort((a, b) => b.riskScore - a.riskScore);
+
+      // ========== WARRANTY TIMELINE (next 3, 6, 12 months) ==========
+      const threeMonths = new Date(); threeMonths.setMonth(threeMonths.getMonth() + 3);
+      const sixMonths = new Date(); sixMonths.setMonth(sixMonths.getMonth() + 6);
+      const twelveMonths = new Date(); twelveMonths.setMonth(twelveMonths.getMonth() + 12);
+
+      let warranty3m = 0, warranty6m = 0, warranty12m = 0;
+      for (const asset of assets) {
+        const detail = detailMap.get(asset.AssetID);
+        if (detail?.WarrantyExpiryDate) {
+          const exp = new Date(detail.WarrantyExpiryDate);
+          if (exp > now && exp <= threeMonths) warranty3m++;
+          else if (exp > threeMonths && exp <= sixMonths) warranty6m++;
+          else if (exp > sixMonths && exp <= twelveMonths) warranty12m++;
+        }
+      }
+      const warrantyTimeline = [
+        { period: '0-3 meses', count: warranty3m },
+        { period: '3-6 meses', count: warranty6m },
+        { period: '6-12 meses', count: warranty12m },
+      ];
+
       // ========== FILTER OPTIONS (for frontend dropdowns) ==========
       const filterOptions = {
         sites: sites.map((s) => ({ siteID: s.SiteID, name: s.Name })),
@@ -323,6 +384,9 @@ export class StatisticsService {
         recentMovements,
         assetsTable: assetsTableData,
         filterOptions,
+        dataCompleteness,
+        siteRiskRanking,
+        warrantyTimeline,
       };
     } catch (error) {
       throw new InternalServerErrorException({

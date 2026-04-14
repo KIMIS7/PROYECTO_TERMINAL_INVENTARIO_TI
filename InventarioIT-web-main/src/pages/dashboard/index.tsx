@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, ChevronDown, X, Filter } from "lucide-react";
+import { RefreshCw, ChevronDown, X, Filter, AlertTriangle, Shield, Database } from "lucide-react";
 
 interface FilterOptions {
   sites: { siteID: number; name: string }[];
@@ -63,6 +63,24 @@ interface DashboardStats {
     isObsolete: boolean;
   }[];
   filterOptions?: FilterOptions;
+  dataCompleteness?: {
+    noSiteCount: number;
+    noUserCount: number;
+    noAcqDateCount: number;
+    noWarrantyCount: number;
+    completenessPercent: number;
+  };
+  siteRiskRanking?: {
+    siteID: number;
+    name: string;
+    total: number;
+    obsolete: number;
+    noWarranty: number;
+    noUser: number;
+    riskScore: number;
+    level: 'green' | 'yellow' | 'red';
+  }[];
+  warrantyTimeline?: { period: string; count: number }[];
 }
 
 // Donut chart SVG component
@@ -629,6 +647,100 @@ export default function Dashboard() {
                       </div>
                     )}
                   </DashCard>
+                </div>
+
+                {/* ==================== ROW 5: SITE RISK RANKING + DATA COMPLETENESS ==================== */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Ranking de hoteles por riesgo TI */}
+                  {stats.siteRiskRanking && stats.siteRiskRanking.length > 0 && (
+                    <DashCard>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield className="h-4 w-4 text-gray-600" />
+                        <h3 className="text-sm font-bold text-gray-900">Ranking por riesgo TI</h3>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-4">
+                        Combina obsolescencia + sin garantía + sin usuario asignado
+                      </p>
+                      <div className="space-y-2.5">
+                        {stats.siteRiskRanking.slice(0, 8).map((site) => {
+                          const colors = {
+                            green: { bg: "bg-green-100", text: "text-green-700", bar: "#22c55e", label: "Bajo" },
+                            yellow: { bg: "bg-amber-100", text: "text-amber-700", bar: "#f59e0b", label: "Medio" },
+                            red: { bg: "bg-red-100", text: "text-red-700", bar: "#ef4444", label: "Alto" },
+                          }[site.level];
+                          return (
+                            <div key={site.name} className="flex items-center gap-2">
+                              <span className="text-xs text-gray-600 w-28 truncate text-right" title={site.name}>
+                                {site.name}
+                              </span>
+                              <div className="flex-1 bg-gray-100 rounded-full h-4">
+                                <div
+                                  className="h-4 rounded-full transition-all duration-500"
+                                  style={{ width: `${site.riskScore}%`, backgroundColor: colors.bar }}
+                                />
+                              </div>
+                              <Badge className={`text-[10px] ${colors.bg} ${colors.text} border-0 w-14 justify-center`}>
+                                {colors.label}
+                              </Badge>
+                              <span className="text-xs text-gray-500 w-6 text-right">{site.total}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </DashCard>
+                  )}
+
+                  {/* Calidad de datos + Garantías por vencer */}
+                  <div className="flex flex-col gap-4">
+                    {/* Datos incompletos */}
+                    {stats.dataCompleteness && (
+                      <DashCard>
+                        <div className="flex items-center gap-2 mb-1">
+                          <Database className="h-4 w-4 text-gray-600" />
+                          <h3 className="text-sm font-bold text-gray-900">Calidad de datos</h3>
+                        </div>
+                        <p className="text-xs text-gray-500 mb-3">
+                          Campos faltantes que afectan las métricas
+                        </p>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="rounded-lg px-3 py-2 bg-red-50 border border-red-200">
+                            <p className="text-lg font-bold text-red-700">{stats.dataCompleteness.noSiteCount}</p>
+                            <p className="text-xs text-gray-600">Sin sede</p>
+                          </div>
+                          <div className="rounded-lg px-3 py-2 bg-amber-50 border border-amber-200">
+                            <p className="text-lg font-bold text-amber-700">{stats.dataCompleteness.noUserCount}</p>
+                            <p className="text-xs text-gray-600">Sin usuario</p>
+                          </div>
+                          <div className="rounded-lg px-3 py-2 bg-orange-50 border border-orange-200">
+                            <p className="text-lg font-bold text-orange-700">{stats.dataCompleteness.noAcqDateCount}</p>
+                            <p className="text-xs text-gray-600">Sin fecha adq.</p>
+                          </div>
+                          <div className="rounded-lg px-3 py-2 bg-yellow-50 border border-yellow-200">
+                            <p className="text-lg font-bold text-yellow-700">{stats.dataCompleteness.noWarrantyCount}</p>
+                            <p className="text-xs text-gray-600">Sin garantía</p>
+                          </div>
+                        </div>
+                      </DashCard>
+                    )}
+
+                    {/* Timeline de garantías */}
+                    {stats.warrantyTimeline && (
+                      <DashCard>
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertTriangle className="h-4 w-4 text-gray-600" />
+                          <h3 className="text-sm font-bold text-gray-900">Garantías por vencer</h3>
+                        </div>
+                        <div className="flex items-end gap-4 mt-3">
+                          {stats.warrantyTimeline.map((item) => (
+                            <div key={item.period} className="flex-1 text-center">
+                              <p className="text-2xl font-bold text-gray-900">{item.count}</p>
+                              <p className="text-xs text-gray-500 mt-1">{item.period}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </DashCard>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (

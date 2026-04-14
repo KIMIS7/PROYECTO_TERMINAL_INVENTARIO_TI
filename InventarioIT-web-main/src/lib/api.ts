@@ -693,6 +693,24 @@ const api = {
           groups: string[];
           states: { stateID: number; name: string }[];
         };
+        dataCompleteness: {
+          noSiteCount: number;
+          noUserCount: number;
+          noAcqDateCount: number;
+          noWarrantyCount: number;
+          completenessPercent: number;
+        };
+        siteRiskRanking: {
+          siteID: number;
+          name: string;
+          total: number;
+          obsolete: number;
+          noWarranty: number;
+          noUser: number;
+          riskScore: number;
+          level: 'green' | 'yellow' | 'red';
+        }[];
+        warrantyTimeline: { period: string; count: number }[];
       }>(`/statistics/dashboard${qs ? `?${qs}` : ''}`);
       return response.data;
     },
