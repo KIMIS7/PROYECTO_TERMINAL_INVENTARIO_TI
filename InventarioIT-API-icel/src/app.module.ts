@@ -1,4 +1,9 @@
-import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
+import {
+  Module,
+  NestModule,
+  MiddlewareConsumer,
+  RequestMethod,
+} from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { AppController } from './app.controller';
 import { DatabaseModule } from './database/database.module';
@@ -51,6 +56,11 @@ export class AppModule implements NestModule {
   configure(consumer: MiddlewareConsumer) {
     consumer
       .apply(SimpleAuthMiddleware)
+      .exclude(
+        // Endpoint público usado por el frontend para verificar al usuario
+        // justo después del login, antes de tener credenciales validadas.
+        { path: 'user/verify/:email', method: RequestMethod.GET },
+      )
       .forRoutes(
         '/user',
         '/rol',
