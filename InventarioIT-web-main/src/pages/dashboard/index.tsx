@@ -3,11 +3,23 @@ import { requireAuthGSSP } from "@/lib/requireAuthGSSP";
 import { useSession } from "next-auth/react";
 import { useUserData } from "@/hooks/dashboard/useUserData";
 import { useAlert } from "@/hooks/useAlert";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, ChevronDown } from "lucide-react";
+import { RefreshCw, ChevronDown, X, Filter } from "lucide-react";
+
+interface FilterOptions {
+  sites: { siteID: number; name: string }[];
+  groups: string[];
+  states: { stateID: number; name: string }[];
+}
+
+interface DashboardFilters {
+  siteID?: number;
+  group?: string;
+  stateID?: number;
+}
 
 interface DashboardStats {
   summary: {
@@ -50,6 +62,7 @@ interface DashboardStats {
     hasActiveWarranty: boolean;
     isObsolete: boolean;
   }[];
+  filterOptions?: FilterOptions;
 }
 
 // Donut chart SVG component
@@ -139,22 +152,49 @@ export default function Dashboard() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<DashboardFilters>({});
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ sites: [], groups: [], states: [] });
+  const initialLoad = useRef(true);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (f?: DashboardFilters) => {
     try {
       setLoading(true);
-      const data = await api.statistics.getDashboard();
+      const activeFilters = f ?? filters;
+      const data = await api.statistics.getDashboard(activeFilters);
       setStats(data);
+      if (data.filterOptions) {
+        setFilterOptions(data.filterOptions);
+      }
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
+    if (initialLoad.current) {
+      initialLoad.current = false;
+      fetchStats({});
+      return;
+    }
     fetchStats();
   }, [fetchStats]);
+
+  const updateFilter = (key: keyof DashboardFilters, value: number | string | undefined) => {
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (value === undefined) {
+        delete next[key];
+      } else {
+        (next as Record<string, unknown>)[key] = value;
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => setFilters({});
+  const hasActiveFilters = filters.siteID || filters.group || filters.stateID;
 
   // State colors for donut chart
   const stateColorMap: Record<string, string> = {
@@ -217,13 +257,64 @@ export default function Dashboard() {
                 </p>
               </div>
               <button
-                onClick={fetchStats}
+                onClick={() => fetchStats()}
                 disabled={loading}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                 Actualizar
               </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+              <Filter className="h-4 w-4 text-gray-400 shrink-0" />
+
+              {/* Site / Hotel */}
+              <select
+                value={filters.siteID ?? ""}
+                onChange={(e) => updateFilter("siteID", e.target.value ? Number(e.target.value) : undefined)}
+                className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-700"
+              >
+                <option value="">Todos los sites</option>
+                {filterOptions.sites.map((s) => (
+                  <option key={s.siteID} value={s.siteID}>{s.name}</option>
+                ))}
+              </select>
+
+              {/* Group */}
+              <select
+                value={filters.group ?? ""}
+                onChange={(e) => updateFilter("group", e.target.value || undefined)}
+                className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-700"
+              >
+                <option value="">Todos los grupos</option>
+                {filterOptions.groups.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+
+              {/* State */}
+              <select
+                value={filters.stateID ?? ""}
+                onChange={(e) => updateFilter("stateID", e.target.value ? Number(e.target.value) : undefined)}
+                className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-700"
+              >
+                <option value="">Todos los estados</option>
+                {filterOptions.states.map((s) => (
+                  <option key={s.stateID} value={s.stateID}>{s.name}</option>
+                ))}
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 h-8 px-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Limpiar
+                </button>
+              )}
             </div>
 
             {loading ? (

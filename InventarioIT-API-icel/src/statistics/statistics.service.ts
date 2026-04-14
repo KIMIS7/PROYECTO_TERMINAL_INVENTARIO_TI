@@ -1,12 +1,26 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { PrismaShopic } from 'src/database/database.service';
 
+interface DashboardFilters {
+  siteID?: number;
+  group?: string;
+  stateID?: number;
+}
+
 @Injectable()
 export class StatisticsService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
-  async getDashboardStats() {
+  async getDashboardStats(filters: DashboardFilters = {}) {
     try {
+      // Build Prisma where clause from filters
+      const where: Record<string, unknown> = {};
+      if (filters.siteID) where.SiteID = filters.siteID;
+      if (filters.stateID) where.AssetState = filters.stateID;
+      if (filters.group) {
+        where.ProductType = { Group: filters.group };
+      }
+
       const [
         assets,
         historyRecords,
@@ -16,6 +30,7 @@ export class StatisticsService {
         productTypes,
       ] = await Promise.all([
         this.prismaShopic.asset.findMany({
+          where,
           include: {
             AssetState_Asset_AssetStateToAssetState: true,
             Site: true,
@@ -31,6 +46,7 @@ export class StatisticsService {
         }),
         this.prismaShopic.assetHistory.findMany({
           select: {
+            AssetID: true,
             Operation: true,
             CreatedTime: true,
           },
@@ -56,6 +72,9 @@ export class StatisticsService {
         this.prismaShopic.productType.findMany(),
       ]);
 
+      // Build a set of filtered asset IDs for filtering history records
+      const filteredAssetIDs = new Set(assets.map((a) => a.AssetID));
+
       const totalAssets = assets.length;
       const now = new Date();
 
@@ -69,11 +88,17 @@ export class StatisticsService {
 
       // ========== UTILIZACIÓN Y DISPONIBILIDAD ==========
 
-      // 1. Tasa de utilización de activos (assets with UserID assigned)
-      const assignedAssets = assets.filter((a) => a.UserID != null).length;
+      // Tasa de utilización: assets con un usuario real asignado
+      // Un asset tiene usuario asignado si UserID no es null Y el estado es "Asignado"
+      const assignedStateNames = ['Asignado'];
+      const assignedAssets = assets.filter((a) => {
+        const stateName = a.AssetState_Asset_AssetStateToAssetState?.Name;
+        const hasUser = a.UserID != null;
+        return hasUser && assignedStateNames.includes(stateName || '');
+      }).length;
       const utilizationRate = totalAssets > 0 ? Math.round((assignedAssets / totalAssets) * 100) : 0;
 
-      // 2. Equipos en estado inactivo o en reparación
+      // Equipos en estado inactivo o en reparación
       const inactiveStates = ['Baja', 'Mantenimiento', 'Resguardo'];
       const inactiveAssets = assets.filter(
         (a) => a.AssetState_Asset_AssetStateToAssetState &&
@@ -83,7 +108,7 @@ export class StatisticsService {
 
       // ========== CICLO DE VIDA Y OBSOLESCENCIA ==========
 
-      // 3. Índice de obsolescencia (assets > 4 years old)
+      // Índice de obsolescencia (assets > 4 years old)
       const fourYearsAgo = new Date();
       fourYearsAgo.setFullYear(fourYearsAgo.getFullYear() - 4);
 
@@ -100,7 +125,7 @@ export class StatisticsService {
       }
       const obsolescenceRate = totalWithAcqDate > 0 ? Math.round((obsoleteCount / totalWithAcqDate) * 100) : 0;
 
-      // 4. Activos próximos a vencer garantía (within 90 days)
+      // Activos próximos a vencer garantía (within 90 days)
       const ninetyDaysFromNow = new Date();
       ninetyDaysFromNow.setDate(ninetyDaysFromNow.getDate() + 90);
 
@@ -132,7 +157,7 @@ export class StatisticsService {
       // Sort warranty alerts by days ascending (most urgent first)
       warrantyAlertsList.sort((a, b) => a.daysUntilExpiry - b.daysUntilExpiry);
 
-      // 5. Antigüedad promedio por tipo de equipo
+      // Antigüedad promedio por tipo de equipo
       const ageByType = new Map<string, { totalYears: number; count: number }>();
       for (const asset of assets) {
         const detail = detailMap.get(asset.AssetID);
@@ -156,7 +181,7 @@ export class StatisticsService {
 
       // ========== DISTRIBUCIÓN Y TRAZABILIDAD ==========
 
-      // 6. Distribución de activos por sede
+      // Distribución de activos por sede
       const assetsBySite = new Map<string, number>();
       for (const asset of assets) {
         const siteName = asset.Site?.Name || 'Sin sede';
@@ -166,10 +191,15 @@ export class StatisticsService {
         .map(([site, count]) => ({ site, count }))
         .sort((a, b) => b.count - a.count);
 
-      // 7. Frecuencia de reasignaciones
-      const reassignments = historyRecords.filter((h) => h.Operation === 'REASIGNACION').length;
+      // Frecuencia de reasignaciones (filtered by asset IDs if filters active)
+      const hasFilters = filters.siteID || filters.group || filters.stateID;
+      const filteredHistory = hasFilters
+        ? historyRecords.filter((h) => filteredAssetIDs.has(h.AssetID))
+        : historyRecords;
 
-      // 8. Cobertura de garantía activa
+      const reassignments = filteredHistory.filter((h) => h.Operation === 'REASIGNACION').length;
+
+      // Cobertura de garantía activa
       let activeWarrantyCount = 0;
       let totalWithWarranty = 0;
       for (const asset of assets) {
@@ -185,7 +215,7 @@ export class StatisticsService {
         ? Math.round((activeWarrantyCount / totalWithWarranty) * 100)
         : 0;
 
-      // ========== NEW: Movements by month (last 6 months) ==========
+      // ========== Movements by month (last 6 months) ==========
       const monthNames = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
       const movementsByMonth: { month: string; count: number }[] = [];
 
@@ -194,7 +224,7 @@ export class StatisticsService {
         const monthStart = new Date(d.getFullYear(), d.getMonth(), 1);
         const monthEnd = new Date(d.getFullYear(), d.getMonth() + 1, 1);
 
-        const count = historyRecords.filter((h) => {
+        const count = filteredHistory.filter((h) => {
           const created = new Date(h.CreatedTime);
           return created >= monthStart && created < monthEnd;
         }).length;
@@ -205,14 +235,18 @@ export class StatisticsService {
         });
       }
 
-      // ========== NEW: Assets created this month ==========
+      // ========== Assets created this month ==========
       const currentMonthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-      const newAssetsThisMonth = historyRecords.filter((h) => {
+      const newAssetsThisMonth = filteredHistory.filter((h) => {
         return h.Operation === 'CREATE' && new Date(h.CreatedTime) >= currentMonthStart;
       }).length;
 
-      // ========== NEW: Recent movements with details ==========
-      const recentMovements = recentMovementsRaw.map((m) => ({
+      // ========== Recent movements with details ==========
+      const filteredRecentMovements = hasFilters
+        ? recentMovementsRaw.filter((m) => filteredAssetIDs.has(m.AssetID))
+        : recentMovementsRaw;
+
+      const recentMovements = filteredRecentMovements.slice(0, 10).map((m) => ({
         assetName: m.Asset?.Name || 'N/A',
         operation: m.Operation,
         user: m.Asset?.User?.Name || '—',
@@ -251,6 +285,13 @@ export class StatisticsService {
         ? Math.round((warrantyExpiringCount / totalAssets) * 1000) / 10
         : 0;
 
+      // ========== FILTER OPTIONS (for frontend dropdowns) ==========
+      const filterOptions = {
+        sites: sites.map((s) => ({ siteID: s.SiteID, name: s.Name })),
+        groups: [...new Set(productTypes.map((pt) => pt.Group))].filter(Boolean).sort(),
+        states: assetStates.map((s) => ({ stateID: s.AssetStateID, name: s.Name })),
+      };
+
       return {
         summary: {
           totalAssets,
@@ -281,6 +322,7 @@ export class StatisticsService {
         warrantyAlerts: warrantyAlertsList.slice(0, 10),
         recentMovements,
         assetsTable: assetsTableData,
+        filterOptions,
       };
     } catch (error) {
       throw new InternalServerErrorException({
