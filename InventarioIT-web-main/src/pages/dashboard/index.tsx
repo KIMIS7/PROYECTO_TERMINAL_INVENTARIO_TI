@@ -7,7 +7,7 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, ChevronDown, X, Filter, AlertTriangle, Shield, Database } from "lucide-react";
+import { RefreshCw, ChevronDown, X, Filter, AlertTriangle, Shield } from "lucide-react";
 
 interface FilterOptions {
   sites: { siteID: number; name: string }[];
@@ -690,39 +690,8 @@ export default function Dashboard() {
                     </DashCard>
                   )}
 
-                  {/* Calidad de datos + Garantías por vencer */}
+                  {/* Garantías por vencer */}
                   <div className="flex flex-col gap-4">
-                    {/* Datos incompletos */}
-                    {stats.dataCompleteness && (
-                      <DashCard>
-                        <div className="flex items-center gap-2 mb-1">
-                          <Database className="h-4 w-4 text-gray-600" />
-                          <h3 className="text-sm font-bold text-gray-900">Calidad de datos</h3>
-                        </div>
-                        <p className="text-xs text-gray-500 mb-3">
-                          Campos faltantes que afectan las métricas
-                        </p>
-                        <div className="grid grid-cols-2 gap-3">
-                          <div className="rounded-lg px-3 py-2 bg-red-50 border border-red-200">
-                            <p className="text-lg font-bold text-red-700">{stats.dataCompleteness.noSiteCount}</p>
-                            <p className="text-xs text-gray-600">Sin sede</p>
-                          </div>
-                          <div className="rounded-lg px-3 py-2 bg-amber-50 border border-amber-200">
-                            <p className="text-lg font-bold text-amber-700">{stats.dataCompleteness.noUserCount}</p>
-                            <p className="text-xs text-gray-600">Sin usuario</p>
-                          </div>
-                          <div className="rounded-lg px-3 py-2 bg-orange-50 border border-orange-200">
-                            <p className="text-lg font-bold text-orange-700">{stats.dataCompleteness.noAcqDateCount}</p>
-                            <p className="text-xs text-gray-600">Sin fecha adq.</p>
-                          </div>
-                          <div className="rounded-lg px-3 py-2 bg-yellow-50 border border-yellow-200">
-                            <p className="text-lg font-bold text-yellow-700">{stats.dataCompleteness.noWarrantyCount}</p>
-                            <p className="text-xs text-gray-600">Sin garantía</p>
-                          </div>
-                        </div>
-                      </DashCard>
-                    )}
-
                     {/* Timeline de garantías */}
                     {stats.warrantyTimeline && (
                       <DashCard>
