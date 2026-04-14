@@ -3,11 +3,23 @@ import { requireAuthGSSP } from "@/lib/requireAuthGSSP";
 import { useSession } from "next-auth/react";
 import { useUserData } from "@/hooks/dashboard/useUserData";
 import { useAlert } from "@/hooks/useAlert";
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import api from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { RefreshCw, ChevronDown } from "lucide-react";
+import { RefreshCw, ChevronDown, X, Filter, AlertTriangle, Shield } from "lucide-react";
+
+interface FilterOptions {
+  sites: { siteID: number; name: string }[];
+  groups: string[];
+  states: { stateID: number; name: string }[];
+}
+
+interface DashboardFilters {
+  siteID?: number;
+  group?: string;
+  stateID?: number;
+}
 
 interface DashboardStats {
   summary: {
@@ -50,6 +62,25 @@ interface DashboardStats {
     hasActiveWarranty: boolean;
     isObsolete: boolean;
   }[];
+  filterOptions?: FilterOptions;
+  dataCompleteness?: {
+    noSiteCount: number;
+    noUserCount: number;
+    noAcqDateCount: number;
+    noWarrantyCount: number;
+    completenessPercent: number;
+  };
+  siteRiskRanking?: {
+    siteID: number;
+    name: string;
+    total: number;
+    obsolete: number;
+    noWarranty: number;
+    noUser: number;
+    riskScore: number;
+    level: 'green' | 'yellow' | 'red';
+  }[];
+  warrantyTimeline?: { period: string; count: number }[];
 }
 
 // Donut chart SVG component
@@ -139,22 +170,49 @@ export default function Dashboard() {
 
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filters, setFilters] = useState<DashboardFilters>({});
+  const [filterOptions, setFilterOptions] = useState<FilterOptions>({ sites: [], groups: [], states: [] });
+  const initialLoad = useRef(true);
 
-  const fetchStats = useCallback(async () => {
+  const fetchStats = useCallback(async (f?: DashboardFilters) => {
     try {
       setLoading(true);
-      const data = await api.statistics.getDashboard();
+      const activeFilters = f ?? filters;
+      const data = await api.statistics.getDashboard(activeFilters);
       setStats(data);
+      if (data.filterOptions) {
+        setFilterOptions(data.filterOptions);
+      }
     } catch (err) {
       console.error("Error fetching dashboard stats:", err);
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [filters]);
 
   useEffect(() => {
+    if (initialLoad.current) {
+      initialLoad.current = false;
+      fetchStats({});
+      return;
+    }
     fetchStats();
   }, [fetchStats]);
+
+  const updateFilter = (key: keyof DashboardFilters, value: number | string | undefined) => {
+    setFilters((prev) => {
+      const next = { ...prev };
+      if (value === undefined) {
+        delete next[key];
+      } else {
+        (next as Record<string, unknown>)[key] = value;
+      }
+      return next;
+    });
+  };
+
+  const clearFilters = () => setFilters({});
+  const hasActiveFilters = filters.siteID || filters.group || filters.stateID;
 
   // State colors for donut chart
   const stateColorMap: Record<string, string> = {
@@ -217,13 +275,64 @@ export default function Dashboard() {
                 </p>
               </div>
               <button
-                onClick={fetchStats}
+                onClick={() => fetchStats()}
                 disabled={loading}
                 className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50"
               >
                 <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
                 Actualizar
               </button>
+            </div>
+
+            {/* Filters */}
+            <div className="flex flex-wrap items-center gap-3 rounded-xl border border-gray-200 bg-white px-4 py-3 shadow-sm">
+              <Filter className="h-4 w-4 text-gray-400 shrink-0" />
+
+              {/* Site / Hotel */}
+              <select
+                value={filters.siteID ?? ""}
+                onChange={(e) => updateFilter("siteID", e.target.value ? Number(e.target.value) : undefined)}
+                className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-700"
+              >
+                <option value="">Todos los sites</option>
+                {filterOptions.sites.map((s) => (
+                  <option key={s.siteID} value={s.siteID}>{s.name}</option>
+                ))}
+              </select>
+
+              {/* Group */}
+              <select
+                value={filters.group ?? ""}
+                onChange={(e) => updateFilter("group", e.target.value || undefined)}
+                className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-700"
+              >
+                <option value="">Todos los grupos</option>
+                {filterOptions.groups.map((g) => (
+                  <option key={g} value={g}>{g}</option>
+                ))}
+              </select>
+
+              {/* State */}
+              <select
+                value={filters.stateID ?? ""}
+                onChange={(e) => updateFilter("stateID", e.target.value ? Number(e.target.value) : undefined)}
+                className="h-8 rounded-md border border-gray-300 bg-white px-2 text-sm text-gray-700"
+              >
+                <option value="">Todos los estados</option>
+                {filterOptions.states.map((s) => (
+                  <option key={s.stateID} value={s.stateID}>{s.name}</option>
+                ))}
+              </select>
+
+              {hasActiveFilters && (
+                <button
+                  onClick={clearFilters}
+                  className="flex items-center gap-1 h-8 px-2 text-sm text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                >
+                  <X className="h-3.5 w-3.5" />
+                  Limpiar
+                </button>
+              )}
             </div>
 
             {loading ? (
@@ -292,53 +401,52 @@ export default function Dashboard() {
                       Permite detectar sobreasignación o desabasto por hotel
                     </p>
                     <div className="space-y-3">
-                      {stats.distributions.bySite.slice(0, 5).map((s, i) => {
-                        const maxCount = stats.distributions.bySite[0]?.count || 1;
+                      {(() => {
+                        const otherCount = stats.distributions.bySite.slice(5).reduce((s, i) => s + i.count, 0);
+                        const maxCount = Math.max(stats.distributions.bySite[0]?.count || 1, otherCount);
                         const colors = ["#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"];
                         return (
-                          <div key={s.site} className="flex items-center gap-3">
-                            <span className="text-xs text-gray-600 w-32 truncate text-right" title={s.site}>
-                              {s.site}
-                            </span>
-                            <div className="flex-1 bg-gray-100 rounded-full h-4">
-                              <div
-                                className="h-4 rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${(s.count / maxCount) * 100}%`,
-                                  backgroundColor: colors[i % colors.length],
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm font-semibold text-gray-700 w-10 text-right">
-                              {s.count}
-                            </span>
-                          </div>
+                          <>
+                            {stats.distributions.bySite.slice(0, 5).map((s, i) => (
+                              <div key={s.site} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-600 w-32 truncate text-right" title={s.site}>
+                                  {s.site}
+                                </span>
+                                <div className="flex-1 bg-gray-100 rounded-full h-4">
+                                  <div
+                                    className="h-4 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${(s.count / maxCount) * 100}%`,
+                                      backgroundColor: colors[i % colors.length],
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700 w-10 text-right">
+                                  {s.count}
+                                </span>
+                              </div>
+                            ))}
+                            {stats.distributions.bySite.length > 5 && (
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-gray-600 w-32 truncate text-right">
+                                  Otras sedes
+                                </span>
+                                <div className="flex-1 bg-gray-100 rounded-full h-4">
+                                  <div
+                                    className="h-4 rounded-full bg-blue-200 transition-all duration-500"
+                                    style={{
+                                      width: `${(otherCount / maxCount) * 100}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700 w-10 text-right">
+                                  {otherCount}
+                                </span>
+                              </div>
+                            )}
+                          </>
                         );
-                      })}
-                      {stats.distributions.bySite.length > 5 && (
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-gray-600 w-32 truncate text-right">
-                            Otras sedes
-                          </span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-4">
-                            <div
-                              className="h-4 rounded-full bg-blue-200 transition-all duration-500"
-                              style={{
-                                width: `${
-                                  (stats.distributions.bySite
-                                    .slice(5)
-                                    .reduce((s, i) => s + i.count, 0) /
-                                    (stats.distributions.bySite[0]?.count || 1)) *
-                                  100
-                                }%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-semibold text-gray-700 w-10 text-right">
-                            {stats.distributions.bySite.slice(5).reduce((s, i) => s + i.count, 0)}
-                          </span>
-                        </div>
-                      )}
+                      })()}
                     </div>
                   </DashCard>
 
@@ -539,6 +647,69 @@ export default function Dashboard() {
                       </div>
                     )}
                   </DashCard>
+                </div>
+
+                {/* ==================== ROW 5: SITE RISK RANKING + DATA COMPLETENESS ==================== */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {/* Ranking de hoteles por riesgo TI */}
+                  {stats.siteRiskRanking && stats.siteRiskRanking.length > 0 && (
+                    <DashCard>
+                      <div className="flex items-center gap-2 mb-1">
+                        <Shield className="h-4 w-4 text-gray-600" />
+                        <h3 className="text-sm font-bold text-gray-900">Ranking por riesgo TI</h3>
+                      </div>
+                      <p className="text-xs text-gray-500 mb-4">
+                        Combina obsolescencia + sin garantía + sin usuario asignado
+                      </p>
+                      <div className="space-y-2.5">
+                        {stats.siteRiskRanking.slice(0, 8).map((site) => {
+                          const colors = {
+                            green: { bg: "bg-green-100", text: "text-green-700", bar: "#22c55e", label: "Bajo" },
+                            yellow: { bg: "bg-amber-100", text: "text-amber-700", bar: "#f59e0b", label: "Medio" },
+                            red: { bg: "bg-red-100", text: "text-red-700", bar: "#ef4444", label: "Alto" },
+                          }[site.level];
+                          return (
+                            <div key={site.name} className="flex items-center gap-2">
+                              <span className="text-xs text-gray-600 w-28 truncate text-right" title={site.name}>
+                                {site.name}
+                              </span>
+                              <div className="flex-1 bg-gray-100 rounded-full h-4">
+                                <div
+                                  className="h-4 rounded-full transition-all duration-500"
+                                  style={{ width: `${site.riskScore}%`, backgroundColor: colors.bar }}
+                                />
+                              </div>
+                              <Badge className={`text-[10px] ${colors.bg} ${colors.text} border-0 w-14 justify-center`}>
+                                {colors.label}
+                              </Badge>
+                              <span className="text-xs text-gray-500 w-6 text-right">{site.total}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </DashCard>
+                  )}
+
+                  {/* Garantías por vencer */}
+                  <div className="flex flex-col gap-4">
+                    {/* Timeline de garantías */}
+                    {stats.warrantyTimeline && (
+                      <DashCard>
+                        <div className="flex items-center gap-2 mb-1">
+                          <AlertTriangle className="h-4 w-4 text-gray-600" />
+                          <h3 className="text-sm font-bold text-gray-900">Garantías por vencer</h3>
+                        </div>
+                        <div className="flex items-end gap-4 mt-3">
+                          {stats.warrantyTimeline.map((item) => (
+                            <div key={item.period} className="flex-1 text-center">
+                              <p className="text-2xl font-bold text-gray-900">{item.count}</p>
+                              <p className="text-xs text-gray-500 mt-1">{item.period}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </DashCard>
+                    )}
+                  </div>
                 </div>
               </>
             ) : (

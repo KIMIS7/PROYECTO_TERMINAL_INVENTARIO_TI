@@ -641,7 +641,12 @@ const api = {
   },
   // Estadísticas del dashboard
   statistics: {
-    getDashboard: async () => {
+    getDashboard: async (filters?: { siteID?: number; group?: string; stateID?: number }) => {
+      const params = new URLSearchParams();
+      if (filters?.siteID) params.append('siteID', filters.siteID.toString());
+      if (filters?.group) params.append('group', filters.group);
+      if (filters?.stateID) params.append('stateID', filters.stateID.toString());
+      const qs = params.toString();
       const response = await apiClient.get<{
         summary: {
           totalAssets: number;
@@ -683,7 +688,30 @@ const api = {
           hasActiveWarranty: boolean;
           isObsolete: boolean;
         }[];
-      }>("/statistics/dashboard");
+        filterOptions: {
+          sites: { siteID: number; name: string }[];
+          groups: string[];
+          states: { stateID: number; name: string }[];
+        };
+        dataCompleteness: {
+          noSiteCount: number;
+          noUserCount: number;
+          noAcqDateCount: number;
+          noWarrantyCount: number;
+          completenessPercent: number;
+        };
+        siteRiskRanking: {
+          siteID: number;
+          name: string;
+          total: number;
+          obsolete: number;
+          noWarranty: number;
+          noUser: number;
+          riskScore: number;
+          level: 'green' | 'yellow' | 'red';
+        }[];
+        warrantyTimeline: { period: string; count: number }[];
+      }>(`/statistics/dashboard${qs ? `?${qs}` : ''}`);
       return response.data;
     },
   },

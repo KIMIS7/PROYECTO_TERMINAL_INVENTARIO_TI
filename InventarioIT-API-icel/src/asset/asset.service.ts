@@ -191,6 +191,7 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
+          Depart: true,
           User: {
             include: {
               Depart: true,
@@ -247,7 +248,12 @@ export class AssetService {
               departID: asset.User.Depart.DepartID,
               Name: asset.User.Depart.Name,
             }
-          : null,
+          : asset.Depart
+            ? {
+                departID: asset.Depart.DepartID,
+                Name: asset.Depart.Name,
+              }
+            : null,
         assetDetail: asset.AssetDetail
           ? {
               assetDetailID: asset.AssetDetail.AssetDetailID,
@@ -289,6 +295,7 @@ export class AssetService {
           Company: true,
           Site: true,
           AssetDetail: true,
+          Depart: true,
           User: {
             include: {
               Depart: true,
@@ -366,7 +373,12 @@ export class AssetService {
               departID: asset.User.Depart.DepartID,
               Name: asset.User.Depart.Name,
             }
-          : null,
+          : asset.Depart
+            ? {
+                departID: asset.Depart.DepartID,
+                Name: asset.Depart.Name,
+              }
+            : null,
         assetDetail: asset.AssetDetail
           ? {
               assetDetailID: asset.AssetDetail.AssetDetailID,

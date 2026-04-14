@@ -54,11 +54,12 @@ interface AssetFullData {
   assetStateInfo?: { assetStateID: number; name: string } | null;
   company?: { companyID: number; description: string } | null;
   site?: { siteID: number; name: string } | null;
+  depart?: { departID: number; Name: string } | null;
   user?: {
     userID: number;
     name: string;
     email: string;
-    department: string;
+    departmentID?: number;
   } | null;
   assetDetail?: Record<string, unknown> | null;
   history?: { assetHistoryID: number; operation: string; description: string; createdTime: string }[];
@@ -279,6 +280,7 @@ export const AssetDetailModal = ({
               <div className="bg-gray-50 rounded-lg px-4 py-1">
                 <DetailRow label="Empresa" value={data.company?.description} />
                 <DetailRow label="Site" value={data.site?.name} />
+                <DetailRow label="Departamento" value={data.depart?.Name} />
               </div>
 
               {/* Usuario Asignado */}
@@ -291,10 +293,6 @@ export const AssetDetailModal = ({
                   <div className="bg-gray-50 rounded-lg px-4 py-1">
                     <DetailRow label="Nombre" value={data.user.name} />
                     <DetailRow label="Email" value={data.user.email} />
-                    <DetailRow
-                      label="Departamento"
-                      value={data.user.department}
-                    />
                   </div>
                 </>
               )}

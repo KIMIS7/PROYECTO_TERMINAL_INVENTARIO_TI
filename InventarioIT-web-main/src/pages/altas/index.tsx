@@ -1,5 +1,5 @@
 import { MainLayout } from "@/components/MainLayout";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { ProductType, Vendor, AssetState, Company, Site, Asset } from "@/types";
 import api from "@/lib/api";
 import { CreateAssetModal } from "@/components/CreateAssetModal";
@@ -42,6 +42,21 @@ import { toast } from "sonner";
 
 const ASSET_GROUPS = ["Equipo", "Accesorio", "Componente", "Otro"] as const;
 
+const INITIAL_COL_WIDTHS: Record<string, number> = {
+  checkbox: 36,
+  actions: 36,
+  name: 180,
+  company: 140,
+  site: 140,
+  department: 160,
+  user: 150,
+  type: 130,
+  brand: 130,
+  model: 140,
+  serial: 150,
+  state: 110,
+};
+
 export default function Altas() {
   // Estados para los catálogos
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
@@ -73,7 +88,39 @@ export default function Altas() {
 
   // Estados para paginación y vista
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
+
+  // Column resize state
+  const [colWidths, setColWidths] = useState<Record<string, number>>(INITIAL_COL_WIDTHS);
+  const resizingCol = useRef<string | null>(null);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
+
+  const onResizeStart = useCallback(
+    (col: string) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      resizingCol.current = col;
+      resizeStartX.current = e.clientX;
+      resizeStartW.current = colWidths[col];
+
+      const onMouseMove = (ev: MouseEvent) => {
+        if (!resizingCol.current) return;
+        const diff = ev.clientX - resizeStartX.current;
+        const newW = Math.min(400, Math.max(50, resizeStartW.current + diff));
+        setColWidths((prev) => ({ ...prev, [resizingCol.current!]: newW }));
+      };
+
+      const onMouseUp = () => {
+        resizingCol.current = null;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [colWidths]
+  );
 
   // Cargar catálogos al montar el componente
   useEffect(() => {
@@ -666,6 +713,20 @@ export default function Altas() {
 
             {/* Paginación */}
             <div className="flex items-center gap-1.5 text-sm text-gray-600 shrink-0">
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="h-7 rounded border border-gray-300 bg-white px-1 text-sm text-gray-600"
+              >
+                {[20, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
               <span className="whitespace-nowrap">
                 {startItem}-{endItem} de {filteredAssets.length}
               </span>
@@ -697,29 +758,49 @@ export default function Altas() {
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
               </div>
             ) : (
-              <Table className = "table-fixed w-full">
-                <TableHeader className="bg-gray-50 sticky top-0">
+              <Table style={{ tableLayout: "fixed", width: Object.values(colWidths).reduce((a, b) => a + b, 0) }}>
+                <colgroup>
+                  {Object.entries(colWidths).map(([key, w]) => (
+                    <col key={key} style={{ width: w }} />
+                  ))}
+                </colgroup>
+                <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow>
-                    <TableHead className="w-5"></TableHead>
-                    <TableHead className="w-5"></TableHead>
-                    <TableHead className="w-18 font-semibold text-gray-700">NOMBRE</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">COMPAÑIA</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">SITE</TableHead>
-                    <TableHead className="w-25 font-semibold text-gray-700">Departamento</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">USUARIO</TableHead>
-                    <TableHead className="w-18 font-semibold text-gray-700">TIPO</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">MARCA</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">MODELO</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">SERIE</TableHead>
-                    <TableHead className="w-20 font-semibold text-gray-700">ESTADO</TableHead>
+                    {[
+                      { key: "checkbox", label: "" },
+                      { key: "actions", label: "" },
+                      { key: "name", label: "NOMBRE" },
+                      { key: "company", label: "COMPAÑIA" },
+                      { key: "site", label: "SITE" },
+                      { key: "department", label: "DEPARTAMENTO" },
+                      { key: "user", label: "USUARIO" },
+                      { key: "type", label: "TIPO" },
+                      { key: "brand", label: "MARCA" },
+                      { key: "model", label: "MODELO" },
+                      { key: "serial", label: "SERIE" },
+                      { key: "state", label: "ESTADO" },
+                    ].map((col) => (
+                      <TableHead
+                        key={col.key}
+                        className="font-semibold text-gray-700 relative select-none overflow-hidden text-ellipsis whitespace-nowrap"
+                        style={{ width: colWidths[col.key] }}
+                      >
+                        {col.label}
+                        {col.label && (
+                          <span
+                            onMouseDown={onResizeStart(col.key)}
+                            className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-400 active:bg-blue-500"
+                          />
+                        )}
+                      </TableHead>
+                    ))}
                   </TableRow>
-                  
                 </TableHeader>
 
                 <TableBody>
                   {paginatedAssets.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={9} className="h-24 text-center text-gray-500">
+                      <TableCell colSpan={12} className="h-24 text-center text-gray-500">
                         No se encontraron activos
                       </TableCell>
                     </TableRow>
@@ -735,10 +816,10 @@ export default function Altas() {
                           isBaja && "opacity-60 bg-red-50/50"
                         )}
                       >
-                        <TableCell>
-    
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
+
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                           <div className="flex items-center gap-1">
                             <button
                               className={cn(
@@ -756,10 +837,10 @@ export default function Altas() {
                             </button>
                           </div>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                           <button
                             className="font-medium text-blue-600 hover:underline truncate block text-left max-w-full"
-                            title="Ver ficha tecnica"
+                            title={asset.name}
                             onClick={(e) => {
                               e.stopPropagation();
                               handleOpenDetail(asset.assetID);
@@ -768,31 +849,31 @@ export default function Altas() {
                             {asset.name}
                           </button>
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.company?.description || ""}>
                           {asset.company?.description || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.site?.name || ""}>
                           {asset.site?.name || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.depart?.Name || ""}>
                           {asset.depart?.Name || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.user?.name || ""}>
                           {asset.user?.name || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.productType?.name || ""}>
                           {asset.productType?.name || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.assetDetail?.productManuf || ""}>
                           {asset.assetDetail?.productManuf || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.assetDetail?.model || ""}>
                           {asset.assetDetail?.model || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.assetDetail?.serialNum || ""}>
                           {asset.assetDetail?.serialNum || "-"}
                         </TableCell>
-                        <TableCell>
+                        <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                           <span className={cn(isBaja && "text-red-600 font-semibold")}>
                             {asset.assetStateInfo?.name || "-"}
                           </span>
