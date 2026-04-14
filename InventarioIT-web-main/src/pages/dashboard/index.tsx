@@ -383,53 +383,52 @@ export default function Dashboard() {
                       Permite detectar sobreasignación o desabasto por hotel
                     </p>
                     <div className="space-y-3">
-                      {stats.distributions.bySite.slice(0, 5).map((s, i) => {
-                        const maxCount = stats.distributions.bySite[0]?.count || 1;
+                      {(() => {
+                        const otherCount = stats.distributions.bySite.slice(5).reduce((s, i) => s + i.count, 0);
+                        const maxCount = Math.max(stats.distributions.bySite[0]?.count || 1, otherCount);
                         const colors = ["#2563eb", "#3b82f6", "#60a5fa", "#93c5fd", "#bfdbfe"];
                         return (
-                          <div key={s.site} className="flex items-center gap-3">
-                            <span className="text-xs text-gray-600 w-32 truncate text-right" title={s.site}>
-                              {s.site}
-                            </span>
-                            <div className="flex-1 bg-gray-100 rounded-full h-4">
-                              <div
-                                className="h-4 rounded-full transition-all duration-500"
-                                style={{
-                                  width: `${(s.count / maxCount) * 100}%`,
-                                  backgroundColor: colors[i % colors.length],
-                                }}
-                              />
-                            </div>
-                            <span className="text-sm font-semibold text-gray-700 w-10 text-right">
-                              {s.count}
-                            </span>
-                          </div>
+                          <>
+                            {stats.distributions.bySite.slice(0, 5).map((s, i) => (
+                              <div key={s.site} className="flex items-center gap-3">
+                                <span className="text-xs text-gray-600 w-32 truncate text-right" title={s.site}>
+                                  {s.site}
+                                </span>
+                                <div className="flex-1 bg-gray-100 rounded-full h-4">
+                                  <div
+                                    className="h-4 rounded-full transition-all duration-500"
+                                    style={{
+                                      width: `${(s.count / maxCount) * 100}%`,
+                                      backgroundColor: colors[i % colors.length],
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700 w-10 text-right">
+                                  {s.count}
+                                </span>
+                              </div>
+                            ))}
+                            {stats.distributions.bySite.length > 5 && (
+                              <div className="flex items-center gap-3">
+                                <span className="text-xs text-gray-600 w-32 truncate text-right">
+                                  Otras sedes
+                                </span>
+                                <div className="flex-1 bg-gray-100 rounded-full h-4">
+                                  <div
+                                    className="h-4 rounded-full bg-blue-200 transition-all duration-500"
+                                    style={{
+                                      width: `${(otherCount / maxCount) * 100}%`,
+                                    }}
+                                  />
+                                </div>
+                                <span className="text-sm font-semibold text-gray-700 w-10 text-right">
+                                  {otherCount}
+                                </span>
+                              </div>
+                            )}
+                          </>
                         );
-                      })}
-                      {stats.distributions.bySite.length > 5 && (
-                        <div className="flex items-center gap-3">
-                          <span className="text-xs text-gray-600 w-32 truncate text-right">
-                            Otras sedes
-                          </span>
-                          <div className="flex-1 bg-gray-100 rounded-full h-4">
-                            <div
-                              className="h-4 rounded-full bg-blue-200 transition-all duration-500"
-                              style={{
-                                width: `${
-                                  (stats.distributions.bySite
-                                    .slice(5)
-                                    .reduce((s, i) => s + i.count, 0) /
-                                    (stats.distributions.bySite[0]?.count || 1)) *
-                                  100
-                                }%`,
-                              }}
-                            />
-                          </div>
-                          <span className="text-sm font-semibold text-gray-700 w-10 text-right">
-                            {stats.distributions.bySite.slice(5).reduce((s, i) => s + i.count, 0)}
-                          </span>
-                        </div>
-                      )}
+                      })()}
                     </div>
                   </DashCard>
 
