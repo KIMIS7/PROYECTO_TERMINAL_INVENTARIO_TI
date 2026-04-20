@@ -47,8 +47,6 @@ function triggerDownload(blob: Blob, filename: string) {
 
 type SubTab = "administrativo" | "tecnico" | "ciclo-vida";
 
-const PAGE_SIZE = 20;
-
 export default function Reportes() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
@@ -69,15 +67,16 @@ export default function Reportes() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // Reset page when filters or tab change
+  // Reset page when filters, tab or page size change
   useEffect(() => {
     setCurrentPage(1);
-  }, [chips, searchQuery, activeTab]);
+  }, [chips, searchQuery, activeTab, pageSize]);
 
   const loadData = async () => {
     try {
@@ -222,11 +221,11 @@ export default function Reportes() {
   }, [filteredAssets]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize));
   const paginatedAssets = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredAssets.slice(start, start + PAGE_SIZE);
-  }, [filteredAssets, currentPage]);
+    const start = (currentPage - 1) * pageSize;
+    return filteredAssets.slice(start, start + pageSize);
+  }, [filteredAssets, currentPage, pageSize]);
 
   // Import handler
   const handleImportCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -680,58 +679,75 @@ export default function Reportes() {
                 )}
 
                 {/* ===== PAGINATION ===== */}
-                {filteredAssets.length > PAGE_SIZE && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50/50">
-                    <p className="text-sm text-gray-500">
-                      Mostrando {(currentPage - 1) * PAGE_SIZE + 1} -{" "}
-                      {Math.min(currentPage * PAGE_SIZE, filteredAssets.length)} de{" "}
-                      {filteredAssets.length}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let page: number;
-                        if (totalPages <= 5) {
-                          page = i + 1;
-                        } else if (currentPage <= 3) {
-                          page = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          page = totalPages - 4 + i;
-                        } else {
-                          page = currentPage - 2 + i;
-                        }
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="h-8 w-8 p-0 text-xs"
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50/50">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="h-7 rounded border border-gray-300 bg-white px-1 text-sm text-gray-600"
+                    >
+                      {[20, 50, 100].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span>
+                      {filteredAssets.length === 0
+                        ? "0 registros"
+                        : `Mostrando ${(currentPage - 1) * pageSize + 1} - ${Math.min(
+                            currentPage * pageSize,
+                            filteredAssets.length
+                          )} de ${filteredAssets.length}`}
+                    </span>
                   </div>
-                )}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let page: number;
+                      if (totalPages <= 5) {
+                        page = i + 1;
+                      } else if (currentPage <= 3) {
+                        page = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        page = totalPages - 4 + i;
+                      } else {
+                        page = currentPage - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="h-8 w-8 p-0 text-xs"
+                        >
+                          {page}
+                        </Button>
+                      );
+                    })}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

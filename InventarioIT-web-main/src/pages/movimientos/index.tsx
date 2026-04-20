@@ -53,7 +53,7 @@ export default function Movimientos() {
 
   // Paginacion
   const [currentPage, setCurrentPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize, setPageSize] = useState(20);
 
   // Panel lateral de historial
   const [selectedAssetID, setSelectedAssetID] = useState<number | null>(null);
@@ -459,6 +459,20 @@ export default function Movimientos() {
 
             {/* Paginacion */}
             <div className="flex items-center gap-1.5 text-sm text-gray-600 shrink-0">
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setCurrentPage(1);
+                }}
+                className="h-7 rounded border border-gray-300 bg-white px-1 text-sm text-gray-600"
+              >
+                {[20, 50, 100].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
               <span className="whitespace-nowrap">
                 {startItem}-{endItem} de {filteredAssets.length}
               </span>
