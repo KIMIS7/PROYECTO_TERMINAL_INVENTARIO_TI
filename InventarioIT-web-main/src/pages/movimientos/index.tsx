@@ -384,37 +384,6 @@ export default function Movimientos() {
     >
       {() => (
         <div className="flex flex-col h-full bg-white">
-          {/* Header - Botones de grupo */}
-          <div className="px-4 py-3 border-b">
-            <div className="flex items-center gap-2">
-              <Button
-                variant={selectedGroup === null ? "default" : "outline"}
-                size="sm"
-                onClick={() => setSelectedGroup(null)}
-                className="h-9 text-sm font-medium"
-              >
-                Todos
-              </Button>
-              {ASSET_GROUPS.map((group) => (
-                <Button
-                  key={group}
-                  variant={selectedGroup === group ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => {
-                    setSelectedGroup(
-                      selectedGroup === group ? null : group
-                    );
-                    setFilterChips((prev) =>
-                      prev.filter((c) => c.facet !== "tipo")
-                    );
-                  }}
-                  className="h-9 text-sm font-medium"
-                >
-                  {group}
-                </Button>
-              ))}
-            </div>
-          </div>
 
           {/* Toolbar */}
           <div className="flex items-center gap-3 px-4 py-2 border-b bg-gray-50">
