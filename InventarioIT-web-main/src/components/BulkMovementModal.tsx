@@ -145,36 +145,77 @@ export const BulkMovementModal = ({
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Defaults pendientes para RESGUARDO: site y departamento a aplicar
+  // una vez cargados filteredSites y departments en cascada.
+  const [pendingResguardo, setPendingResguardo] = useState<{
+    targetSiteName: string;
+    targetDepartID: number;
+  } | null>(null);
+
   // Selected assets info
   const selectedAssets = assets.filter((a) => selectedAssetIDs.includes(a.assetID));
 
   const isReasignacion = movementType === "REASIGNACION";
   const isResguardo = movementType === "RESGUARDO";
 
-  // Auto-resolve user's site for RESGUARDO
+  // Al activar RESGUARDO: Empresa = PENINSULA17, Site = IT, Departamento = del usuario logueado
   useEffect(() => {
-    if (isResguardo && session?.user?.preferred_username) {
-      const resolveUserSite = async () => {
-        try {
-          const results = await api.user.search({ q: session.user.preferred_username });
-          if (results.length > 0) {
-            const currentUser = results[0];
-            if (currentUser.siteID) {
-              setSiteID(currentUser.siteID);
-              // Find the company for this site
-              const matchingSite = sites.find(s => s.siteID === currentUser.siteID);
-              if (matchingSite) {
-                setCompanyID(matchingSite.companyID);
-              }
-            }
-          }
-        } catch (error) {
-          console.error("Error resolving user site:", error);
-        }
-      };
-      resolveUserSite();
+    if (!isResguardo) {
+      setPendingResguardo(null);
+      return;
     }
-  }, [isResguardo, session?.user?.preferred_username, sites]);
+    if (!session?.user?.preferred_username) return;
+    if (companies.length === 0) return;
+
+    const peninsula = companies.find(
+      (c) => c.description?.trim().toUpperCase() === "PENINSULA17"
+    );
+    if (!peninsula) return;
+
+    let cancelled = false;
+    const resolveResguardoDefaults = async () => {
+      try {
+        const results = await api.user.search({ q: session.user.preferred_username });
+        if (cancelled) return;
+        if (results.length === 0) return;
+        const currentUser = results[0];
+        setPendingResguardo({
+          targetSiteName: "IT",
+          targetDepartID: currentUser.departmentID,
+        });
+        setCompanyID(peninsula.companyID);
+      } catch (error) {
+        if (!cancelled) console.error("Error resolving resguardo defaults:", error);
+      }
+    };
+    resolveResguardoDefaults();
+    return () => {
+      cancelled = true;
+    };
+  }, [isResguardo, session?.user?.preferred_username, companies]);
+
+  // Una vez filtrados los sites por empresa, seleccionar el site "IT" pendiente.
+  useEffect(() => {
+    if (!pendingResguardo) return;
+    if (filteredSites.length === 0) return;
+    const target = filteredSites.find(
+      (s) => s.name?.trim().toUpperCase() === pendingResguardo.targetSiteName.toUpperCase()
+    );
+    if (target && target.siteID !== siteID) {
+      setSiteID(target.siteID);
+    }
+  }, [filteredSites, pendingResguardo, siteID]);
+
+  // Al cargar los departments del site seleccionado, aplicar el departamento del usuario.
+  useEffect(() => {
+    if (!pendingResguardo) return;
+    if (departments.length === 0) return;
+    const match = departments.find((d) => d.departID === pendingResguardo.targetDepartID);
+    if (match) {
+      setDepartID(match.departID);
+      setPendingResguardo(null);
+    }
+  }, [departments, pendingResguardo]);
 
   // Load catalogs
   useEffect(() => {
@@ -332,6 +373,7 @@ export const BulkMovementModal = ({
     setUserSearchResults([]);
     setUserSearchOpen(false);
     setErrors({});
+    setPendingResguardo(null);
   };
 
   const handleClose = () => {

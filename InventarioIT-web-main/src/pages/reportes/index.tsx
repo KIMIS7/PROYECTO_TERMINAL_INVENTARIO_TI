@@ -1,6 +1,6 @@
 import { MainLayout } from "@/components/MainLayout";
 import { useEffect, useState, useMemo } from "react";
-import { Asset, Company, Site, AssetState } from "@/types";
+import { Asset, Company, Site, AssetState, Vendor, ProductType } from "@/types";
 import api from "@/lib/api";
 import {
   OmniboxFilter,
@@ -47,14 +47,14 @@ function triggerDownload(blob: Blob, filename: string) {
 
 type SubTab = "administrativo" | "tecnico" | "ciclo-vida";
 
-const PAGE_SIZE = 20;
-
 export default function Reportes() {
   const [assets, setAssets] = useState<Asset[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [sites, setSites] = useState<Site[]>([]);
   const [departments, setDepartments] = useState<{ departID: number; name: string }[]>([]);
   const [assetStates, setAssetStates] = useState<AssetState[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -69,31 +69,44 @@ export default function Reportes() {
 
   // Pagination
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
 
   useEffect(() => {
     loadData();
   }, []);
 
-  // Reset page when filters or tab change
+  // Reset page when filters, tab or page size change
   useEffect(() => {
     setCurrentPage(1);
-  }, [chips, searchQuery, activeTab]);
+  }, [chips, searchQuery, activeTab, pageSize]);
 
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [assetsRes, companiesRes, sitesRes, statesRes, deptsRes] = await Promise.all([
+      const [
+        assetsRes,
+        companiesRes,
+        sitesRes,
+        statesRes,
+        deptsRes,
+        vendorsRes,
+        productTypesRes,
+      ] = await Promise.all([
         api.asset.getAll().catch(() => []),
         api.company.getAll().catch(() => []),
         api.site.getAll().catch(() => []),
         api.assetState.getAll().catch(() => []),
         api.user.getDepartments().catch(() => []),
+        api.vendor.getAll().catch(() => []),
+        api.productType.getAll().catch(() => []),
       ]);
       setAssets(assetsRes as Asset[]);
       setCompanies(companiesRes);
       setSites(sitesRes);
       setAssetStates(statesRes);
       setDepartments(deptsRes);
+      setVendors(vendorsRes);
+      setProductTypes(productTypesRes);
     } catch (error) {
       console.error("Error loading report data:", error);
     } finally {
@@ -101,7 +114,61 @@ export default function Reportes() {
     }
   };
 
-  // Build facets for Omnibox (Empresa, Sitio, Departamento)
+  // Usuarios unicos (desde los activos)
+  const uniqueUsers = useMemo(() => {
+    const userMap = new Map<number, { userID: number; name: string }>();
+    assets.forEach((a) => {
+      if (a.user?.userID && a.user?.name) {
+        userMap.set(a.user.userID, { userID: a.user.userID, name: a.user.name });
+      }
+    });
+    return Array.from(userMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [assets]);
+
+  // Valores tecnicos unicos (extraidos de los activos)
+  const uniqueRAM = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.ram) values.add(a.assetDetail.ram); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueMemoryType = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.physicalMemory) values.add(a.assetDetail.physicalMemory); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddCapacity = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddCapacity) values.add(a.assetDetail.hddCapacity); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddModel = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddModel) values.add(a.assetDetail.hddModel); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueOS = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.operatingSystem) values.add(a.assetDetail.operatingSystem); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueProcessors = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.processor) values.add(a.assetDetail.processor); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueManufacturers = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.productManuf) values.add(a.assetDetail.productManuf); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  // Build facets for Omnibox (mismos que Inventario)
   const facets: Facet[] = useMemo(() => {
     const result: Facet[] = [];
 
@@ -133,11 +200,9 @@ export default function Reportes() {
 
     // Departamento
     const uniqueDepts = new Map<string, string>();
-    // From departments catalog
     departments.forEach((d) => {
       uniqueDepts.set(d.departID.toString(), d.name);
     });
-    // Also from assets' department info
     assets.forEach((a) => {
       if (a.depart?.departID && a.depart?.Name) {
         uniqueDepts.set(a.depart.departID.toString(), a.depart.Name);
@@ -154,8 +219,136 @@ export default function Reportes() {
       });
     }
 
+    // Usuario
+    if (uniqueUsers.length > 0) {
+      result.push({
+        key: "usuario",
+        label: "Usuario",
+        color: "emerald",
+        options: uniqueUsers.map((u) => ({
+          value: String(u.userID),
+          label: u.name,
+        })),
+      });
+    }
+
+    // Estado
+    if (assetStates.length > 0) {
+      result.push({
+        key: "estado",
+        label: "Estado",
+        color: "amber",
+        options: assetStates.map((s) => ({
+          value: String(s.assetStateID),
+          label: s.name,
+        })),
+      });
+    }
+
+    // Tipo
+    if (productTypes.length > 0) {
+      result.push({
+        key: "tipo",
+        label: "Tipo",
+        color: "purple",
+        options: productTypes.map((pt) => ({
+          value: String(pt.productTypeID),
+          label: pt.name,
+        })),
+      });
+    }
+
+    // Proveedor
+    if (vendors.length > 0) {
+      result.push({
+        key: "proveedor",
+        label: "Proveedor",
+        color: "violet",
+        options: vendors.map((v) => ({
+          value: String(v.vendorID),
+          label: v.name,
+        })),
+      });
+    }
+
+    // Fabricante
+    if (uniqueManufacturers.length > 0) {
+      result.push({
+        key: "fabricante",
+        label: "Fabricante",
+        color: "stone",
+        options: uniqueManufacturers.map((v) => ({ value: v, label: v })),
+      });
+    }
+
+    // Filtros tecnicos
+    if (uniqueRAM.length > 0) {
+      result.push({
+        key: "ram",
+        label: "RAM",
+        color: "cyan",
+        options: uniqueRAM.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueMemoryType.length > 0) {
+      result.push({
+        key: "memoria_tipo",
+        label: "Tipo Memoria",
+        color: "teal",
+        options: uniqueMemoryType.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueHddCapacity.length > 0) {
+      result.push({
+        key: "disco_cap",
+        label: "Capacidad Disco",
+        color: "orange",
+        options: uniqueHddCapacity.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueHddModel.length > 0) {
+      result.push({
+        key: "disco_tipo",
+        label: "Tipo Disco",
+        color: "rose",
+        options: uniqueHddModel.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueOS.length > 0) {
+      result.push({
+        key: "so",
+        label: "Sistema Operativo",
+        color: "indigo",
+        options: uniqueOS.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueProcessors.length > 0) {
+      result.push({
+        key: "procesador",
+        label: "Procesador",
+        color: "fuchsia",
+        options: uniqueProcessors.map((v) => ({ value: v, label: v })),
+      });
+    }
+
     return result;
-  }, [companies, sites, departments, assets]);
+  }, [
+    companies,
+    sites,
+    departments,
+    assets,
+    uniqueUsers,
+    assetStates,
+    productTypes,
+    vendors,
+    uniqueManufacturers,
+    uniqueRAM,
+    uniqueMemoryType,
+    uniqueHddCapacity,
+    uniqueHddModel,
+    uniqueOS,
+    uniqueProcessors,
+  ]);
 
   // Filter assets based on chips and search query
   const filteredAssets = useMemo(() => {
@@ -186,6 +379,62 @@ export default function Reportes() {
     if (chipsByFacet.has("departamento")) {
       const values = chipsByFacet.get("departamento")!;
       result = result.filter((a) => values.has(a.depart?.departID?.toString() || ""));
+    }
+
+    // Filter by Usuario
+    if (chipsByFacet.has("usuario")) {
+      const values = chipsByFacet.get("usuario")!;
+      result = result.filter((a) => values.has(String(a.userID)));
+    }
+
+    // Filter by Estado
+    if (chipsByFacet.has("estado")) {
+      const values = chipsByFacet.get("estado")!;
+      result = result.filter((a) => values.has(String(a.assetState)));
+    }
+
+    // Filter by Tipo
+    if (chipsByFacet.has("tipo")) {
+      const values = chipsByFacet.get("tipo")!;
+      result = result.filter((a) => values.has(String(a.productTypeID)));
+    }
+
+    // Filter by Proveedor
+    if (chipsByFacet.has("proveedor")) {
+      const values = chipsByFacet.get("proveedor")!;
+      result = result.filter((a) => values.has(String(a.vendorID)));
+    }
+
+    // Filter by Fabricante
+    if (chipsByFacet.has("fabricante")) {
+      const values = chipsByFacet.get("fabricante")!;
+      result = result.filter((a) => a.assetDetail?.productManuf && values.has(a.assetDetail.productManuf));
+    }
+
+    // Filtros tecnicos
+    if (chipsByFacet.has("ram")) {
+      const values = chipsByFacet.get("ram")!;
+      result = result.filter((a) => a.assetDetail?.ram && values.has(a.assetDetail.ram));
+    }
+    if (chipsByFacet.has("memoria_tipo")) {
+      const values = chipsByFacet.get("memoria_tipo")!;
+      result = result.filter((a) => a.assetDetail?.physicalMemory && values.has(a.assetDetail.physicalMemory));
+    }
+    if (chipsByFacet.has("disco_cap")) {
+      const values = chipsByFacet.get("disco_cap")!;
+      result = result.filter((a) => a.assetDetail?.hddCapacity && values.has(a.assetDetail.hddCapacity));
+    }
+    if (chipsByFacet.has("disco_tipo")) {
+      const values = chipsByFacet.get("disco_tipo")!;
+      result = result.filter((a) => a.assetDetail?.hddModel && values.has(a.assetDetail.hddModel));
+    }
+    if (chipsByFacet.has("so")) {
+      const values = chipsByFacet.get("so")!;
+      result = result.filter((a) => a.assetDetail?.operatingSystem && values.has(a.assetDetail.operatingSystem));
+    }
+    if (chipsByFacet.has("procesador")) {
+      const values = chipsByFacet.get("procesador")!;
+      result = result.filter((a) => a.assetDetail?.processor && values.has(a.assetDetail.processor));
     }
 
     // Text search
@@ -222,11 +471,11 @@ export default function Reportes() {
   }, [filteredAssets]);
 
   // Pagination
-  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(filteredAssets.length / pageSize));
   const paginatedAssets = useMemo(() => {
-    const start = (currentPage - 1) * PAGE_SIZE;
-    return filteredAssets.slice(start, start + PAGE_SIZE);
-  }, [filteredAssets, currentPage]);
+    const start = (currentPage - 1) * pageSize;
+    return filteredAssets.slice(start, start + pageSize);
+  }, [filteredAssets, currentPage, pageSize]);
 
   // Import handler
   const handleImportCsv = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -680,58 +929,75 @@ export default function Reportes() {
                 )}
 
                 {/* ===== PAGINATION ===== */}
-                {filteredAssets.length > PAGE_SIZE && (
-                  <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50/50">
-                    <p className="text-sm text-gray-500">
-                      Mostrando {(currentPage - 1) * PAGE_SIZE + 1} -{" "}
-                      {Math.min(currentPage * PAGE_SIZE, filteredAssets.length)} de{" "}
-                      {filteredAssets.length}
-                    </p>
-                    <div className="flex items-center gap-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={currentPage === 1}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronLeft className="h-4 w-4" />
-                      </Button>
-                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                        let page: number;
-                        if (totalPages <= 5) {
-                          page = i + 1;
-                        } else if (currentPage <= 3) {
-                          page = i + 1;
-                        } else if (currentPage >= totalPages - 2) {
-                          page = totalPages - 4 + i;
-                        } else {
-                          page = currentPage - 2 + i;
-                        }
-                        return (
-                          <Button
-                            key={page}
-                            variant={currentPage === page ? "default" : "outline"}
-                            size="sm"
-                            onClick={() => setCurrentPage(page)}
-                            className="h-8 w-8 p-0 text-xs"
-                          >
-                            {page}
-                          </Button>
-                        );
-                      })}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                        disabled={currentPage === totalPages}
-                        className="h-8 w-8 p-0"
-                      >
-                        <ChevronRight className="h-4 w-4" />
-                      </Button>
-                    </div>
+                <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50/50">
+                  <div className="flex items-center gap-2 text-sm text-gray-500">
+                    <select
+                      value={pageSize}
+                      onChange={(e) => {
+                        setPageSize(Number(e.target.value));
+                        setCurrentPage(1);
+                      }}
+                      className="h-7 rounded border border-gray-300 bg-white px-1 text-sm text-gray-600"
+                    >
+                      {[20, 50, 100].map((size) => (
+                        <option key={size} value={size}>
+                          {size}
+                        </option>
+                      ))}
+                    </select>
+                    <span>
+                      {filteredAssets.length === 0
+                        ? "0 registros"
+                        : `Mostrando ${(currentPage - 1) * pageSize + 1} - ${Math.min(
+                            currentPage * pageSize,
+                            filteredAssets.length
+                          )} de ${filteredAssets.length}`}
+                    </span>
                   </div>
-                )}
+                  <div className="flex items-center gap-1">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                      disabled={currentPage === 1}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronLeft className="h-4 w-4" />
+                    </Button>
+                    {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                      let page: number;
+                      if (totalPages <= 5) {
+                        page = i + 1;
+                      } else if (currentPage <= 3) {
+                        page = i + 1;
+                      } else if (currentPage >= totalPages - 2) {
+                        page = totalPages - 4 + i;
+                      } else {
+                        page = currentPage - 2 + i;
+                      }
+                      return (
+                        <Button
+                          key={page}
+                          variant={currentPage === page ? "default" : "outline"}
+                          size="sm"
+                          onClick={() => setCurrentPage(page)}
+                          className="h-8 w-8 p-0 text-xs"
+                        >
+                          {page}
+                        </Button>
+                      );
+                    })}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                      disabled={currentPage === totalPages}
+                      className="h-8 w-8 p-0"
+                    >
+                      <ChevronRight className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
               </div>
             )}
           </div>

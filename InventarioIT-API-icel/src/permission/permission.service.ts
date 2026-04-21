@@ -1,4 +1,5 @@
 import {
+  ForbiddenException,
   Injectable,
   InternalServerErrorException,
   NotFoundException,
@@ -149,14 +150,25 @@ export class PermissionService {
 
   async remove(id: number) {
     try {
-      // Verificar si el permiso existe
+      // Verificar si el permiso existe e incluir el rol para validar admin
       const permissionExists =
         await this.prismaShopic.rol_dashboard_path.findUnique({
           where: { roldashboardpathID: id },
+          include: {
+            rol: { select: { name: true } },
+          },
         });
 
       if (!permissionExists) {
         throw new NotFoundException('Permiso no encontrado');
+      }
+
+      // Los permisos del rol Administrador estan bloqueados por seguridad
+      const roleName = permissionExists.rol?.name?.trim().toLowerCase();
+      if (roleName === 'administrador' || roleName === 'admin') {
+        throw new ForbiddenException(
+          'Los permisos del rol Administrador no pueden eliminarse',
+        );
       }
 
       // Eliminar el permiso
@@ -170,7 +182,10 @@ export class PermissionService {
         data: {},
       };
     } catch (error) {
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException ||
+        error instanceof ForbiddenException
+      ) {
         throw error;
       }
       throw new InternalServerErrorException({
