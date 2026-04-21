@@ -146,7 +146,8 @@ export class ReportService {
         return {
           name: asset.Name,
           productType: asset.ProductType?.Name || '',
-          vendor: asset.Vendor?.Name || detail?.ProductManuf || '',
+          vendor: asset.Vendor?.Name || '',
+          productManuf: detail?.ProductManuf || '',
           model: detail?.Model || '',
           serialNum: detail?.SerialNum || '',
         };
@@ -469,7 +470,14 @@ export class ReportService {
     razonSocial: string,
     deptoTienda: string,
     recibe: string,
-    items: { name: string; productType: string; vendor: string; model: string; serialNum: string }[],
+    items: {
+      name: string;
+      productType: string;
+      vendor: string;
+      productManuf: string;
+      model: string;
+      serialNum: string;
+    }[],
     notes: string,
     legalText: string,
     signatures: {
@@ -565,7 +573,7 @@ export class ReportService {
     const colHeaderStyle = { bold: true, alignment: 'center' as const, fontSize: 9, color: COL_HEADER_COLOR, fillColor: COL_HEADER_BG, margin: [4, 6, 4, 6] as number[] };
     body.push([
       { text: 'CANTIDAD', ...colHeaderStyle },
-      { text: 'DESCRIPCION', ...colHeaderStyle },
+      { text: 'NOMBRE', ...colHeaderStyle },
       { text: 'MARCA', ...colHeaderStyle },
       { text: 'MODELO', ...colHeaderStyle },
       { text: 'NUMERO DE SERIE', ...colHeaderStyle },
@@ -574,17 +582,18 @@ export class ReportService {
     // Data rows (alternating background)
     items.forEach((item, idx) => {
       const fillColor = idx % 2 === 1 ? '#F5F7FA' : undefined;
+      const marca = (item.productManuf || item.vendor || '').toUpperCase();
       body.push([
         { text: '1', alignment: 'center', fontSize: 9, margin: CELL_PAD, fillColor },
-        { text: (item.productType || item.name).toUpperCase(), fontSize: 9, margin: CELL_PAD, fillColor },
-        { text: item.vendor.toUpperCase(), fontSize: 9, margin: CELL_PAD, fillColor },
-        { text: item.model, fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: (item.name || '').toUpperCase(), fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: marca, fontSize: 9, margin: CELL_PAD, fillColor },
+        { text: item.model || '', fontSize: 9, margin: CELL_PAD, fillColor },
         { text: item.serialNum || 'N/A', fontSize: 9, margin: CELL_PAD, fillColor },
       ]);
     });
 
-    // Empty rows - just enough to keep the layout clean
-    const minRows = Math.max(items.length + 3, 8);
+    // Empty rows - fill the page so the signature block lands near the bottom
+    const minRows = Math.max(items.length + 3, 15);
     for (let i = items.length; i < minRows; i++) {
       const fillColor = i % 2 === 1 ? '#F5F7FA' : undefined;
       body.push([
@@ -635,11 +644,35 @@ export class ReportService {
     ]);
 
     // Empty signature space + name + line (2 visual columns)
+    // Linea de firma centrada dentro de la celda con un ancho fijo, usando
+    // columns con spacers '*' a los lados.
+    const SIGNATURE_LINE_WIDTH = 180;
+    const signatureLine = () => ({
+      columns: [
+        { width: '*', text: '' },
+        {
+          width: SIGNATURE_LINE_WIDTH,
+          canvas: [
+            {
+              type: 'line',
+              x1: 0,
+              y1: 0,
+              x2: SIGNATURE_LINE_WIDTH,
+              y2: 0,
+              lineWidth: 1,
+              lineColor: HEADER_LINE,
+            },
+          ],
+        },
+        { width: '*', text: '' },
+      ],
+    });
+
     body.push([
       {
         stack: [
-          { text: '', margin: [0, 40, 0, 0] },
-          { canvas: [{ type: 'line', x1: 30, y1: 0, x2: 170, y2: 0, lineWidth: 1, lineColor: HEADER_LINE }] },
+          { text: '', margin: [0, 50, 0, 0] },
+          signatureLine(),
           { text: signatures.leftName || '', bold: true, alignment: 'center', fontSize: 9, margin: [0, 4, 0, 0] },
         ],
         colSpan: 2,
@@ -649,8 +682,8 @@ export class ReportService {
       {},
       {
         stack: [
-          { text: '', margin: [0, 40, 0, 0] },
-          { canvas: [{ type: 'line', x1: 30, y1: 0, x2: 170, y2: 0, lineWidth: 1, lineColor: HEADER_LINE }] },
+          { text: '', margin: [0, 50, 0, 0] },
+          signatureLine(),
           { text: signatures.rightName, bold: true, alignment: 'center', fontSize: 9, margin: [0, 4, 0, 0] },
         ],
         colSpan: 3,
