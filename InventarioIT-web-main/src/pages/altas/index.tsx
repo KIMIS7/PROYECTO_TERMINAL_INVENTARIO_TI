@@ -764,6 +764,7 @@ export default function Altas() {
                     <col key={key} style={{ width: w }} />
                   ))}
                 </colgroup>
+                
                 <TableHeader className="bg-gray-50 sticky top-0 z-10">
                   <TableRow>
                     {[
@@ -837,6 +838,7 @@ export default function Altas() {
                             </button>
                           </div>
                         </TableCell>
+
                         <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                           <button
                             className="font-medium text-blue-600 hover:underline truncate block text-left max-w-full"
@@ -848,6 +850,7 @@ export default function Altas() {
                           >
                             {asset.name}
                           </button>
+                        
                         </TableCell>
                         <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap" title={asset.company?.description || ""}>
                           {asset.company?.description || "-"}
