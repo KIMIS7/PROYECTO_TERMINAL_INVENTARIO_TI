@@ -1,5 +1,5 @@
 import { MainLayout } from "@/components/MainLayout";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useRef, useCallback } from "react";
 import { ProductType, AssetState, Company, Asset, Vendor } from "@/types";
 import api from "@/lib/api";
 import { BulkMovementModal, MovementResult } from "@/components/BulkMovementModal";
@@ -32,6 +32,20 @@ import { toast } from "sonner";
 
 const ASSET_GROUPS = ["Equipo", "Accesorio", "Componente", "Otro"] as const;
 
+const INITIAL_COL_WIDTHS: Record<string, number> = {
+  checkbox: 36,
+  name: 180,
+  company: 140,
+  site: 140,
+  department: 160,
+  user: 150,
+  type: 130,
+  brand: 130,
+  serial: 150,
+  state: 110,
+  history: 60,
+};
+
 export default function Movimientos() {
   // Catalogos
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
@@ -55,6 +69,38 @@ export default function Movimientos() {
   // Paginacion
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
+
+  // Column resize state
+  const [colWidths, setColWidths] = useState<Record<string, number>>(INITIAL_COL_WIDTHS);
+  const resizingCol = useRef<string | null>(null);
+  const resizeStartX = useRef(0);
+  const resizeStartW = useRef(0);
+
+  const onResizeStart = useCallback(
+    (col: string) => (e: React.MouseEvent) => {
+      e.preventDefault();
+      resizingCol.current = col;
+      resizeStartX.current = e.clientX;
+      resizeStartW.current = colWidths[col];
+
+      const onMouseMove = (ev: MouseEvent) => {
+        if (!resizingCol.current) return;
+        const diff = ev.clientX - resizeStartX.current;
+        const newW = Math.min(400, Math.max(50, resizeStartW.current + diff));
+        setColWidths((prev) => ({ ...prev, [resizingCol.current!]: newW }));
+      };
+
+      const onMouseUp = () => {
+        resizingCol.current = null;
+        document.removeEventListener("mousemove", onMouseMove);
+        document.removeEventListener("mouseup", onMouseUp);
+      };
+
+      document.addEventListener("mousemove", onMouseMove);
+      document.addEventListener("mouseup", onMouseUp);
+    },
+    [colWidths]
+  );
 
   // Panel lateral de historial
   const [selectedAssetID, setSelectedAssetID] = useState<number | null>(null);
@@ -702,45 +748,46 @@ export default function Movimientos() {
                   <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
                 </div>
               ) : (
-                <Table className="table-fixed w-full">
-                  <TableHeader className="bg-gray-50 sticky top-0">
+                <Table style={{ tableLayout: "fixed", width: Object.values(colWidths).reduce((a, b) => a + b, 0) }}>
+                  <colgroup>
+                    {Object.entries(colWidths).map(([key, w]) => (
+                      <col key={key} style={{ width: w }} />
+                    ))}
+                  </colgroup>
+                  <TableHeader className="bg-gray-50 sticky top-0 z-10">
                     <TableRow>
-                      <TableHead className="w-5">
-                        <Checkbox
-                          checked={isAllSelected}
-                          onCheckedChange={handleSelectAll}
-                        />
-                      </TableHead>
-                      <TableHead className="w-18 font-semibold text-gray-700">
-                        NOMBRE
-                      </TableHead>
-                      <TableHead className="w-20 font-semibold text-gray-700">
-                        COMPAÑIA
-                      </TableHead>
-                      <TableHead className="w-20 font-semibold text-gray-700">
-                        SITE
-                      </TableHead>
-                      <TableHead className="w-25 font-semibold text-gray-700">
-                        DEPARTAMENTO
-                      </TableHead>
-                      <TableHead className="w-20 font-semibold text-gray-700">
-                        USUARIO
-                      </TableHead>
-                      <TableHead className="w-18 font-semibold text-gray-700">
-                        TIPO
-                      </TableHead>
-                      <TableHead className="w-20 font-semibold text-gray-700">
-                        MARCA
-                      </TableHead>
-                      <TableHead className="w-20 font-semibold text-gray-700">
-                        SERIE
-                      </TableHead>
-                      <TableHead className="w-20 font-semibold text-gray-700">
-                        ESTADO
-                      </TableHead>
-                      <TableHead className="w-12 font-semibold text-gray-700">
-                        HIST.
-                      </TableHead>
+                      {[
+                        { key: "checkbox", label: "" },
+                        { key: "name", label: "NOMBRE" },
+                        { key: "company", label: "COMPAÑIA" },
+                        { key: "site", label: "SITE" },
+                        { key: "department", label: "DEPARTAMENTO" },
+                        { key: "user", label: "USUARIO" },
+                        { key: "type", label: "TIPO" },
+                        { key: "brand", label: "MARCA" },
+                        { key: "serial", label: "SERIE" },
+                        { key: "state", label: "ESTADO" },
+                        { key: "history", label: "HIST." },
+                      ].map((col) => (
+                        <TableHead
+                          key={col.key}
+                          className="font-semibold text-gray-700 relative select-none overflow-hidden text-ellipsis whitespace-nowrap"
+                          style={{ width: colWidths[col.key] }}
+                        >
+                          {col.key === "checkbox" ? (
+                            <Checkbox
+                              checked={isAllSelected}
+                              onCheckedChange={handleSelectAll}
+                            />
+                          ) : (
+                            col.label
+                          )}
+                          <span
+                            onMouseDown={onResizeStart(col.key)}
+                            className="absolute right-0 top-0 bottom-0 w-1.5 cursor-col-resize hover:bg-blue-400 active:bg-blue-500"
+                          />
+                        </TableHead>
+                      ))}
                     </TableRow>
                   </TableHeader>
 
@@ -767,7 +814,7 @@ export default function Movimientos() {
                             isBaja && "opacity-60 bg-red-50/50"
                           )}
                         >
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             <Checkbox
                               checked={selectedAssets.has(asset.assetID)}
                               onCheckedChange={(checked) =>
@@ -777,36 +824,40 @@ export default function Movimientos() {
                               title={isBaja ? "Activo dado de baja - no se permiten movimientos" : undefined}
                             />
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             <span className="font-medium text-gray-900 truncate block">
                               {asset.name}
                             </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             {asset.company?.description || "-"}
                           </TableCell>
-                          <TableCell>{asset.site?.name || "-"}</TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
+                            {asset.site?.name || "-"}
+                          </TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             {asset.depart?.Name || "-"}
                           </TableCell>
-                          <TableCell>{asset.user?.name || "-"}</TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
+                            {asset.user?.name || "-"}
+                          </TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             {asset.productType?.name || "-"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             {asset.assetDetail?.productManuf || "-"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             {asset.assetDetail?.serialNum || "-"}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             <span className={cn(
                               isBaja && "text-red-600 font-semibold"
                             )}>
                               {asset.assetStateInfo?.name || "-"}
                             </span>
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="overflow-hidden text-ellipsis whitespace-nowrap">
                             <Button
                               variant="ghost"
                               size="icon"
