@@ -17,23 +17,48 @@ interface PermissionActionCellProps {
   dashboardPaths: DashboardPath[];
 }
 
-export const PermissionActionCell = ({ 
-  row, 
-  setPermissions, 
+// Los permisos del rol administrador estan bloqueados por seguridad.
+const isAdminRoleName = (name?: string) => {
+  const normalized = name?.trim().toLowerCase();
+  return normalized === "administrador" || normalized === "admin";
+};
+
+export const PermissionActionCell = ({
+  row,
+  setPermissions,
   setFilteredPermissions,
   roles,
-  dashboardPaths 
+  dashboardPaths
 }: PermissionActionCellProps) => {
   const { showSuccess, showError, showWarning } = useNotifications();
   const [isLoading, setIsLoading] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const permission = row.original;
 
+  // Nombre del rol: usar el del permiso y, como fallback, buscar en el catalogo.
+  const roleName =
+    permission.roleName ||
+    roles.find((r) => r.rolID === permission.rolID)?.name ||
+    "Rol desconocido";
+  const pathName =
+    dashboardPaths.find((p) => p.dashboarpathID === permission.dashboarpathID)?.name ||
+    "Ruta desconocida";
+  const isAdmin = isAdminRoleName(roleName);
+
   const handleDelete = () => {
+    if (isAdmin) {
+      showWarning("Los permisos del rol Administrador no pueden eliminarse.");
+      return;
+    }
     setIsDeleteDialogOpen(true);
   };
 
   const confirmDelete = async () => {
+    if (isAdmin) {
+      showWarning("Los permisos del rol Administrador no pueden eliminarse.");
+      setIsDeleteDialogOpen(false);
+      return;
+    }
     try {
       setIsLoading(true);
       await api.permission.delete(permission.roldashboardpathID);
@@ -75,10 +100,6 @@ export const PermissionActionCell = ({
     }
   };
 
-  // Obtener nombres para el mensaje de confirmación
-  const roleName = roles.find(r => r.rolID === permission.rolID)?.name || 'Rol desconocido';
-  const pathName = dashboardPaths.find(p => p.dashboarpathID === permission.dashboarpathID)?.name || 'Ruta desconocida';
-
   return (
     <>
       <div className="flex items-center justify-center gap-1">
@@ -88,15 +109,25 @@ export const PermissionActionCell = ({
               variant="ghost"
               size="icon"
               onClick={handleDelete}
-              disabled={isLoading}
+              disabled={isLoading || isAdmin}
               className="h-8 w-8"
-              aria-label="Eliminar permiso"
+              aria-label={
+                isAdmin
+                  ? "Los permisos del Administrador estan bloqueados"
+                  : "Eliminar permiso"
+              }
             >
-              <Trash2 className="h-4 w-4 text-red-500" />
+              <Trash2
+                className={`h-4 w-4 ${isAdmin ? "text-gray-300" : "text-red-500"}`}
+              />
             </Button>
           </TooltipTrigger>
           <TooltipContent>
-            <p>Eliminar permiso</p>
+            <p>
+              {isAdmin
+                ? "Los permisos del Administrador estan bloqueados"
+                : "Eliminar permiso"}
+            </p>
           </TooltipContent>
         </Tooltip>
       </div>
