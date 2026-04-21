@@ -1,6 +1,6 @@
 import { MainLayout } from "@/components/MainLayout";
 import { useEffect, useState, useMemo } from "react";
-import { Asset, Company, Site, AssetState } from "@/types";
+import { Asset, Company, Site, AssetState, Vendor, ProductType } from "@/types";
 import api from "@/lib/api";
 import {
   OmniboxFilter,
@@ -53,6 +53,8 @@ export default function Reportes() {
   const [sites, setSites] = useState<Site[]>([]);
   const [departments, setDepartments] = useState<{ departID: number; name: string }[]>([]);
   const [assetStates, setAssetStates] = useState<AssetState[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
+  const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isExporting, setIsExporting] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
@@ -81,18 +83,30 @@ export default function Reportes() {
   const loadData = async () => {
     try {
       setIsLoading(true);
-      const [assetsRes, companiesRes, sitesRes, statesRes, deptsRes] = await Promise.all([
+      const [
+        assetsRes,
+        companiesRes,
+        sitesRes,
+        statesRes,
+        deptsRes,
+        vendorsRes,
+        productTypesRes,
+      ] = await Promise.all([
         api.asset.getAll().catch(() => []),
         api.company.getAll().catch(() => []),
         api.site.getAll().catch(() => []),
         api.assetState.getAll().catch(() => []),
         api.user.getDepartments().catch(() => []),
+        api.vendor.getAll().catch(() => []),
+        api.productType.getAll().catch(() => []),
       ]);
       setAssets(assetsRes as Asset[]);
       setCompanies(companiesRes);
       setSites(sitesRes);
       setAssetStates(statesRes);
       setDepartments(deptsRes);
+      setVendors(vendorsRes);
+      setProductTypes(productTypesRes);
     } catch (error) {
       console.error("Error loading report data:", error);
     } finally {
@@ -100,7 +114,61 @@ export default function Reportes() {
     }
   };
 
-  // Build facets for Omnibox (Empresa, Sitio, Departamento)
+  // Usuarios unicos (desde los activos)
+  const uniqueUsers = useMemo(() => {
+    const userMap = new Map<number, { userID: number; name: string }>();
+    assets.forEach((a) => {
+      if (a.user?.userID && a.user?.name) {
+        userMap.set(a.user.userID, { userID: a.user.userID, name: a.user.name });
+      }
+    });
+    return Array.from(userMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [assets]);
+
+  // Valores tecnicos unicos (extraidos de los activos)
+  const uniqueRAM = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.ram) values.add(a.assetDetail.ram); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueMemoryType = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.physicalMemory) values.add(a.assetDetail.physicalMemory); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddCapacity = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddCapacity) values.add(a.assetDetail.hddCapacity); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddModel = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddModel) values.add(a.assetDetail.hddModel); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueOS = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.operatingSystem) values.add(a.assetDetail.operatingSystem); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueProcessors = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.processor) values.add(a.assetDetail.processor); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueManufacturers = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.productManuf) values.add(a.assetDetail.productManuf); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  // Build facets for Omnibox (mismos que Inventario)
   const facets: Facet[] = useMemo(() => {
     const result: Facet[] = [];
 
@@ -132,11 +200,9 @@ export default function Reportes() {
 
     // Departamento
     const uniqueDepts = new Map<string, string>();
-    // From departments catalog
     departments.forEach((d) => {
       uniqueDepts.set(d.departID.toString(), d.name);
     });
-    // Also from assets' department info
     assets.forEach((a) => {
       if (a.depart?.departID && a.depart?.Name) {
         uniqueDepts.set(a.depart.departID.toString(), a.depart.Name);
@@ -153,8 +219,136 @@ export default function Reportes() {
       });
     }
 
+    // Usuario
+    if (uniqueUsers.length > 0) {
+      result.push({
+        key: "usuario",
+        label: "Usuario",
+        color: "emerald",
+        options: uniqueUsers.map((u) => ({
+          value: String(u.userID),
+          label: u.name,
+        })),
+      });
+    }
+
+    // Estado
+    if (assetStates.length > 0) {
+      result.push({
+        key: "estado",
+        label: "Estado",
+        color: "amber",
+        options: assetStates.map((s) => ({
+          value: String(s.assetStateID),
+          label: s.name,
+        })),
+      });
+    }
+
+    // Tipo
+    if (productTypes.length > 0) {
+      result.push({
+        key: "tipo",
+        label: "Tipo",
+        color: "purple",
+        options: productTypes.map((pt) => ({
+          value: String(pt.productTypeID),
+          label: pt.name,
+        })),
+      });
+    }
+
+    // Proveedor
+    if (vendors.length > 0) {
+      result.push({
+        key: "proveedor",
+        label: "Proveedor",
+        color: "violet",
+        options: vendors.map((v) => ({
+          value: String(v.vendorID),
+          label: v.name,
+        })),
+      });
+    }
+
+    // Fabricante
+    if (uniqueManufacturers.length > 0) {
+      result.push({
+        key: "fabricante",
+        label: "Fabricante",
+        color: "stone",
+        options: uniqueManufacturers.map((v) => ({ value: v, label: v })),
+      });
+    }
+
+    // Filtros tecnicos
+    if (uniqueRAM.length > 0) {
+      result.push({
+        key: "ram",
+        label: "RAM",
+        color: "cyan",
+        options: uniqueRAM.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueMemoryType.length > 0) {
+      result.push({
+        key: "memoria_tipo",
+        label: "Tipo Memoria",
+        color: "teal",
+        options: uniqueMemoryType.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueHddCapacity.length > 0) {
+      result.push({
+        key: "disco_cap",
+        label: "Capacidad Disco",
+        color: "orange",
+        options: uniqueHddCapacity.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueHddModel.length > 0) {
+      result.push({
+        key: "disco_tipo",
+        label: "Tipo Disco",
+        color: "rose",
+        options: uniqueHddModel.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueOS.length > 0) {
+      result.push({
+        key: "so",
+        label: "Sistema Operativo",
+        color: "indigo",
+        options: uniqueOS.map((v) => ({ value: v, label: v })),
+      });
+    }
+    if (uniqueProcessors.length > 0) {
+      result.push({
+        key: "procesador",
+        label: "Procesador",
+        color: "fuchsia",
+        options: uniqueProcessors.map((v) => ({ value: v, label: v })),
+      });
+    }
+
     return result;
-  }, [companies, sites, departments, assets]);
+  }, [
+    companies,
+    sites,
+    departments,
+    assets,
+    uniqueUsers,
+    assetStates,
+    productTypes,
+    vendors,
+    uniqueManufacturers,
+    uniqueRAM,
+    uniqueMemoryType,
+    uniqueHddCapacity,
+    uniqueHddModel,
+    uniqueOS,
+    uniqueProcessors,
+  ]);
 
   // Filter assets based on chips and search query
   const filteredAssets = useMemo(() => {
@@ -185,6 +379,62 @@ export default function Reportes() {
     if (chipsByFacet.has("departamento")) {
       const values = chipsByFacet.get("departamento")!;
       result = result.filter((a) => values.has(a.depart?.departID?.toString() || ""));
+    }
+
+    // Filter by Usuario
+    if (chipsByFacet.has("usuario")) {
+      const values = chipsByFacet.get("usuario")!;
+      result = result.filter((a) => values.has(String(a.userID)));
+    }
+
+    // Filter by Estado
+    if (chipsByFacet.has("estado")) {
+      const values = chipsByFacet.get("estado")!;
+      result = result.filter((a) => values.has(String(a.assetState)));
+    }
+
+    // Filter by Tipo
+    if (chipsByFacet.has("tipo")) {
+      const values = chipsByFacet.get("tipo")!;
+      result = result.filter((a) => values.has(String(a.productTypeID)));
+    }
+
+    // Filter by Proveedor
+    if (chipsByFacet.has("proveedor")) {
+      const values = chipsByFacet.get("proveedor")!;
+      result = result.filter((a) => values.has(String(a.vendorID)));
+    }
+
+    // Filter by Fabricante
+    if (chipsByFacet.has("fabricante")) {
+      const values = chipsByFacet.get("fabricante")!;
+      result = result.filter((a) => a.assetDetail?.productManuf && values.has(a.assetDetail.productManuf));
+    }
+
+    // Filtros tecnicos
+    if (chipsByFacet.has("ram")) {
+      const values = chipsByFacet.get("ram")!;
+      result = result.filter((a) => a.assetDetail?.ram && values.has(a.assetDetail.ram));
+    }
+    if (chipsByFacet.has("memoria_tipo")) {
+      const values = chipsByFacet.get("memoria_tipo")!;
+      result = result.filter((a) => a.assetDetail?.physicalMemory && values.has(a.assetDetail.physicalMemory));
+    }
+    if (chipsByFacet.has("disco_cap")) {
+      const values = chipsByFacet.get("disco_cap")!;
+      result = result.filter((a) => a.assetDetail?.hddCapacity && values.has(a.assetDetail.hddCapacity));
+    }
+    if (chipsByFacet.has("disco_tipo")) {
+      const values = chipsByFacet.get("disco_tipo")!;
+      result = result.filter((a) => a.assetDetail?.hddModel && values.has(a.assetDetail.hddModel));
+    }
+    if (chipsByFacet.has("so")) {
+      const values = chipsByFacet.get("so")!;
+      result = result.filter((a) => a.assetDetail?.operatingSystem && values.has(a.assetDetail.operatingSystem));
+    }
+    if (chipsByFacet.has("procesador")) {
+      const values = chipsByFacet.get("procesador")!;
+      result = result.filter((a) => a.assetDetail?.processor && values.has(a.assetDetail.processor));
     }
 
     // Text search

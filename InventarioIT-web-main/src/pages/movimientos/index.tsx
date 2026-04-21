@@ -1,6 +1,6 @@
 import { MainLayout } from "@/components/MainLayout";
 import { useEffect, useState, useMemo } from "react";
-import { ProductType, AssetState, Company, Asset } from "@/types";
+import { ProductType, AssetState, Company, Asset, Vendor } from "@/types";
 import api from "@/lib/api";
 import { BulkMovementModal, MovementResult } from "@/components/BulkMovementModal";
 import { MovementHistoryTable } from "@/components/MovementHistoryTable";
@@ -37,6 +37,7 @@ export default function Movimientos() {
   const [productTypes, setProductTypes] = useState<ProductType[]>([]);
   const [assetStates, setAssetStates] = useState<AssetState[]>([]);
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [vendors, setVendors] = useState<Vendor[]>([]);
 
   // Activos
   const [assets, setAssets] = useState<Asset[]>([]);
@@ -76,15 +77,17 @@ export default function Movimientos() {
   useEffect(() => {
     const loadCatalogs = async () => {
       try {
-        const [productTypesRes, assetStatesRes, companiesRes] =
+        const [productTypesRes, assetStatesRes, companiesRes, vendorsRes] =
           await Promise.all([
             api.productType.getAll().catch(() => []),
             api.assetState.getAll().catch(() => []),
             api.company.getAll().catch(() => []),
+            api.vendor.getAll().catch(() => []),
           ]);
         setProductTypes(productTypesRes);
         setAssetStates(assetStatesRes);
         setCompanies(companiesRes);
+        setVendors(vendorsRes);
       } catch (error) {
         console.error("Error loading catalogs:", error);
       }
@@ -126,6 +129,71 @@ export default function Movimientos() {
     );
   }, [assets]);
 
+  // Sitios unicos (desde los activos)
+  const uniqueSites = useMemo(() => {
+    const siteMap = new Map<number, { siteID: number; name: string }>();
+    assets.forEach((a) => {
+      if (a.site && a.site.siteID && a.site.name) {
+        siteMap.set(a.site.siteID, { siteID: a.site.siteID, name: a.site.name });
+      }
+    });
+    return Array.from(siteMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [assets]);
+
+  // Departamentos unicos (desde los activos)
+  const uniqueDepartments = useMemo(() => {
+    const deptMap = new Map<number, { departID: number; name: string }>();
+    assets.forEach((a) => {
+      if (a.depart && a.depart.departID && a.depart.Name) {
+        deptMap.set(a.depart.departID, { departID: a.depart.departID, name: a.depart.Name });
+      }
+    });
+    return Array.from(deptMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  }, [assets]);
+
+  // Valores tecnicos unicos (extraidos de los activos)
+  const uniqueRAM = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.ram) values.add(a.assetDetail.ram); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueMemoryType = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.physicalMemory) values.add(a.assetDetail.physicalMemory); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddCapacity = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddCapacity) values.add(a.assetDetail.hddCapacity); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueHddModel = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.hddModel) values.add(a.assetDetail.hddModel); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueOS = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.operatingSystem) values.add(a.assetDetail.operatingSystem); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueProcessors = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.processor) values.add(a.assetDetail.processor); });
+    return Array.from(values).sort();
+  }, [assets]);
+
+  const uniqueManufacturers = useMemo(() => {
+    const values = new Set<string>();
+    assets.forEach((a) => { if (a.assetDetail?.productManuf) values.add(a.assetDetail.productManuf); });
+    return Array.from(values).sort();
+  }, [assets]);
+
   // Tipos filtrados por grupo
   const filteredProductTypes = useMemo(() => {
     if (selectedGroup) {
@@ -144,6 +212,24 @@ export default function Movimientos() {
         options: companies.map((c) => ({
           value: String(c.companyID),
           label: c.description,
+        })),
+      },
+      {
+        key: "site",
+        label: "Site",
+        color: "sky",
+        options: uniqueSites.map((s) => ({
+          value: String(s.siteID),
+          label: s.name,
+        })),
+      },
+      {
+        key: "departamento",
+        label: "Departamento",
+        color: "lime",
+        options: uniqueDepartments.map((d) => ({
+          value: String(d.departID),
+          label: d.name,
         })),
       },
       {
@@ -173,8 +259,74 @@ export default function Movimientos() {
           label: pt.name,
         })),
       },
+      {
+        key: "proveedor",
+        label: "Proveedor",
+        color: "violet",
+        options: vendors.map((v) => ({
+          value: String(v.vendorID),
+          label: v.name,
+        })),
+      },
+      {
+        key: "fabricante",
+        label: "Fabricante",
+        color: "stone",
+        options: uniqueManufacturers.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "ram",
+        label: "RAM",
+        color: "cyan",
+        options: uniqueRAM.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "memoria_tipo",
+        label: "Tipo Memoria",
+        color: "teal",
+        options: uniqueMemoryType.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "disco_cap",
+        label: "Capacidad Disco",
+        color: "orange",
+        options: uniqueHddCapacity.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "disco_tipo",
+        label: "Tipo Disco",
+        color: "rose",
+        options: uniqueHddModel.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "so",
+        label: "Sistema Operativo",
+        color: "indigo",
+        options: uniqueOS.map((v) => ({ value: v, label: v })),
+      },
+      {
+        key: "procesador",
+        label: "Procesador",
+        color: "fuchsia",
+        options: uniqueProcessors.map((v) => ({ value: v, label: v })),
+      },
     ],
-    [companies, uniqueUsers, assetStates, filteredProductTypes]
+    [
+      companies,
+      uniqueSites,
+      uniqueDepartments,
+      uniqueUsers,
+      assetStates,
+      filteredProductTypes,
+      vendors,
+      uniqueManufacturers,
+      uniqueRAM,
+      uniqueMemoryType,
+      uniqueHddCapacity,
+      uniqueHddModel,
+      uniqueOS,
+      uniqueProcessors,
+    ]
   );
 
   // Aplicar filtros
@@ -199,6 +351,14 @@ export default function Movimientos() {
       const values = chipsByFacet.get("empresa")!;
       result = result.filter((a) => values.has(String(a.companyID)));
     }
+    if (chipsByFacet.has("site")) {
+      const values = chipsByFacet.get("site")!;
+      result = result.filter((a) => values.has(String(a.siteID)));
+    }
+    if (chipsByFacet.has("departamento")) {
+      const values = chipsByFacet.get("departamento")!;
+      result = result.filter((a) => a.depart && values.has(String(a.depart.departID)));
+    }
     if (chipsByFacet.has("usuario")) {
       const values = chipsByFacet.get("usuario")!;
       result = result.filter((a) => values.has(String(a.userID)));
@@ -210,6 +370,38 @@ export default function Movimientos() {
     if (chipsByFacet.has("tipo")) {
       const values = chipsByFacet.get("tipo")!;
       result = result.filter((a) => values.has(String(a.productTypeID)));
+    }
+    if (chipsByFacet.has("proveedor")) {
+      const values = chipsByFacet.get("proveedor")!;
+      result = result.filter((a) => values.has(String(a.vendorID)));
+    }
+    if (chipsByFacet.has("fabricante")) {
+      const values = chipsByFacet.get("fabricante")!;
+      result = result.filter((a) => a.assetDetail?.productManuf && values.has(a.assetDetail.productManuf));
+    }
+    if (chipsByFacet.has("ram")) {
+      const values = chipsByFacet.get("ram")!;
+      result = result.filter((a) => a.assetDetail?.ram && values.has(a.assetDetail.ram));
+    }
+    if (chipsByFacet.has("memoria_tipo")) {
+      const values = chipsByFacet.get("memoria_tipo")!;
+      result = result.filter((a) => a.assetDetail?.physicalMemory && values.has(a.assetDetail.physicalMemory));
+    }
+    if (chipsByFacet.has("disco_cap")) {
+      const values = chipsByFacet.get("disco_cap")!;
+      result = result.filter((a) => a.assetDetail?.hddCapacity && values.has(a.assetDetail.hddCapacity));
+    }
+    if (chipsByFacet.has("disco_tipo")) {
+      const values = chipsByFacet.get("disco_tipo")!;
+      result = result.filter((a) => a.assetDetail?.hddModel && values.has(a.assetDetail.hddModel));
+    }
+    if (chipsByFacet.has("so")) {
+      const values = chipsByFacet.get("so")!;
+      result = result.filter((a) => a.assetDetail?.operatingSystem && values.has(a.assetDetail.operatingSystem));
+    }
+    if (chipsByFacet.has("procesador")) {
+      const values = chipsByFacet.get("procesador")!;
+      result = result.filter((a) => a.assetDetail?.processor && values.has(a.assetDetail.processor));
     }
 
     if (searchQuery.trim()) {
