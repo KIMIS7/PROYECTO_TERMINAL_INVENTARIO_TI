@@ -403,6 +403,9 @@ const api = {
         historyID: number;
         assetID: number;
         assetName: string;
+        assetTAG?: string | null;
+        productTypeName?: string | null;
+        productTypeGroup?: string | null;
         operation: string;
         description: string;
         performedBy?: string | null;

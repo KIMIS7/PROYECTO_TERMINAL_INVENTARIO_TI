@@ -60,9 +60,10 @@ export default function Reportes() {
   const [isImporting, setIsImporting] = useState(false);
   const csvInputRef = useRef<HTMLInputElement>(null);
 
-  // Omnibox filter state
-  const [chips, setChips] = useState<FilterChip[]>([]);
+  // Omnibox filter state (mismos nombres que Inventario/Movimientos/Historial)
+  const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  const [isSearchPinned, setIsSearchPinned] = useState(true);
 
   // Active sub-tab
   const [activeTab, setActiveTab] = useState<SubTab>("administrativo");
@@ -78,7 +79,7 @@ export default function Reportes() {
   // Reset page when filters, tab or page size change
   useEffect(() => {
     setCurrentPage(1);
-  }, [chips, searchQuery, activeTab, pageSize]);
+  }, [filterChips, searchQuery, activeTab, pageSize]);
 
   const loadData = async () => {
     try {
@@ -171,6 +172,23 @@ export default function Reportes() {
   // Build facets for Omnibox (mismos que Inventario)
   const facets: Facet[] = useMemo(() => {
     const result: Facet[] = [];
+
+    // Grupo (mismo que Inventario)
+    const uniqueGroups = Array.from(
+      new Set(
+        assets
+          .map((a) => a.productType?.group)
+          .filter((g): g is string => Boolean(g))
+      )
+    ).sort();
+    if (uniqueGroups.length > 0) {
+      result.push({
+        key: "grupo",
+        label: "Grupo",
+        color: "slate",
+        options: uniqueGroups.map((g) => ({ value: g, label: g })),
+      });
+    }
 
     // Empresa
     if (companies.length > 0) {
@@ -356,12 +374,18 @@ export default function Reportes() {
 
     // Group chips by facet
     const chipsByFacet = new Map<string, Set<string>>();
-    chips.forEach((chip) => {
+    filterChips.forEach((chip) => {
       if (!chipsByFacet.has(chip.facet)) {
         chipsByFacet.set(chip.facet, new Set());
       }
       chipsByFacet.get(chip.facet)!.add(chip.value);
     });
+
+    // Filter by Grupo (nuevo, alineado con Inventario)
+    if (chipsByFacet.has("grupo")) {
+      const values = chipsByFacet.get("grupo")!;
+      result = result.filter((a) => a.productType?.group && values.has(a.productType.group));
+    }
 
     // Filter by Empresa
     if (chipsByFacet.has("empresa")) {
@@ -437,23 +461,25 @@ export default function Reportes() {
       result = result.filter((a) => a.assetDetail?.processor && values.has(a.assetDetail.processor));
     }
 
-    // Text search
+    // Text search (mismo conjunto de campos que Inventario y Movimientos)
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter((a) =>
         a.name?.toLowerCase().includes(query) ||
         a.assetDetail?.serialNum?.toLowerCase().includes(query) ||
+        a.assetDetail?.assetTAG?.toLowerCase().includes(query) ||
         a.user?.name?.toLowerCase().includes(query) ||
+        a.depart?.Name?.toLowerCase().includes(query) ||
+        a.vendor?.name?.toLowerCase().includes(query) ||
+        a.productType?.name?.toLowerCase().includes(query) ||
         a.assetDetail?.ipAddress?.toLowerCase().includes(query) ||
         a.assetDetail?.macAddress?.toLowerCase().includes(query) ||
-        a.vendor?.name?.toLowerCase().includes(query) ||
-        a.depart?.Name?.toLowerCase().includes(query) ||
         a.site?.name?.toLowerCase().includes(query)
       );
     }
 
     return result;
-  }, [assets, chips, searchQuery]);
+  }, [assets, filterChips, searchQuery]);
 
   // KPI calculations
   const kpis = useMemo(() => {
@@ -503,7 +529,7 @@ export default function Reportes() {
     try {
       setIsExporting("csv");
       const filters: { group?: string; companyID?: number; assetState?: number } = {};
-      const companyChips = chips.filter((c) => c.facet === "empresa");
+      const companyChips = filterChips.filter((c) => c.facet === "empresa");
       if (companyChips.length === 1) {
         filters.companyID = parseInt(companyChips[0].value);
       }
@@ -527,7 +553,7 @@ export default function Reportes() {
       setIsExporting("excel");
       const filters: { group?: string; companyID?: number; assetState?: number } = {};
       // Apply company filter if selected
-      const companyChips = chips.filter((c) => c.facet === "empresa");
+      const companyChips = filterChips.filter((c) => c.facet === "empresa");
       if (companyChips.length === 1) {
         filters.companyID = parseInt(companyChips[0].value);
       }
@@ -625,12 +651,13 @@ export default function Reportes() {
               <div className="flex-1">
                 <OmniboxFilter
                   facets={facets}
-                  chips={chips}
-                  onChipsChange={setChips}
+                  chips={filterChips}
+                  onChipsChange={setFilterChips}
                   searchQuery={searchQuery}
                   onSearchQueryChange={setSearchQuery}
                   placeholder="Filtrar por Empresa, Sitio (Hotel), Departamento o buscar..."
-                  pinned={true}
+                  pinned={isSearchPinned}
+                  onPinnedChange={setIsSearchPinned}
                 />
               </div>
             </div>
@@ -759,7 +786,7 @@ export default function Reportes() {
                   <p className="text-sm text-gray-500">
                     {subTabs.find((t) => t.key === activeTab)?.description} — Mostrando{" "}
                     <span className="font-semibold text-gray-700">{filteredAssets.length}</span> registros
-                    {chips.length > 0 && " (filtrados)"}
+                    {filterChips.length > 0 && " (filtrados)"}
                   </p>
                 </div>
 

@@ -4,13 +4,6 @@ import api from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
   Table,
   TableBody,
   TableCell,
@@ -21,7 +14,6 @@ import {
 import {
   ChevronLeft,
   ChevronRight,
-  Search,
   RefreshCw,
   X,
   History,
@@ -38,13 +30,18 @@ import {
   User,
   Building2,
   MapPin,
+  Tag,
 } from "lucide-react";
 import { toast } from "sonner";
+import { OmniboxFilter, Facet, FilterChip } from "@/components/OmniboxFilter";
 
 interface HistoryRecord {
   historyID: number;
   assetID: number;
   assetName: string;
+  assetTAG?: string | null;
+  productTypeName?: string | null;
+  productTypeGroup?: string | null;
   operation: string;
   description: string;
   performedBy?: string | null;
@@ -121,10 +118,12 @@ export default function Historial() {
   const [records, setRecords] = useState<HistoryRecord[]>([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // Filters
+  // Filtros (mismas primitivas que Inventario/Movimientos/Reportes)
   const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedOperation, setSelectedOperation] = useState<string | null>(null);
+  const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
+  const [isSearchPinned, setIsSearchPinned] = useState(false);
+
+  // Filtros de fecha (especificos de Historial)
   const [dateFrom, setDateFrom] = useState("");
   const [dateTo, setDateTo] = useState("");
 
@@ -148,19 +147,179 @@ export default function Historial() {
     }
   };
 
-  // Filtered records
+  // Opciones derivadas para las facetas del omnibox
+  const uniqueOperations = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => r.operation && set.add(r.operation));
+    return Array.from(set).sort();
+  }, [records]);
+
+  const uniqueGroups = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => r.productTypeGroup && set.add(r.productTypeGroup));
+    return Array.from(set).sort();
+  }, [records]);
+
+  const uniqueProductTypes = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => r.productTypeName && set.add(r.productTypeName));
+    return Array.from(set).sort();
+  }, [records]);
+
+  const uniqueCompanies = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => r.company && set.add(r.company));
+    return Array.from(set).sort();
+  }, [records]);
+
+  const uniqueSites = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => r.site && set.add(r.site));
+    return Array.from(set).sort();
+  }, [records]);
+
+  const uniqueDepartments = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => r.department && set.add(r.department));
+    return Array.from(set).sort();
+  }, [records]);
+
+  const uniqueUsers = useMemo(() => {
+    const set = new Set<string>();
+    records.forEach((r) => r.assignedUser && set.add(r.assignedUser));
+    records.forEach((r) => r.performedBy && set.add(r.performedBy));
+    return Array.from(set).sort();
+  }, [records]);
+
+  // Facetas (mismo patron que Inventario/Movimientos/Reportes)
+  const facets: Facet[] = useMemo(
+    () => {
+      const result: Facet[] = [];
+      if (uniqueOperations.length > 0) {
+        result.push({
+          key: "operacion",
+          label: "Operación",
+          color: "purple",
+          options: uniqueOperations.map((op) => ({
+            value: op,
+            label: operationConfig[op]?.label || op,
+          })),
+        });
+      }
+      if (uniqueGroups.length > 0) {
+        result.push({
+          key: "grupo",
+          label: "Grupo",
+          color: "slate",
+          options: uniqueGroups.map((g) => ({ value: g, label: g })),
+        });
+      }
+      if (uniqueProductTypes.length > 0) {
+        result.push({
+          key: "tipo",
+          label: "Tipo",
+          color: "purple",
+          options: uniqueProductTypes.map((t) => ({ value: t, label: t })),
+        });
+      }
+      if (uniqueCompanies.length > 0) {
+        result.push({
+          key: "empresa",
+          label: "Empresa",
+          color: "blue",
+          options: uniqueCompanies.map((c) => ({ value: c, label: c })),
+        });
+      }
+      if (uniqueSites.length > 0) {
+        result.push({
+          key: "site",
+          label: "Site",
+          color: "sky",
+          options: uniqueSites.map((s) => ({ value: s, label: s })),
+        });
+      }
+      if (uniqueDepartments.length > 0) {
+        result.push({
+          key: "departamento",
+          label: "Departamento",
+          color: "lime",
+          options: uniqueDepartments.map((d) => ({ value: d, label: d })),
+        });
+      }
+      if (uniqueUsers.length > 0) {
+        result.push({
+          key: "usuario",
+          label: "Usuario",
+          color: "emerald",
+          options: uniqueUsers.map((u) => ({ value: u, label: u })),
+        });
+      }
+      return result;
+    },
+    [
+      uniqueOperations,
+      uniqueGroups,
+      uniqueProductTypes,
+      uniqueCompanies,
+      uniqueSites,
+      uniqueDepartments,
+      uniqueUsers,
+    ]
+  );
+
+  // Filtrado (mismo patron: AND entre facetas, OR dentro de una faceta)
   const filteredRecords = useMemo(() => {
     let result = [...records];
 
-    if (selectedOperation) {
-      result = result.filter((r) => r.operation === selectedOperation);
+    const chipsByFacet = new Map<string, Set<string>>();
+    filterChips.forEach((chip) => {
+      if (!chipsByFacet.has(chip.facet)) {
+        chipsByFacet.set(chip.facet, new Set());
+      }
+      chipsByFacet.get(chip.facet)!.add(chip.value);
+    });
+
+    if (chipsByFacet.has("operacion")) {
+      const values = chipsByFacet.get("operacion")!;
+      result = result.filter((r) => values.has(r.operation));
+    }
+    if (chipsByFacet.has("grupo")) {
+      const values = chipsByFacet.get("grupo")!;
+      result = result.filter((r) => r.productTypeGroup && values.has(r.productTypeGroup));
+    }
+    if (chipsByFacet.has("tipo")) {
+      const values = chipsByFacet.get("tipo")!;
+      result = result.filter((r) => r.productTypeName && values.has(r.productTypeName));
+    }
+    if (chipsByFacet.has("empresa")) {
+      const values = chipsByFacet.get("empresa")!;
+      result = result.filter((r) => r.company && values.has(r.company));
+    }
+    if (chipsByFacet.has("site")) {
+      const values = chipsByFacet.get("site")!;
+      result = result.filter((r) => r.site && values.has(r.site));
+    }
+    if (chipsByFacet.has("departamento")) {
+      const values = chipsByFacet.get("departamento")!;
+      result = result.filter((r) => r.department && values.has(r.department));
+    }
+    if (chipsByFacet.has("usuario")) {
+      const values = chipsByFacet.get("usuario")!;
+      result = result.filter(
+        (r) =>
+          (r.assignedUser && values.has(r.assignedUser)) ||
+          (r.performedBy && values.has(r.performedBy))
+      );
     }
 
+    // Busqueda libre: incluye assetTAG (nuevo) para unificar con el resto
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       result = result.filter(
         (r) =>
           r.assetName?.toLowerCase().includes(query) ||
+          r.assetTAG?.toLowerCase().includes(query) ||
+          r.productTypeName?.toLowerCase().includes(query) ||
           r.description?.toLowerCase().includes(query) ||
           r.performedBy?.toLowerCase().includes(query) ||
           r.assignedUser?.toLowerCase().includes(query) ||
@@ -183,12 +342,12 @@ export default function Historial() {
     }
 
     return result;
-  }, [records, selectedOperation, searchQuery, dateFrom, dateTo]);
+  }, [records, filterChips, searchQuery, dateFrom, dateTo]);
 
   // Reset page when filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [selectedOperation, searchQuery, dateFrom, dateTo]);
+  }, [filterChips, searchQuery, dateFrom, dateTo]);
 
   // Pagination
   const paginatedRecords = useMemo(() => {
@@ -200,7 +359,7 @@ export default function Historial() {
   const startItem = filteredRecords.length > 0 ? (currentPage - 1) * pageSize + 1 : 0;
   const endItem = Math.min(currentPage * pageSize, filteredRecords.length);
 
-  // Stats
+  // Stats por operacion, click en chip agrega/quita filtro
   const stats = useMemo(() => {
     const counts: Record<string, number> = {};
     for (const r of records) {
@@ -208,6 +367,31 @@ export default function Historial() {
     }
     return counts;
   }, [records]);
+
+  const selectedOperationSet = useMemo(() => {
+    const s = new Set<string>();
+    filterChips.forEach((c) => {
+      if (c.facet === "operacion") s.add(c.value);
+    });
+    return s;
+  }, [filterChips]);
+
+  const toggleOperationChip = (op: string) => {
+    if (selectedOperationSet.has(op)) {
+      setFilterChips((prev) => prev.filter((c) => !(c.facet === "operacion" && c.value === op)));
+    } else {
+      setFilterChips((prev) => [
+        ...prev,
+        {
+          id: `operacion-${op}`,
+          facet: "operacion",
+          facetLabel: "Operación",
+          value: op,
+          valueLabel: operationConfig[op]?.label || op,
+        },
+      ]);
+    }
+  };
 
   const [isExportingHistory, setIsExportingHistory] = useState(false);
 
@@ -239,15 +423,12 @@ export default function Historial() {
     }
   };
 
-  const clearFilters = () => {
-    setSearchQuery("");
-    setSelectedOperation(null);
+  const clearDates = () => {
     setDateFrom("");
     setDateTo("");
-    setIsSearchOpen(false);
   };
 
-  const hasActiveFilters = searchQuery || selectedOperation || dateFrom || dateTo;
+  const hasDateFilters = dateFrom || dateTo;
 
   return (
     <MainLayout
@@ -276,20 +457,19 @@ export default function Historial() {
             </div>
           </div>
 
-          {/* Stats bar */}
+          {/* Stats bar: chips rapidos por operacion */}
           <div className="flex items-center gap-2 px-4 py-2 border-b bg-gray-50/50 overflow-x-auto">
             {OPERATION_TYPES.map((op) => {
               const config = operationConfig[op];
               const count = stats[op] || 0;
               if (count === 0) return null;
+              const selected = selectedOperationSet.has(op);
               return (
                 <button
                   key={op}
-                  onClick={() =>
-                    setSelectedOperation(selectedOperation === op ? null : op)
-                  }
+                  onClick={() => toggleOperationChip(op)}
                   className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-all shrink-0 ${
-                    selectedOperation === op
+                    selected
                       ? `${config.bgColor} ${config.color} ring-2 ring-offset-1 ring-current`
                       : `${config.bgColor} ${config.color} opacity-70 hover:opacity-100`
                   }`}
@@ -302,103 +482,53 @@ export default function Historial() {
             })}
           </div>
 
-          {/* Toolbar */}
-          <div className="flex items-center justify-between px-4 py-2 border-b bg-gray-50">
-            <div className="flex items-center gap-2">
-              {/* Search */}
-              {isSearchOpen ? (
-                <div className="flex items-center">
-                  <Input
-                    placeholder="Buscar por activo, descripción, responsable..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    className="h-8 w-64 text-sm"
-                    autoFocus
-                  />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="h-8 w-8"
-                    onClick={() => {
-                      setIsSearchOpen(false);
-                      setSearchQuery("");
-                    }}
-                  >
-                    <X className="h-4 w-4" />
-                  </Button>
-                </div>
-              ) : (
+          {/* Toolbar (mismo componente OmniboxFilter que Inventario/Movimientos/Reportes) */}
+          <div className="flex items-center gap-3 px-4 py-2 border-b bg-gray-50">
+            <OmniboxFilter
+              facets={facets}
+              chips={filterChips}
+              onChipsChange={setFilterChips}
+              searchQuery={searchQuery}
+              onSearchQueryChange={setSearchQuery}
+              pinned={isSearchPinned}
+              onPinnedChange={setIsSearchPinned}
+              placeholder="Buscar por activo, AssetTag, descripción..."
+            />
+
+            <div className="h-6 w-px bg-gray-300" />
+
+            {/* Rango de fechas (especifico de historial) */}
+            <div className="flex items-center gap-1 shrink-0">
+              <Calendar className="h-4 w-4 text-gray-400" />
+              <Input
+                type="date"
+                value={dateFrom}
+                onChange={(e) => setDateFrom(e.target.value)}
+                className="h-8 w-36 text-xs"
+                placeholder="Desde"
+              />
+              <span className="text-xs text-gray-400">-</span>
+              <Input
+                type="date"
+                value={dateTo}
+                onChange={(e) => setDateTo(e.target.value)}
+                className="h-8 w-36 text-xs"
+                placeholder="Hasta"
+              />
+              {hasDateFilters && (
                 <Button
                   variant="ghost"
                   size="icon"
-                  className="h-8 w-8"
-                  onClick={() => setIsSearchOpen(true)}
+                  className="h-7 w-7"
+                  onClick={clearDates}
+                  title="Limpiar fechas"
                 >
-                  <Search className="h-4 w-4 text-gray-500" />
+                  <X className="h-3.5 w-3.5" />
                 </Button>
               )}
+            </div>
 
-              <div className="h-6 w-px bg-gray-300 mx-1" />
-
-              {/* Operation type filter */}
-              <Select
-                value={selectedOperation || "all"}
-                onValueChange={(value) =>
-                  setSelectedOperation(value === "all" ? null : value)
-                }
-              >
-                <SelectTrigger className="h-8 w-44 text-sm">
-                  <SelectValue placeholder="Todas las operaciones" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Todas las operaciones</SelectItem>
-                  {OPERATION_TYPES.map((op) => (
-                    <SelectItem key={op} value={op}>
-                      {operationConfig[op].label}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <div className="h-6 w-px bg-gray-300 mx-1" />
-
-              {/* Date filters */}
-              <div className="flex items-center gap-1">
-                <Calendar className="h-4 w-4 text-gray-400" />
-                <Input
-                  type="date"
-                  value={dateFrom}
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="h-8 w-36 text-xs"
-                  placeholder="Desde"
-                />
-                <span className="text-xs text-gray-400">-</span>
-                <Input
-                  type="date"
-                  value={dateTo}
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="h-8 w-36 text-xs"
-                  placeholder="Hasta"
-                />
-              </div>
-
-              {hasActiveFilters && (
-                <>
-                  <div className="h-6 w-px bg-gray-300 mx-1" />
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={clearFilters}
-                    className="h-8 text-xs text-red-600 hover:text-red-700"
-                  >
-                    <X className="h-3 w-3 mr-1" />
-                    Limpiar filtros
-                  </Button>
-                </>
-              )}
-
-              <div className="h-6 w-px bg-gray-300 mx-1" />
-
+            <div className="flex items-center gap-1 shrink-0 ml-auto">
               <Button
                 variant="outline"
                 size="sm"
@@ -419,14 +549,13 @@ export default function Historial() {
                 onClick={handleRefresh}
                 className="h-8 text-sm font-normal"
               >
-                <RefreshCw className="h-4 w-4 mr-1" />
-                Actualizar
+                <RefreshCw className="h-4 w-4" />
               </Button>
             </div>
 
-            {/* Pagination */}
-            <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
+            {/* Paginacion */}
+            <div className="flex items-center gap-2 text-sm text-gray-600 shrink-0">
+              <span className="whitespace-nowrap">
                 {startItem} - {endItem} de {filteredRecords.length}
               </span>
               <Button
@@ -465,8 +594,11 @@ export default function Historial() {
                     <TableHead className="font-semibold text-gray-700 w-36">
                       Operación
                     </TableHead>
-                    <TableHead className="font-semibold text-gray-700 w-32">
+                    <TableHead className="font-semibold text-gray-700 w-40">
                       Activo
+                    </TableHead>
+                    <TableHead className="font-semibold text-gray-700 w-32">
+                      Asset TAG
                     </TableHead>
                     <TableHead className="font-semibold text-gray-700">
                       Descripción
@@ -489,10 +621,10 @@ export default function Historial() {
                   {paginatedRecords.length === 0 ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-24 text-center text-gray-500"
                       >
-                        {hasActiveFilters
+                        {filterChips.length > 0 || searchQuery || hasDateFilters
                           ? "No se encontraron registros con los filtros aplicados"
                           : "No hay registros en el historial"}
                       </TableCell>
@@ -506,11 +638,6 @@ export default function Historial() {
                           bgColor: "bg-gray-100",
                           icon: <History className="h-3.5 w-3.5" />,
                         };
-
-                      // Build department/site display
-                      const locationParts: string[] = [];
-                      if (record.department) locationParts.push(record.department);
-                      if (record.site) locationParts.push(record.site);
 
                       return (
                         <TableRow
@@ -527,6 +654,16 @@ export default function Historial() {
                           </TableCell>
                           <TableCell className="font-medium text-gray-900">
                             {record.assetName}
+                          </TableCell>
+                          <TableCell className="text-sm">
+                            {record.assetTAG ? (
+                              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-slate-100 text-slate-700 text-xs font-mono">
+                                <Tag className="h-3 w-3" />
+                                {record.assetTAG}
+                              </span>
+                            ) : (
+                              <span className="text-gray-400">-</span>
+                            )}
                           </TableCell>
                           <TableCell className="text-gray-600 text-sm max-w-[250px] truncate">
                             {record.description || "-"}
@@ -552,7 +689,7 @@ export default function Historial() {
                             )}
                           </TableCell>
                           <TableCell className="text-sm">
-                            {locationParts.length > 0 ? (
+                            {record.department || record.site ? (
                               <div className="flex flex-col gap-0.5">
                                 {record.department && (
                                   <div className="flex items-center gap-1">

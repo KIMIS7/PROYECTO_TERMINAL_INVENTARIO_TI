@@ -60,7 +60,6 @@ export default function Movimientos() {
   const [isBulkMovementModalOpen, setIsBulkMovementModalOpen] = useState(false);
 
   // Filtros y seleccion
-  const [selectedGroup, setSelectedGroup] = useState<string | null>(null);
   const [selectedAssets, setSelectedAssets] = useState<Set<number>>(new Set());
   const [searchQuery, setSearchQuery] = useState("");
   const [filterChips, setFilterChips] = useState<FilterChip[]>([]);
@@ -240,17 +239,29 @@ export default function Movimientos() {
     return Array.from(values).sort();
   }, [assets]);
 
-  // Tipos filtrados por grupo
-  const filteredProductTypes = useMemo(() => {
-    if (selectedGroup) {
-      return productTypes.filter((pt) => pt.group === selectedGroup);
-    }
-    return productTypes;
-  }, [productTypes, selectedGroup]);
+  // Tipos filtrados por los chips de grupo (para reducir opciones del combobox Tipo)
+  const selectedGroupValues = useMemo(() => {
+    const set = new Set<string>();
+    filterChips.forEach((c) => {
+      if (c.facet === "grupo") set.add(c.value);
+    });
+    return set;
+  }, [filterChips]);
 
-  // Facetas para omnibox
+  const filteredProductTypes = useMemo(() => {
+    if (selectedGroupValues.size === 0) return productTypes;
+    return productTypes.filter((pt) => pt.group && selectedGroupValues.has(pt.group));
+  }, [productTypes, selectedGroupValues]);
+
+  // Facetas para omnibox (mismas keys que Inventario)
   const facets: Facet[] = useMemo(
     () => [
+      {
+        key: "grupo",
+        label: "Grupo",
+        color: "slate",
+        options: ASSET_GROUPS.map((g) => ({ value: g, label: g })),
+      },
       {
         key: "empresa",
         label: "Empresa",
@@ -379,12 +390,6 @@ export default function Movimientos() {
   useEffect(() => {
     let result = [...assets];
 
-    if (selectedGroup) {
-      result = result.filter(
-        (asset) => asset.productType?.group === selectedGroup
-      );
-    }
-
     const chipsByFacet = new Map<string, Set<string>>();
     filterChips.forEach((chip) => {
       if (!chipsByFacet.has(chip.facet)) {
@@ -393,6 +398,10 @@ export default function Movimientos() {
       chipsByFacet.get(chip.facet)!.add(chip.value);
     });
 
+    if (chipsByFacet.has("grupo")) {
+      const values = chipsByFacet.get("grupo")!;
+      result = result.filter((a) => a.productType?.group && values.has(a.productType.group));
+    }
     if (chipsByFacet.has("empresa")) {
       const values = chipsByFacet.get("empresa")!;
       result = result.filter((a) => values.has(String(a.companyID)));
@@ -466,7 +475,7 @@ export default function Movimientos() {
 
     setFilteredAssets(result);
     setCurrentPage(1);
-  }, [assets, selectedGroup, filterChips, searchQuery]);
+  }, [assets, filterChips, searchQuery]);
 
   // Paginacion
   const paginatedAssets = useMemo(() => {

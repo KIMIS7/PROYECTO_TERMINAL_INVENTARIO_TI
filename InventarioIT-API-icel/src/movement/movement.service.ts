@@ -500,6 +500,18 @@ export class MovementService {
             select: {
               AssetID: true,
               Name: true,
+              AssetDetail: {
+                select: {
+                  AssetTAG: true,
+                },
+              },
+              ProductType: {
+                select: {
+                  ProductTypeID: true,
+                  Name: true,
+                  Group: true,
+                },
+              },
               User: {
                 select: {
                   UserID: true,
@@ -557,6 +569,9 @@ export class MovementService {
           historyID: m.AssetHistoryID,
           assetID: m.AssetID,
           assetName: m.Asset?.Name || 'Activo eliminado',
+          assetTAG: m.Asset?.AssetDetail?.AssetTAG || null,
+          productTypeName: m.Asset?.ProductType?.Name || null,
+          productTypeGroup: m.Asset?.ProductType?.Group || null,
           operation: m.Operation,
           description,
           performedBy,
