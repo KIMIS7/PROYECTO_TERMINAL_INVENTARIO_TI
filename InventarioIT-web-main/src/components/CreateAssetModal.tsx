@@ -56,7 +56,6 @@ export const CreateAssetModal = ({
     siteID: 0,
     // Detalles tecnicos basicos
     serialNum: "",
-    assetTAG: "",
     model: "",
     productManuf: "",
     // Detalles de red (Equipo)
@@ -403,10 +402,10 @@ export const CreateAssetModal = ({
     try {
       setIsLoading(true);
 
-      // Construir objeto de detalles segun la categoria
+      // Construir objeto de detalles segun la categoria.
+      // assetTAG no se envia: lo genera el backend automaticamente (HS-{ProductTypeID}-{secuencia}).
       const detail: Record<string, string | undefined> = {
         serialNum: formData.serialNum || undefined,
-        assetTAG: formData.assetTAG || undefined,
         model: formData.model || undefined,
         productManuf: formData.productManuf || undefined,
         purchaseDate: formData.purchaseDate || undefined,
@@ -487,7 +486,6 @@ export const CreateAssetModal = ({
       companyID: 0,
       siteID: 0,
       serialNum: "",
-      assetTAG: "",
       model: "",
       productManuf: "",
       ipAddress: "",
@@ -602,11 +600,18 @@ export const CreateAssetModal = ({
               </Label>
               <Input
                 id="assetTAG"
-                value={formData.assetTAG}
-                onChange={(e) => handleInputChange("assetTAG", e.target.value)}
-                placeholder="Ej: TAG-001"
-                disabled={isLoading}
+                value={
+                  formData.productTypeID
+                    ? `HS-${String(formData.productTypeID).padStart(2, "0")}-XX`
+                    : ""
+                }
+                placeholder="Se generara automaticamente (HS-XX-NN)"
+                disabled
+                readOnly
               />
+              <p className="text-xs text-gray-500 mt-1">
+                Se asigna automaticamente al guardar, segun el tipo de producto y el numero consecutivo.
+              </p>
             </div>
             
           </div>

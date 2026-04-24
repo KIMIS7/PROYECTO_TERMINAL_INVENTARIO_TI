@@ -186,9 +186,9 @@ export const EditAssetModal = ({
     try {
       setIsLoading(true);
 
+      // assetTAG no se envia: el backend lo gestiona automaticamente (formato HS-XX-NN)
       const detail: Record<string, string | undefined> = {
         serialNum: formData.serialNum || undefined,
-        assetTAG: formData.assetTAG || undefined,
         model: formData.model || undefined,
         productManuf: formData.productManuf || undefined,
         purchaseDate: formData.purchaseDate || undefined,
@@ -301,7 +301,8 @@ export const EditAssetModal = ({
             </div>
             <div>
               <Label htmlFor="assetTAG" className="text-sm font-medium">Asset TAG</Label>
-              <Input id="assetTAG" value={formData.assetTAG} onChange={(e) => handleInputChange("assetTAG", e.target.value)} placeholder="Ej: TAG-001" disabled={isLoading} />
+              <Input id="assetTAG" value={formData.assetTAG} placeholder="Se genera automaticamente (HS-XX-NN)" disabled readOnly />
+              <p className="text-xs text-gray-500 mt-1">El Asset TAG es asignado por el sistema y se regenera si cambia el tipo de producto.</p>
             </div>
           </div>
         </div>

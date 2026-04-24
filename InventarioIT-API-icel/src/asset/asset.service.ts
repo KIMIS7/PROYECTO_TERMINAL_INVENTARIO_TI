@@ -11,6 +11,33 @@ import { PrismaShopic } from 'src/database/database.service';
 export class AssetService {
   constructor(private readonly prismaShopic: PrismaShopic) {}
 
+  // Formato: HS-{ProductTypeID con 2 digitos}-{secuencia con 2 digitos}
+  // Ej: el 5o monitor (ProductTypeID = 3) -> HS-03-05
+  private async generateAssetTag(productTypeID: number): Promise<string> {
+    const productCode = String(productTypeID).padStart(2, '0');
+    const tagPrefix = `HS-${productCode}-`;
+
+    const existingDetails = await this.prismaShopic.assetDetail.findMany({
+      where: {
+        AssetTAG: { startsWith: tagPrefix },
+        Asset: { some: { ProductTypeID: productTypeID } },
+      },
+      select: { AssetTAG: true },
+    });
+
+    let maxSeq = 0;
+    for (const d of existingDetails) {
+      if (!d.AssetTAG) continue;
+      const seqPart = d.AssetTAG.substring(tagPrefix.length);
+      const seq = parseInt(seqPart, 10);
+      if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
+    }
+
+    const nextSeq = maxSeq + 1;
+    const padded = String(nextSeq).padStart(2, '0');
+    return `${tagPrefix}${padded}`;
+  }
+
   async create(createAssetDto: CreateAssetDto, userEmail?: string) {
     const { name, vendorID, productTypeID, assetState, companyID, siteID, userID, assignmentFromDate, assignmentToDate, detail } =
       createAssetDto;
@@ -71,6 +98,9 @@ export class AssetService {
         resolvedSiteID = defaultSite?.SiteID || 1;
       }
 
+      // Generar el AssetTAG automaticamente (formato HS-{ProductTypeID}-{secuencia})
+      const generatedTag = await this.generateAssetTag(productTypeID);
+
       // Si hay detalles, crearlos primero para obtener el AssetDetailID
       let assetDetailID: number | null = null;
       if (detail) {
@@ -105,7 +135,7 @@ export class AssetService {
             WarrantyExpiryDate: detail.warrantyExpiryDate ? new Date(detail.warrantyExpiryDate) : null,
             AssetACQDate: detail.assetACQDate ? new Date(detail.assetACQDate) : null,
             AssetExpiryDate: detail.assetExpiryDate ? new Date(detail.assetExpiryDate) : null,
-            AssetTAG: detail.assetTAG,
+            AssetTAG: generatedTag,
             WarrantyExpiry: detail.warrantyExpiry ? new Date(detail.warrantyExpiry) : null,
             Barcode: detail.barcode,
             Factura: detail.factura,
@@ -504,6 +534,15 @@ export class AssetService {
         },
       });
 
+      // Si cambia el ProductTypeID, regenerar el AssetTAG para mantener la nomenclatura HS-XX-NN
+      let regeneratedTag: string | undefined;
+      if (
+        assetData.productTypeID !== undefined &&
+        assetData.productTypeID !== asset.ProductTypeID
+      ) {
+        regeneratedTag = await this.generateAssetTag(assetData.productTypeID);
+      }
+
       // Actualizar detalles si existen
       if (detail) {
         const detailData = {
@@ -532,7 +571,8 @@ export class AssetService {
               OSVersion: detail.osVersion,
               RAM: detail.ram,
               SerialNum: detail.serialNum,
-              AssetTAG: detail.assetTAG,
+              // AssetTAG es inmutable salvo cambio de ProductTypeID: se ignora el valor enviado por el cliente
+              AssetTAG: regeneratedTag ?? undefined,
               Barcode: detail.barcode,
               Factura: detail.factura,
               Ticket: detail.ticket,
@@ -550,9 +590,14 @@ export class AssetService {
           });
         } else {
           // No tiene detalle, crear uno nuevo y vincularlo al asset
+          // Generar tag si no se regenero antes (ProductTypeID sin cambios)
+          const tagForNewDetail =
+            regeneratedTag ??
+            (await this.generateAssetTag(assetData.productTypeID ?? asset.ProductTypeID));
           const newDetail = await this.prismaShopic.assetDetail.create({
             data: {
               ...detailData,
+              AssetTAG: tagForNewDetail,
               PurchaseDate: detail.purchaseDate ? new Date(detail.purchaseDate) : null,
               WarrantyExpiryDate: detail.warrantyExpiryDate ? new Date(detail.warrantyExpiryDate) : null,
               CreatedTime: new Date(),
