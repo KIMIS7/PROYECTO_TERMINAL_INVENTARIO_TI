@@ -15,6 +15,7 @@ export interface User {
   rolID: number;
   departmentID: number;
   departmentName: string;
+  siteID: number | null;
 }
 
 export interface Department {

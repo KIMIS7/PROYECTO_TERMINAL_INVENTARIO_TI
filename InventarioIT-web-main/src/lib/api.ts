@@ -185,9 +185,8 @@ const api = {
             const response = await apiClient.get<User[]>("/user");
             return response.data;
         },
-        update : async (userId: number, data: { rolID: number, name: string, email: string, DepartmentID?: number }) => {
+        update : async (userId: number, data: { rolID: number, name: string, email: string, DepartmentID?: number, SiteID?: number }) => {
             try {
-                // Map frontend field names to backend DTO field names
                 const nameParts = data.name.trim().split(/\s+/);
                 const FirstName = nameParts[0] || '';
                 const LastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
@@ -197,6 +196,7 @@ const api = {
                     FirstName,
                     rolD: data.rolID,
                     DepartmentID: data.DepartmentID,
+                    SiteID: data.SiteID || null,
                 };
                 if (LastName) {
                     payload.LastName = LastName;
@@ -205,7 +205,6 @@ const api = {
                 const response = await apiClient.patch<{ success: boolean, message: string, data: { userID: number, name: string, email: string, isActive: boolean, role: string, rolID: number } }>(`/user/${userId}`, payload);
                 return response.data;
             } catch (error: unknown) {
-                // Re-lanzar el error para que sea manejado por el componente
                 throw error;
             }
         },

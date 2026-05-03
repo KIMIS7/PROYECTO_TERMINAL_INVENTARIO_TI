@@ -36,5 +36,9 @@ export class UserDto {
   @Expose({ name: 'departmentName' })
   @Transform(({ obj }) => obj?.Depart?.Name || '')
   departmentName: string;
+
+  @Expose({ name: 'siteID' })
+  @Transform(({ obj }) => obj?.SiteID || null)
+  siteID: number | null;
 }
 
