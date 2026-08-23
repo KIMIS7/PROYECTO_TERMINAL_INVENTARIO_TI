@@ -715,7 +715,7 @@ export default function Dashboard() {
             ) : (
               <div className="text-center py-12 text-gray-500">
                 <p>No se pudieron cargar las estadísticas</p>
-                <button onClick={fetchStats} className="mt-2 text-blue-600 hover:underline text-sm">
+                <button onClick={() => fetchStats()} className="mt-2 text-blue-600 hover:underline text-sm">
                   Reintentar
                 </button>
               </div>
